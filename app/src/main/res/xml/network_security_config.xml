@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!-- 特定域名的配置：覆盖默认设置 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">ecjtu.edu.cn</domain>
+
+    </domain-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">172.16.2.100</domain>
+
+    </domain-config>
+
+</network-security-config>
