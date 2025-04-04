@@ -23,7 +23,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -64,11 +64,9 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.VerticalDivider
-import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.icons.useful.Settings
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -82,7 +80,7 @@ fun MainScreen(
 ) {
     val sidebarWidth = 200.dp
     val sidebarWidthPx = with(LocalDensity.current) { sidebarWidth.toPx() }
-    val animationSpec = tween<Float>(durationMillis = 300) // M3 动画通常稍慢
+    val animationSpec = tween<Float>(durationMillis = 300)
 
     val mainContentOffsetX = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -171,6 +169,7 @@ fun MainScreen(
                     .padding(horizontal = 12.dp, vertical = 16.dp)
             ) {
                 NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
                     icon = { Icon(Icons.Outlined.AccountCircle, contentDescription = "个人信息") },
                     label = { Text("个人信息") },
                     selected = currentRoute == AppRoutes.PROFILE,
@@ -191,6 +190,7 @@ fun MainScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
 
                 NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
                     icon = { Icon(Icons.Outlined.Home, contentDescription = "主页") },
                     label = { Text("主页") },
                     selected = currentRoute == AppRoutes.HOME, // 选中状态判断
@@ -207,6 +207,7 @@ fun MainScreen(
                     )
                 )
                 NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
                     icon = { Icon(Icons.Outlined.AccountBox, contentDescription = "教务系统") },
                     label = { Text("教务系统") },
                     selected = currentRoute == AppRoutes.JWXT,
@@ -223,6 +224,7 @@ fun MainScreen(
                     )
                 )
                 NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
                     icon = { Icon(painterResource(R.drawable.ic_menu_wifi), contentDescription = "校园网") },
                     label = { Text("校园网") },
                     selected = currentRoute == AppRoutes.WIFI,
@@ -242,6 +244,7 @@ fun MainScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
 
                 NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
                     icon = { Icon(Icons.Outlined.Settings, contentDescription = "设置") },
                     label = { Text("设置") },
                     selected = currentRoute == AppRoutes.SETTING,

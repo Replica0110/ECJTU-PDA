@@ -34,6 +34,7 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.LazyColumn
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -77,26 +78,25 @@ fun StuInfoScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(nestedScrollConnection)
-            .padding(bottom = 16.dp),
+            .nestedScroll(nestedScrollConnection),
         contentPadding = padding
     ) {
 
             when {
                 uiState.isLoading -> {
                     item {
-                        Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Column {
+                        Box(modifier = Modifier.fillParentMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                                 CircularProgressIndicator()
                                 Text(
                                     text = "如果加载时间较长，可能登录已过期，应用正在重新登录",
                                     color = Color.Gray,
-                                    style = MiuixTheme.textStyles.main,
+                                    style = MiuixTheme.textStyles.subtitle,
                                     modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 30.dp)
                                         .padding(horizontal = 16.dp)
-                                        .padding(top = 16.dp)
                                 )
-                            }
+
                         }
                     }
                 }
@@ -148,9 +148,9 @@ fun StuInfoScreen(
                     item {
                         Card(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp)
-                                .padding(bottom = 12.dp + padding.calculateBottomPadding()),
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 16.dp + padding.calculateBottomPadding()),
                         ) {
                             Button(
                                 modifier = Modifier.fillMaxWidth(),
