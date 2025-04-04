@@ -16,6 +16,7 @@ import com.lonx.ecjtu.pda.network.WifiStatusMonitor
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import com.lonx.ecjtu.pda.viewmodel.JwxtViewModel
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
+import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
@@ -78,6 +79,6 @@ val appModule = module {
     viewModel { LoginViewModel(service = get(), prefs = get()) }
     viewModel { StuInfoViewModel(service = get(),prefs = get()) }
     viewModel { HomeViewModel(service = get(), prefs = get()) }
-
+    viewModel { SettingViewModel(service = get(), prefs = get()) }
 
 }

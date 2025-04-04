@@ -9,11 +9,11 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,20 +22,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
@@ -58,11 +54,23 @@ import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.viewmodel.UiEvent
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import timber.log.Timber
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+
+enum class DialogType { NONE,INFO, LOCATION_PROMPT, PERMISSION_DENIED }
+
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun WifiScreen(
     navHostController: NavHostController,
+    padding: PaddingValues,
     wifiViewModel: WifiViewModel = koinViewModel()
 ) {
     val uiState by wifiViewModel.uiState.collectAsStateWithLifecycle()
@@ -100,6 +108,7 @@ fun WifiScreen(
     }
     LaunchedEffect(key1 = wifiViewModel) {
         wifiViewModel.uiEvent.collect { event ->
+            Timber.tag("WifiScreen").d("Received UiEvent: $event")
             when (event) {
                 is UiEvent.NavigateToWifiSettings -> {
                     val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
@@ -146,74 +155,71 @@ fun WifiScreen(
     }
     if (showInfoDialog) {
         AlertDialog(
+            containerColor = MiuixTheme.colorScheme.background,
             onDismissRequest = { showInfoDialog = false },
-            title = { Text(text = infoDialogTitle) },
-            text = { Text(text = infoDialogMessage) },
+            title = { Text(text = infoDialogTitle, style = MiuixTheme.textStyles.title3) },
+            text = { Text(text = infoDialogMessage)  },
             confirmButton = {
-                TextButton(onClick = { showInfoDialog = false }) {
-                    Text("确定")
-                }
+                TextButton(onClick = { showInfoDialog = false }, text = "确定")
             }
         )
     }
 
     if (showLocationEnablePromptDialog) {
         AlertDialog(
+            containerColor = MiuixTheme.colorScheme.background,
             onDismissRequest = { showLocationEnablePromptDialog = false },
-            title = { Text("需要开启位置信息") },
-            text = { Text("应用需要您开启位置信息服务以获取WiFi信息，是否前往设置开启？") },
+            title = { Text(text = "需要开启位置信息", style = MiuixTheme.textStyles.title3) },
+            text = {  Text("应用需要您开启位置信息服务以获取WiFi信息，是否前往设置开启？")  },
             confirmButton = {
                 TextButton(
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
                     onClick = {
                         wifiViewModel.userConfirmedNavigateToLocationSettings()
                         showLocationEnablePromptDialog = false
-                    }
-                ) {
-                    Text("去设置")
-                }
+                    },
+                    text = "去设置"
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showLocationEnablePromptDialog = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { showLocationEnablePromptDialog = false }, text = "取消")
+
             }
         )
     }
     if (showPermissionDeniedDialog) {
         AlertDialog(
+            containerColor = MiuixTheme.colorScheme.background,
             onDismissRequest = { showPermissionDeniedDialog = false },
-            title = { Text("需要位置权限") },
-            text = { Text("请在应用设置中手动授予位置权限以获取WiFi信息。") },
+            title = { Text("需要位置权限", style = MiuixTheme.textStyles.title3) },
+            text = {   Text("请在应用设置中手动授予位置权限以获取WiFi信息。")  },
             confirmButton = {
                 TextButton(
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
                     onClick = {
                         wifiViewModel.userConfirmedNavigateToAppSettings()
                         showPermissionDeniedDialog = false
-                    }
-                ) {
-                    Text("去设置")
-                }
+                    }, text = "去设置"
+
+                )
+
             },
             dismissButton = {
-                TextButton(onClick = { showPermissionDeniedDialog = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { showPermissionDeniedDialog = false }, text = "取消")
             }
         )
     }
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
+            .padding(padding)
     ) {
-            Spacer(modifier = Modifier.height(16.dp))
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
@@ -227,7 +233,6 @@ fun WifiScreen(
                             painter = painterResource(id = uiState.wifiStatusIconRes),
                             contentDescription = "WiFi Status Icon",
                             modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -237,8 +242,9 @@ fun WifiScreen(
                         headlineContent = { Text("网络状态") },
                         trailingContent = {
                             Text(
+                                style = MiuixTheme.textStyles.subtitle,
+                                color = MiuixTheme.colorScheme.onSecondaryVariant,
                                 text = uiState.wifiStatusText,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         modifier = Modifier.clickable(onClick = { wifiViewModel.onOpenWifiSettingsClicked() }),
@@ -251,8 +257,9 @@ fun WifiScreen(
                         headlineContent = { Text("SSID / 状态") },
                         trailingContent = {
                             Text(
+                                style = MiuixTheme.textStyles.subtitle,
+                                color = MiuixTheme.colorScheme.onSecondaryVariant,
                                 text = uiState.ssid,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         modifier = Modifier.clickable(onClick = { wifiViewModel.onCheckPermissionsClicked() }),
@@ -264,19 +271,21 @@ fun WifiScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { wifiViewModel.onLoginClicked() },
+                    onClick = {
+                        Timber.d( "Login Button Clicked")
+                        wifiViewModel.onLoginClicked() },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
                 ) {
                     if (uiState.isLoadingIn) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp
                         )
                     } else {
@@ -284,15 +293,16 @@ fun WifiScreen(
                     }
                 }
 
-                OutlinedButton(
-                    onClick = { wifiViewModel.onLogoutClicked() },
+                Button(
+                    onClick = {
+                        Timber.d( "Logout Button Clicked")
+                        wifiViewModel.onLogoutClicked() },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
                 ) {
                     if (uiState.isLoadingOut) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 2.dp
                         )
                     } else {

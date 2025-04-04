@@ -85,6 +85,7 @@ class JwxtService(
 
         // 检查凭据是否存在
         if (studentId.isBlank() || studentPassword.isBlank()) {
+            Timber.d("登录失败：账号为${studentId}，密码为${studentPassword}。")
             Timber.e("登录失败：PreferencesManager 中缺少凭据。")
             return@withContext LoginResult.Failure("请先设置学号和密码")
         }
@@ -201,135 +202,20 @@ class JwxtService(
         Timber.i("退出登录操作完成。")
     }
     /** 通过解析教务系统页面的 HTML 获取学生信息。 */
-//    suspend fun getStuInfo(): ServiceResult<StudentInfo> = withContext(Dispatchers.IO) {
-//        Timber.d("开始获取学生信息...")
-//
-//        // 1. 检查登录状态 (需要完整的 JWXT 会话)
-//        if (!hasLogin(1)) {
-//            Timber.d("用户未登录或 JWXT 会话无效，尝试登录...")
-//            val loginResult = login() // Attempt to login
-//            if (loginResult is LoginResult.Failure) {
-//                Timber.e("获取学生信息失败：需要登录，但登录失败: ${loginResult.error}")
-//                return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
-//            }
-//            kotlinx.coroutines.delay(100)
-//            if (!hasLogin(1)) {
-//                Timber.e("获取学生信息失败：登录尝试后仍然缺少 JWXT 会话。")
-//                return@withContext ServiceResult.Error("无法建立教务系统会话，请重新登录")
-//            }
-//            Timber.d("登录成功，继续获取学生信息。")
-//        } else {
-//            Timber.d("用户已登录，直接获取学生信息。")
-//        }
-//
-//        safeServiceCall {
-//            // 构建请求头
-//            val headers = Headers.Builder()
-//                .add("Host", ApiConstants.GET_STU_INFO_URL.toHttpUrl().host)
-////                .add("Connection", "keep-alive")
-////                .add("Cache-Control", "max-age=0")
-//                .add("sec-ch-ua", """"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"""")
-//                .add("sec-ch-ua-mobile", "?0")
-//                .add("Sec-Fetch-User", "?1")
-//                .add("Sec-Fetch-Site", "same-origin")
-//                .add("Sec-Fetch-Mode", "navigate")
-//                .add("Sec-Fetch-Dest", "document")
-//                .add("Upgrade-Insecure-Requests", "1")
-////                .add("Accept-Encoding","gzip, deflate, br, zstd")
-//                .add("User-Agent", ApiConstants.USER_AGENT)
-//                .add("Referer", "$JWXT_ECJTU_DOMAIN/index.action")
-//                .build()
-//
-//            // 构建请求
-//            val request = Request.Builder()
-//                .url(ApiConstants.GET_STU_INFO_URL)
-//                .headers(headers)
-//                .get()
-//                .build()
-//            Timber.d("正在向 ${ApiConstants.GET_STU_INFO_URL} 发送 GET 请求")
-//            val response = client.newCall(request).execute()
-//
-//            if (!response.isSuccessful) {
-//                response.close()
-//                Timber.e("获取学生信息页面失败: HTTP ${response.code}")
-//                throw IOException("获取学生信息页面失败: HTTP ${response.code}")
-//            }
-//
-//            val htmlBody = response.body?.string()
-//            response.close()
-//
-//            if (htmlBody.isNullOrBlank()) {
-//                Timber.e("获取学生信息页面成功，但响应体为空。")
-//                throw ParseException("学生信息页面响应体为空")
-//            }
-//
-//            Timber.d("获取学生信息页面成功，开始解析 HTML...")
-//            val document = Jsoup.parse(htmlBody)
-//            val infoTable = document.selectFirst("div#basic table.table_border")
-//
-//            if (infoTable == null) {
-//                Timber.e("无法在 HTML 中找到基本信息表格 (div#basic table.table_border)")
-//
-//                Timber.v("Received HTML body (first 500 chars): ${htmlBody.take(2000)}")
-//                throw ParseException("无法在页面中找到学生信息表格结构")
-//            }
-//
-//            fun extractValue(table: Element, key: String): String? {
-//                val valueTd = table.select("td.k:containsOwn(${key})").first()?.nextElementSibling()
-//                return valueTd?.text()?.trim()?.takeIf { it.isNotEmpty() }
-//            }
-//
-//            fun extractRequiredValue(table: Element, key: String, fieldName: String): String {
-//                return extractValue(table, key) ?: throw ParseException("无法解析必需字段: $fieldName")
-//            }
-//
-//
-//            try {
-//                val studentInfo = StudentInfo(
-//                    studentId = extractRequiredValue(infoTable, "学号：", "学号"),
-//                    classInternalId = extractRequiredValue(infoTable, "在班编号：", "在班编号"),
-//                    name = extractRequiredValue(infoTable, "姓名：", "姓名"),
-//                    className = extractRequiredValue(infoTable, "班级：", "班级"),
-//                    gender = extractRequiredValue(infoTable, "性别：", "性别"),
-//                    ethnicity = extractRequiredValue(infoTable, "民族：", "民族"),
-//                    dateOfBirth = extractRequiredValue(infoTable, "出生日期：", "出生日期"),
-//                    idCardNumber = extractRequiredValue(infoTable, "身份证号：", "身份证号"),
-//                    politicalStatus = extractRequiredValue(infoTable, "政治面貌：", "政治面貌"),
-//                    nativePlace = extractValue(infoTable, "籍贯："), // Nullable
-//                    curriculumPlanId = extractValue(infoTable, "培养方案编号："), // Nullable
-//                    englishLevel = extractValue(infoTable, "英语分级级别："), // Nullable
-//                    studentStatus = extractRequiredValue(infoTable, "学籍状态：", "学籍状态"),
-//                    disciplinaryStatus = extractRequiredValue(infoTable, "处分状态：", "处分状态"),
-//                    gaokaoExamId = extractValue(infoTable, "高考考生号："), // Nullable
-//                    gaokaoScore = extractValue(infoTable, "高考成绩："), // Nullable
-//                    placeOfOrigin = extractRequiredValue(infoTable, "生源地：", "生源地")
-//                )
-//                Timber.i("学生信息解析成功: ${studentInfo.name} (${studentInfo.studentId})")
-//                studentInfo
-//            } catch (e: ParseException) {
-//                Timber.e(e, "解析学生信息时出错: ${e.message}")
-//                throw e
-//            } catch (e: Exception) {
-//                Timber.e(e, "解析学生信息时发生意外错误。")
-//                throw ParseException("解析学生信息HTML时发生未知错误")
-//            }
-//        }
-//    }
-    /** 通过解析教务系统页面的 HTML 获取学生信息。 */
     suspend fun getStuInfo(attempt: Int = 1): ServiceResult<StudentInfo> = withContext(Dispatchers.IO) {
         Timber.d("开始获取学生信息... (尝试次数: $attempt)")
         val maxLoginAttempts = 2 // 允许因会话过期而触发的登录尝试次数
 
         // --- 1. 初始登录状态检查 ---
-        // (保持不变) 如果连初始的Cookie都没有，先尝试登录一次
+        // 如果连初始的Cookie都没有，先尝试登录一次
         if (!hasLogin(1) && attempt == 1) { // 只在首次尝试时检查并主动登录
             Timber.d("用户未登录或 JWXT 会话无效，尝试登录...")
-            val loginResult = login() // Use existing login logic
+            val loginResult = login()
             if (loginResult is LoginResult.Failure) {
                 Timber.e("获取学生信息失败：需要登录，但登录失败: ${loginResult.error}")
                 return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
             }
-            kotlinx.coroutines.delay(100) // Give cookies time to settle?
+            kotlinx.coroutines.delay(100)
             if (!hasLogin(1)) {
                 Timber.e("获取学生信息失败：登录尝试后仍然缺少 JWXT 会话。")
                 return@withContext ServiceResult.Error("无法建立教务系统会话，请重新登录")
@@ -367,8 +253,6 @@ class JwxtService(
             response.use {
                 if (!it.isSuccessful) {
                     Timber.e("获取学生信息页面失败: HTTP ${it.code}")
-                    // 对于某些特定错误代码（如401/403），也可以考虑触发重登录，但302到登录页更常见
-                    // 暂时按原逻辑处理非成功响应
                     throw IOException("获取学生信息页面失败: HTTP ${it.code}")
                 }
 
@@ -398,7 +282,7 @@ class JwxtService(
 
                         Timber.i("获取锁，检测到登录页，执行强制重新登录...")
                         try {
-                            logout() // 清理可能无效的旧 Cookie
+                            logout(clearStoredCredentials = false) // 清理可能无效的旧 Cookie，注意不要清除账号密码
                             val reLoginResult = login(forceRefresh = true) // 强制刷新登录
                             if (reLoginResult is LoginResult.Success) {
                                 // 重新登录成功后，最好再验证一下

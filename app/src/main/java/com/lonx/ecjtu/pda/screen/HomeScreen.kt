@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +26,7 @@ import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -32,11 +34,14 @@ import org.koin.androidx.compose.koinViewModel
 fun HomeScreen(
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
+    padding:PaddingValues,
+
     homeViewModel: HomeViewModel = koinViewModel()
 ) {
     val uiState = homeViewModel.uiState.collectAsStateWithLifecycle()
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        modifier = Modifier.padding(padding),
+        containerColor = MiuixTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier

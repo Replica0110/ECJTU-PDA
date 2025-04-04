@@ -53,6 +53,12 @@ data class WifiUiState(
     val isLoadingIn: Boolean = false,
     val isLoadingOut: Boolean = false
 ):BaseUiState
+
+data class SettingUiState(
+    val isLoading: Boolean = false,
+    val error: String? = null
+): BaseUiState
+
 sealed class LocationStatus {
     data object Disabled : LocationStatus()
     data object Enabled : LocationStatus()

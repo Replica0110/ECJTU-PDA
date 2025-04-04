@@ -3,13 +3,19 @@ package com.lonx.ecjtu.pda.screen
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,58 +23,92 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.AppRoutes
+import com.lonx.ecjtu.pda.utils.rememberNavHostAwareScrollBehavior
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.VerticalDivider
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.icons.useful.Settings
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     topLevelNavController: NavHostController,
     internalNavController: NavHostController
 ) {
-    val sidebarWidth = 250.dp // M3 抽屉通常稍宽一些，可以调整
+    val sidebarWidth = 200.dp
     val sidebarWidthPx = with(LocalDensity.current) { sidebarWidth.toPx() }
     val animationSpec = tween<Float>(durationMillis = 300) // M3 动画通常稍慢
 
     val mainContentOffsetX = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+
+    val navHostAwareScrollBehavior = rememberNavHostAwareScrollBehavior()
+
+
+    val hazeState = remember { HazeState() }
+
+    val hazeStyleTopBar = HazeStyle(
+        backgroundColor = MiuixTheme.colorScheme.background,
+        tint = HazeTint(
+            MiuixTheme.colorScheme.background.copy(
+                if (navHostAwareScrollBehavior.state.collapsedFraction <= 0f) 1f
+                else lerp(1f, 0.67f, (navHostAwareScrollBehavior.state.collapsedFraction))
+            )
+        )
+    )
+
+    val hazeStyle = HazeStyle(
+        backgroundColor = MiuixTheme.colorScheme.background,
+        tint = HazeTint(MiuixTheme.colorScheme.background.copy(0.67f))
+    )
+
+    val showTopAppBar = remember { mutableStateOf(true) }
+
 
     val isOpen by remember {
         derivedStateOf { mainContentOffsetX.value > 0f } // 打开状态判断调整
@@ -95,7 +135,7 @@ fun MainScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background) // 使用 M3 背景色
+            .background(MiuixTheme.colorScheme.background)
             .draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { delta ->
@@ -115,23 +155,23 @@ fun MainScreen(
             )
     ) {
 
-        Surface(
+        Scaffold(
+            containerColor = MiuixTheme.colorScheme.background,
             modifier = Modifier
                 .fillMaxHeight()
                 .requiredWidth(sidebarWidth)
                 .offset { IntOffset((mainContentOffsetX.value - sidebarWidthPx).roundToInt(), 0) },
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp
-        ) {
+
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .padding(innerPadding)
                     .statusBarsPadding()
                     .padding(horizontal = 12.dp, vertical = 16.dp)
             ) {
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.AccountCircle, contentDescription = "个人信息") }, // 使用标准图标
+                    icon = { Icon(Icons.Outlined.AccountCircle, contentDescription = "个人信息") },
                     label = { Text("个人信息") },
                     selected = currentRoute == AppRoutes.PROFILE,
                     onClick = {
@@ -141,7 +181,11 @@ fun MainScreen(
                         }
                         closeSidebar()
                     },
-                    modifier = Modifier.padding(bottom = 8.dp) // 与下一组分隔
+                    modifier = Modifier.padding(bottom = 8.dp) ,
+                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
@@ -156,7 +200,11 @@ fun MainScreen(
                             popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
                         }
                         closeSidebar()
-                    }
+                    },
+                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Outlined.AccountBox, contentDescription = "教务系统") },
@@ -168,7 +216,11 @@ fun MainScreen(
                             popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
                         }
                         closeSidebar()
-                    }
+                    },
+                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
                 NavigationDrawerItem(
                     icon = { Icon(painterResource(R.drawable.ic_menu_wifi), contentDescription = "校园网") },
@@ -180,7 +232,11 @@ fun MainScreen(
                             popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
                         }
                         closeSidebar()
-                    }
+                    },
+                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
@@ -195,83 +251,133 @@ fun MainScreen(
                             popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
                         }
                         closeSidebar()
-                    }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Info, contentDescription = "关于") },
-                    label = { Text("关于") },
-                    selected = currentRoute == AppRoutes.ABOUT,
-                    onClick = {
-                        internalNavController.navigate(AppRoutes.ABOUT) {
-                            launchSingleTop = true
-                            popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
-                        }
-                        closeSidebar()
-                    }
+                    },
+                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
             }
         }
-
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) }
-        ) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
+        VerticalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Scaffold(
+                containerColor = MiuixTheme.colorScheme.background,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) },
                 topBar = {
                     val currentScreenTitle = when (currentRoute) {
                         AppRoutes.HOME -> "主页"
                         AppRoutes.JWXT -> "教务系统"
                         AppRoutes.WIFI -> "校园网"
                         AppRoutes.SETTING -> "设置"
-                        AppRoutes.ABOUT -> "关于"
                         AppRoutes.PROFILE -> "个人信息"
-                        else -> "华交工具箱"
+                        else -> stringResource(R.string.app_name)
                     }
-                    TopAppBar(
-                        title = { Text(currentScreenTitle) },
-                        navigationIcon = {
-                            IconButton(onClick = { if (isFullyOpen) closeSidebar() else openSidebar() }) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Menu,
-                                    contentDescription = "打开侧边栏"
+                    AnimatedVisibility(
+                        visible = showTopAppBar.value,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        BoxWithConstraints {
+                            if (maxWidth > 840.dp) {
+                                SmallTopAppBar(
+                                    title = currentScreenTitle,
+                                    modifier = Modifier.hazeEffect(state = hazeState) {
+                                        style = hazeStyle
+                                        blurRadius = 25.dp
+                                        noiseFactor = 0f
+                                    },
+                                    scrollBehavior = navHostAwareScrollBehavior,
+                                    color = Color.Transparent,
+                                    navigationIcon = {
+                                        IconButton(
+                                            modifier = Modifier.padding(start = 20.dp),
+                                            onClick = {
+                                                run { if (isFullyOpen) closeSidebar() else openSidebar() }
+                                            },
+                                        ) {
+                                            top.yukonga.miuix.kmp.basic.Icon(
+                                                imageVector = MiuixIcons.Useful.Settings,
+                                                tint = MiuixTheme.colorScheme.onBackground,
+                                                contentDescription = "侧边栏"
+                                            )
+                                        }
+                                    }
+                                )
+                            } else {
+                                TopAppBar(
+                                    title = currentScreenTitle,
+                                    modifier = Modifier
+                                        .hazeEffect(state = hazeState) {
+                                            style = hazeStyleTopBar
+                                            blurRadius = 25.dp
+                                            noiseFactor = 0f
+                                        },
+                                    scrollBehavior = navHostAwareScrollBehavior,
+                                    color = Color.Transparent,
+                                    navigationIcon = {
+                                        IconButton(
+                                            modifier = Modifier.padding(start = 20.dp),
+                                            onClick = {
+                                                run { if (isFullyOpen) closeSidebar() else openSidebar() }
+                                            },
+                                        ) {
+                                            top.yukonga.miuix.kmp.basic.Icon(
+                                                imageVector = MiuixIcons.Useful.Settings,
+                                                tint = MiuixTheme.colorScheme.onBackground,
+                                                contentDescription = "侧边栏"
+                                            )
+                                        }
+                                    }
                                 )
                             }
-                        },
-                        // 可选: 设置颜色
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            // 你也可以使用 surface, surfaceVariant 等作为 containerColor
-                            // containerColor = MaterialTheme.colorScheme.surface,
-                            // titleContentColor = MaterialTheme.colorScheme.onSurface,
-                            // navigationIconContentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                    )
+                        }
+                    }
                 },
                 content = { innerPadding ->
+
                     NavHost(
                         navController = internalNavController,
                         startDestination = AppRoutes.HOME,
                         modifier = Modifier
-                            .padding(innerPadding)
                             .fillMaxSize()
+                            .hazeSource(state = hazeState)
                     ) {
-                        composable(AppRoutes.HOME) { HomeScreen(internalNavController, topLevelNavController) }
-                        composable(AppRoutes.JWXT) { JwxtScreen(internalNavController) }
-                        composable(AppRoutes.WIFI) { WifiScreen(internalNavController) }
+                        composable(AppRoutes.HOME) { HomeScreen(internalNavController, topLevelNavController,innerPadding) }
+                        composable(AppRoutes.JWXT) { JwxtScreen(internalNavController,innerPadding) }
+                        composable(AppRoutes.WIFI) { WifiScreen(internalNavController,innerPadding) }
                         composable(AppRoutes.SETTING) { SettingScreen(
-                            internalNavController,
-                            topLevelNavController = topLevelNavController
+                            padding = innerPadding,
+                            scrollBehavior = navHostAwareScrollBehavior
                         ) }
-                        composable(AppRoutes.ABOUT) { AboutScreen(internalNavController) }
-                        composable(AppRoutes.PROFILE) { StuInfoScreen(internalNavController, topLevelNavController) }
+                        composable(AppRoutes.PROFILE) { StuInfoScreen(
+                            internalNavController = internalNavController,
+                            topLevelNavController = topLevelNavController,
+                            padding = innerPadding,
+                            scrollBehavior = navHostAwareScrollBehavior
+                        ) }
                     }
                 }
             )
-        }
+
     }
+}
+class AppBarScrollStateHolder {
+    var scrollOffset: Float by mutableFloatStateOf(0f)
+        private set // 外部只能读取
+
+    fun updateScrollOffset(newOffset: Float) {
+        scrollOffset = newOffset
+        // 这里可以添加逻辑计算折叠比例等
+    }
+
+    fun resetScrollOffset() {
+        scrollOffset = 0f
+    }
+}
+
+@Composable
+fun rememberAppBarScrollStateHolder(): AppBarScrollStateHolder {
+    return remember { AppBarScrollStateHolder() }
 }

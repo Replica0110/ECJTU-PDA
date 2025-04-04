@@ -54,6 +54,7 @@ import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.data.NavigationTarget
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +98,7 @@ fun LoginScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MiuixTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier

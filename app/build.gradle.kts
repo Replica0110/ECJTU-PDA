@@ -40,6 +40,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.haze)
+    implementation(libs.miuix)
     implementation(libs.koin.androidx.compose)
     implementation(libs.gson)
     implementation(libs.jsoup)

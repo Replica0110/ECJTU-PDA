@@ -5,7 +5,6 @@ object AppRoutes {
     const val JWXT="jwxt"
     const val WIFI="wifi"
     const val SETTING="setting"
-    const val ABOUT="about"
     const val MAIN="main"
     const val SPLASH = "splash"
     const val LOGIN = "login"
