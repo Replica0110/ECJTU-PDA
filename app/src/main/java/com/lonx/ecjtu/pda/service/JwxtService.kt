@@ -8,9 +8,9 @@ import com.lonx.ecjtu.pda.data.ApiConstants.COOKIE_CASTGC
 import com.lonx.ecjtu.pda.data.ApiConstants.COOKIE_JSESSIONID
 import com.lonx.ecjtu.pda.data.ApiConstants.ECJTU_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
+import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
-import com.lonx.ecjtu.pda.data.IspOption
 import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.StudentInfo
@@ -83,7 +83,7 @@ class JwxtService(
     suspend fun login(forceRefresh: Boolean = false): LoginResult = withContext(Dispatchers.IO) {
         val studentId = preferencesManager.getString("student_id", "")
         val studentPassword = preferencesManager.getString("password", "")
-
+        val sessionTimeOut = checkSession()
         // 检查凭据是否存在
         if (studentId.isBlank() || studentPassword.isBlank()) {
             Timber.d("登录失败：账号为${studentId}，密码为${studentPassword}。")
@@ -94,7 +94,7 @@ class JwxtService(
         Timber.d("尝试为用户 $studentId 登录。强制刷新：$forceRefresh")
 
         // 检查是否需要登录
-        if (!forceRefresh && hasLogin(1)) { // 检查完整登录状态 (包括 JWXT 会话)
+        if (!forceRefresh && hasLogin(1) && !sessionTimeOut) { // 检查完整登录状态 (包括 JWXT 会话)
             Timber.d("用户已拥有 CAS 和 JWXT 会话 Cookie。跳过登录步骤。")
             return@withContext LoginResult.Success("已登录")
         } else if (!forceRefresh && hasLogin(0)) { // 仅有 CAS 登录，可能需要重定向到 JWXT
@@ -122,8 +122,7 @@ class JwxtService(
             }
 
             // 1. 加密密码
-            val encPasswordResult = getEncryptedPassword(studentPassword)
-            val encPassword = when (encPasswordResult) {
+            val encPassword = when (val encPasswordResult = getEncryptedPassword(studentPassword)) {
                 is ServiceResult.Success -> encPasswordResult.data
                 is ServiceResult.Error -> {
                     Timber.e("密码加密过程中登录失败: ${encPasswordResult.message}")
@@ -202,6 +201,64 @@ class JwxtService(
 
         Timber.i("退出登录操作完成。")
     }
+    /**登录过期检查方法*/
+
+    private suspend fun checkSession(): Boolean = withContext(Dispatchers.IO) {
+        if (!hasLogin(1)) {
+            Timber.d("JWXT Session Check: Failed (JSESSIONID cookie missing).")
+            return@withContext false
+        }
+
+        Timber.d("JWXT Session Check: Performing network check...")
+
+        val checkUrl = ApiConstants.GET_STU_INFO_URL
+        val headers = Headers.Builder()
+            .add("Host", checkUrl.toHttpUrl().host)
+            .add("User-Agent", ApiConstants.USER_AGENT)
+            .add("Referer", "$JWXT_ECJTU_DOMAIN/index.action")
+            .add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+            .add("X-Requested-With", "XMLHttpRequest")
+            .build()
+
+        val request = Request.Builder()
+            .url(checkUrl)
+            .headers(headers)
+            .get()
+            .build()
+
+        try {
+            val response = client.newCall(request).execute()
+
+            response.use {
+                if (!it.isSuccessful) {
+                    Timber.w("JWXT Session Check: Failed (HTTP ${it.code}).")
+
+                    return@withContext false
+                }
+
+                val htmlBody = it.body?.string()
+
+                if (htmlBody.isNullOrBlank()) {
+                    Timber.w("JWXT Session Check: Failed (Response body is empty).")
+                    return@withContext false
+                }
+
+                if (htmlBody.contains(JWXT_LOGIN_PAGE_IDENTIFIER)) {
+                    Timber.w("JWXT Session Check: Failed (Detected login page content). Session likely expired.")
+                    return@withContext false
+                } else {
+                    Timber.i("JWXT Session Check: Success. Session appears valid.")
+                    return@withContext true
+                }
+            }
+        } catch (e: IOException) {
+            Timber.e(e, "JWXT Session Check: Failed (Network IO Error).")
+            return@withContext false // Network error means we can't confirm session validity
+        } catch (e: Exception) {
+            Timber.e(e, "JWXT Session Check: Failed (Unknown Error).")
+            return@withContext false // Other errors also mean failure to confirm
+        }
+    }
     /** 通过解析教务系统页面的 HTML 获取学生信息。 */
     suspend fun getStuInfo(attempt: Int = 1): ServiceResult<StudentInfo> = withContext(Dispatchers.IO) {
         Timber.d("开始获取学生信息... (尝试次数: $attempt)")
@@ -238,7 +295,7 @@ class JwxtService(
                 .add("Host", ApiConstants.GET_STU_INFO_URL.toHttpUrl().host)
                 // ... (其他请求头) ...
                 .add("User-Agent", ApiConstants.USER_AGENT)
-                .add("Referer", "${ApiConstants.JWXT_ECJTU_DOMAIN}/index.action")
+                .add("Referer", "$JWXT_ECJTU_DOMAIN/index.action")
                 .build()
 
             // 构建请求
@@ -385,111 +442,107 @@ class JwxtService(
         }
     }
     /**修改密码*/
-    suspend fun updatePassword(oldPassword: String, newPassword: String, confirmPassword: String): ServiceResult<String> = withContext(Dispatchers.IO) {
+    suspend fun updatePassword(oldPassword: String, newPassword: String): ServiceResult<String> = withContext(Dispatchers.IO) {
         Timber.d("开始修改密码...")
 
-        if (newPassword != confirmPassword) {
-            Timber.w("修改密码失败：新密码与确认密码不匹配。")
-            return@withContext ServiceResult.Error("新密码与确认密码不匹配")
-        }
         if (newPassword.isBlank()) {
             Timber.w("修改密码失败：新密码不能为空。")
             return@withContext ServiceResult.Error("新密码不能为空")
         }
-        if (!hasLogin(1)) {
-            Timber.d("用户未登录或 JWXT 会话无效，尝试登录...")
-            val loginResult = login() // 尝试登录
+
+        if (!checkSession()) {
+            Timber.d("JWXT 会话无效或无法验证，尝试登录...")
+            val loginResult = login()
             if (loginResult is LoginResult.Failure) {
                 Timber.e("修改密码失败：需要登录，但登录失败: ${loginResult.error}")
                 return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
             }
-            kotlinx.coroutines.delay(100) // 短暂延迟，可能有助于 Cookie 传播
-            if (!hasLogin(1)) {
-                Timber.e("修改密码失败：登录尝试后仍然缺少 JWXT 会话。")
+            kotlinx.coroutines.delay(100)
+            if (!checkSession()) {
+                Timber.e("修改密码失败：登录尝试后 JWXT 会话仍然无效。")
                 return@withContext ServiceResult.Error("无法建立教务系统会话，请重新登录")
             }
-            Timber.d("登录成功，继续修改密码。")
+            Timber.d("登录/会话确认成功，继续修改密码。")
         } else {
-            Timber.d("用户已登录，直接修改密码。")
+            Timber.d("JWXT 会话有效，直接修改密码。")
         }
 
-        // 3. 使用 safeServiceCall 包装网络请求和响应处理
-        safeServiceCall {
+        try {
+            val updatePasswordUrl = ApiConstants.UPDATE_PASSWORD
 
-            val updatePasswordUrl = ApiConstants.GET_STU_INFO_URL
-
-            // 准备请求体
-            val payload = mapOf(
-                "oldPassword" to oldPassword,
-                "password" to newPassword,
-                "rpassword" to confirmPassword
-            )
-            val jsonPayload = gson.toJson(payload)
-            Timber.v("修改密码请求 JSON: $jsonPayload")
-
-            val requestBody = jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType())
-
-            // 准备请求头
+            val formBody = FormBody.Builder()
+                .add("oldPassword", oldPassword)
+                .add("password", newPassword)
+                .add("rpassword", newPassword)
+                .build()
 
             val headers = Headers.Builder()
                 .add("User-Agent", ApiConstants.USER_AGENT)
-                .add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                .add("Accept", "*/*") // 通常 API 接受任何类型，但可以更具体
+                .add("Accept", "*/*")
+                .add("Accept-Encoding", "gzip, deflate, br, zstd")
                 .add("Host", JWXT_ECJTU_DOMAIN)
-                .add("Sec-Fetch-Site", "same-origin")
-                .add("Sec-Fetch-Mode", "cors")
-                .add("Sec-Fetch-Dest", "empty")
-                .add("Origin", "https://${ JWXT_ECJTU_DOMAIN }")
+                .add("Origin", "https://${JWXT_ECJTU_DOMAIN}")
                 .add("Referer", ApiConstants.GET_STU_INFO_URL)
                 .add("X-Requested-With", "XMLHttpRequest")
+                .add("sec-ch-ua", "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"")
+                .add("Sec-Fetch-Site", "same-origin")
+                .add("sec-ch-ua-mobile", "?0")
+                .add("Sec-Fetch-Mode", "cors")
+                .add("Sec-Fetch-Dest", "empty")
                 .build()
 
             // 构建 POST 请求
             val request = Request.Builder()
                 .url(updatePasswordUrl)
                 .headers(headers)
-                .post(requestBody)
+                .post(formBody) // 使用 FormBody
                 .build()
 
-            Timber.d("正在向 $updatePasswordUrl 发送 POST 请求修改密码")
-
-            // 执行请求
+            Timber.d("正在向 $updatePasswordUrl 发送 POST 请求修改密码 (Form Data)")
             val response = client.newCall(request).execute()
 
-            // 处理响应
-            response.use { // 使用 use 确保响应体被关闭
+            response.use {
                 if (!it.isSuccessful) {
-                    Timber.e("修改密码请求失败: HTTP ${it.code}")
-                    // 抛出异常，会被 safeServiceCall 捕获
-                    throw IOException("修改密码请求失败: HTTP ${it.code}")
+                    Timber.e("修改密码请求失败: HTTP ${it.code} ${it.message}")
+                    // 打印响应体帮助调试，即使请求不成功
+                    val errorBody = it.body?.string()
+                    Timber.e("失败响应体: $errorBody")
+                    return@withContext ServiceResult.Error("修改密码请求失败: HTTP ${it.code}")
                 }
 
                 val responseBody = it.body?.string()?.trim()
-                Timber.d("修改密码响应原始文本: '$responseBody'")
+                // *** 注意：这里打印修改为了 Timber.d 或 Timber.i，因为原始文本不是错误 ***
+                Timber.i("修改密码响应原始文本: '$responseBody'")
 
                 if (responseBody.isNullOrBlank()) {
                     Timber.e("修改密码响应体为空。")
-                    throw IOException("修改密码响应体为空")
+                    return@withContext ServiceResult.Error("修改密码响应体为空")
                 }
 
-                // 根据响应文本判断结果
                 when (responseBody) {
                     "1" -> {
                         Timber.i("密码修改成功。")
-                        "密码修改成功"
+                        ServiceResult.Success("密码修改成功")
                     }
                     "2" -> {
-                        Timber.w("修改密码失败：服务器返回 '2' (可能是旧密码错误或新密码不符合要求)。")
-                        throw PasswordChangeException("旧密码错误或新密码不符合要求")
+                        Timber.w("修改密码失败：服务器返回 '2' (可能是旧密码错误、新密码不符合要求或请求格式错误)。")
+                        ServiceResult.Error("旧密码错误或新密码不符合要求")
                     }
                     else -> {
-                        Timber.e("修改密码失败：收到未知的响应内容: '$responseBody'")
-                        throw IOException("修改密码失败：未知的响应内容")
+                        Timber.e("修改密码失败：收到未知的响应内容 '$responseBody'")
+                        ServiceResult.Error("修改密码失败：未知的响应内容 '$responseBody'")
                     }
                 }
             }
+        } catch (e: IOException) {
+            Timber.e(e, "网络或IO错误在修改密码时发生")
+            ServiceResult.Error("网络错误，请稍后重试: ${e.message}")
+        } catch (e: Exception) {
+            Timber.e(e, "未知错误在修改密码时发生")
+            ServiceResult.Error("发生未知错误: ${e.message}")
         }
     }
+
     class PasswordChangeException(message: String) : IOException(message)
     /** 获取 YKT (一卡通) 余额。 */
     suspend fun getYktNum(): ServiceResult<String> = withContext(Dispatchers.IO) {
