@@ -19,13 +19,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.data.AppRoutes
+import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
+import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
@@ -34,54 +39,32 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun HomeScreen(
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
+    scrollBehavior : UpdatableScrollBehavior,
     padding:PaddingValues,
 
     homeViewModel: HomeViewModel = koinViewModel()
 ) {
     val uiState = homeViewModel.uiState.collectAsStateWithLifecycle()
-    Scaffold(
-        modifier = Modifier.padding(padding),
-        containerColor = MiuixTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 32.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
 
-            Button(
-                onClick = {
-                    homeViewModel.performLogout()
-                    topLevelNavController.navigate(AppRoutes.LOGIN) {
-                        popUpTo(topLevelNavController.graph.findStartDestination().id) {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                Text("退出登录")
-            }
-            Spacer(Modifier.fillMaxWidth().padding(8.dp))
-            Button(
-                onClick = {
-                    internalNavController.navigate(AppRoutes.SETTING) {
-                        popUpTo(topLevelNavController.graph.findStartDestination().id) {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
+    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
+        scrollBehavior = scrollBehavior
+    )
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(nestedScrollConnection),
+        contentPadding = padding
+    ) {
+        item {
+            Card(modifier = Modifier.padding(16.dp)){
 
-                },
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                Text("账号配置")
-            }
+                        Text(
+                            text = "欢迎使用",
+                            style = MiuixTheme.textStyles.title1
+                        )
+
+                }
+
         }
     }
 }

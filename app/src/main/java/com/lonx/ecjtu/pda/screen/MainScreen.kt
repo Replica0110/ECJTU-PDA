@@ -378,9 +378,23 @@ fun MainScreen(
                             .fillMaxSize()
                             .hazeSource(state = hazeState)
                     ) {
-                        composable(AppRoutes.HOME) { HomeScreen(internalNavController, topLevelNavController,innerPadding) }
-                        composable(AppRoutes.JWXT) { JwxtScreen(internalNavController,innerPadding) }
-                        composable(AppRoutes.WIFI) { WifiScreen(internalNavController,innerPadding) }
+                        composable(AppRoutes.HOME) { HomeScreen(
+                            internalNavController=internalNavController,
+                            topLevelNavController = topLevelNavController,
+                            scrollBehavior = navHostAwareScrollBehavior,
+                            padding = innerPadding
+                        ) }
+                        composable(AppRoutes.JWXT) { JwxtScreen(
+                            internalNavController = internalNavController,
+                            topLevelNavController = topLevelNavController,
+                            scrollBehavior = navHostAwareScrollBehavior,
+                            padding = innerPadding
+                        ) }
+                        composable(AppRoutes.WIFI) { WifiScreen(
+                            internalNavController = internalNavController,
+                            padding = innerPadding,
+                            scrollBehavior = navHostAwareScrollBehavior,
+                        ) }
                         composable(AppRoutes.SETTING) { SettingScreen(
                             padding = innerPadding,
                             scrollBehavior = navHostAwareScrollBehavior

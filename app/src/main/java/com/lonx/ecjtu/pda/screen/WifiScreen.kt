@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,10 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
@@ -51,6 +49,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
+import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.UiEvent
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -58,19 +58,18 @@ import timber.log.Timber
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
-enum class DialogType { NONE,INFO, LOCATION_PROMPT, PERMISSION_DENIED }
-
-
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun WifiScreen(
-    navHostController: NavHostController,
+    internalNavController: NavHostController,
     padding: PaddingValues,
+    scrollBehavior: UpdatableScrollBehavior,
     wifiViewModel: WifiViewModel = koinViewModel()
 ) {
     val uiState by wifiViewModel.uiState.collectAsStateWithLifecycle()
@@ -86,7 +85,9 @@ fun WifiScreen(
 
     var showPermissionDeniedDialog by remember { mutableStateOf(false) }
 
-
+    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
+        scrollBehavior = scrollBehavior
+    )
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -209,16 +210,15 @@ fun WifiScreen(
             }
         )
     }
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(padding)
+            .nestedScroll(nestedScrollConnection),
+        contentPadding = padding
     ) {
-
+        item {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .padding(16.dp),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -278,8 +278,9 @@ fun WifiScreen(
             ) {
                 Button(
                     onClick = {
-                        Timber.d( "Login Button Clicked")
-                        wifiViewModel.onLoginClicked() },
+                        Timber.d("Login Button Clicked")
+                        wifiViewModel.onLoginClicked()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
                 ) {
@@ -295,8 +296,9 @@ fun WifiScreen(
 
                 Button(
                     onClick = {
-                        Timber.d( "Logout Button Clicked")
-                        wifiViewModel.onLogoutClicked() },
+                        Timber.d("Logout Button Clicked")
+                        wifiViewModel.onLogoutClicked()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
                 ) {
@@ -312,6 +314,7 @@ fun WifiScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+        }
 
     }
 }

@@ -35,6 +35,7 @@ import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.ui.StuInfoCard
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
+import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -73,26 +74,11 @@ fun StuInfoScreen(
         }
     }
 
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (!pullToRefreshState.isRefreshing && available.y < 0) {
-                    val consumedY = scrollBehavior.updateHeightOffset(available.y)
-                    if (consumedY != 0f) {
-                        return Offset(0f, consumedY)
-                    }
-                }
-                return Offset.Zero
-            }
+    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
+        scrollBehavior = scrollBehavior,
+        pullToRefreshState = pullToRefreshState
+    )
 
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                if (!pullToRefreshState.isRefreshing && available.y != 0f) {
-                    scrollBehavior.updateHeightOffset(available.y)
-                }
-                return Offset.Zero
-            }
-        }
-    }
     PullToRefresh(
         modifier = Modifier
             .fillMaxSize()

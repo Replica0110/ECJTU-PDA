@@ -168,7 +168,6 @@ fun SettingScreen(
         }
     }
 }
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountConfigDialog(
     currentStudentId: String,
