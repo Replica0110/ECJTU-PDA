@@ -32,8 +32,8 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -50,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -65,6 +66,7 @@ import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.VerticalDivider
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -81,7 +83,6 @@ fun MainScreen(
     val sidebarWidth = 200.dp
     val sidebarWidthPx = with(LocalDensity.current) { sidebarWidth.toPx() }
     val animationSpec = tween<Float>(durationMillis = 300)
-
     val mainContentOffsetX = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
@@ -174,14 +175,20 @@ fun MainScreen(
                     label = { Text("个人信息") },
                     selected = currentRoute == AppRoutes.PROFILE,
                     onClick = {
-                        internalNavController.navigate(AppRoutes.PROFILE) {
+                        internalNavController.navigate(AppRoutes.PROFILE) { // 导航到目标路由
+                            // popUpTo 查找导航图的起始目的地
+                            popUpTo(internalNavController.graph.findStartDestination().id) {
+                                saveState = true // 保存当前堆栈的状态
+                            }
+                            // 确保只有一个实例在顶部
                             launchSingleTop = true
-                            popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
+                            // 恢复之前保存的目标堆栈状态
+                            restoreState = true
                         }
                         closeSidebar()
                     },
                     modifier = Modifier.padding(bottom = 8.dp) ,
-                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                    colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
                         unselectedContainerColor = Color.Transparent
                     )
@@ -196,12 +203,18 @@ fun MainScreen(
                     selected = currentRoute == AppRoutes.HOME, // 选中状态判断
                     onClick = {
                         internalNavController.navigate(AppRoutes.HOME) {
+                            // popUpTo 查找导航图的起始目的地
+                            popUpTo(internalNavController.graph.findStartDestination().id) {
+                                saveState = true // 保存当前堆栈的状态
+                            }
+                            // 确保只有一个实例在顶部
                             launchSingleTop = true
-                            popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
+                            // 恢复之前保存的目标堆栈状态
+                            restoreState = true
                         }
                         closeSidebar()
                     },
-                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                    colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
                         unselectedContainerColor = Color.Transparent
                     )
@@ -213,12 +226,18 @@ fun MainScreen(
                     selected = currentRoute == AppRoutes.JWXT,
                     onClick = {
                         internalNavController.navigate(AppRoutes.JWXT) {
+                            // popUpTo 查找导航图的起始目的地
+                            popUpTo(internalNavController.graph.findStartDestination().id) {
+                                saveState = true // 保存当前堆栈的状态
+                            }
+                            // 确保只有一个实例在顶部
                             launchSingleTop = true
-                            popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
+                            // 恢复之前保存的目标堆栈状态
+                            restoreState = true
                         }
                         closeSidebar()
                     },
-                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                    colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
                         unselectedContainerColor = Color.Transparent
                     )
@@ -230,12 +249,18 @@ fun MainScreen(
                     selected = currentRoute == AppRoutes.WIFI,
                     onClick = {
                         internalNavController.navigate(AppRoutes.WIFI) {
+                            // popUpTo 查找导航图的起始目的地
+                            popUpTo(internalNavController.graph.findStartDestination().id) {
+                                saveState = true // 保存当前堆栈的状态
+                            }
+                            // 确保只有一个实例在顶部
                             launchSingleTop = true
-                            popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
+                            // 恢复之前保存的目标堆栈状态
+                            restoreState = true
                         }
                         closeSidebar()
                     },
-                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                    colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
                         unselectedContainerColor = Color.Transparent
                     )
@@ -250,12 +275,18 @@ fun MainScreen(
                     selected = currentRoute == AppRoutes.SETTING,
                     onClick = {
                         internalNavController.navigate(AppRoutes.SETTING) {
+                            // popUpTo 查找导航图的起始目的地
+                            popUpTo(internalNavController.graph.findStartDestination().id) {
+                                saveState = true // 保存当前堆栈的状态
+                            }
+                            // 确保只有一个实例在顶部
                             launchSingleTop = true
-                            popUpTo(internalNavController.graph.startDestinationId) { saveState = true }
+                            // 恢复之前保存的目标堆栈状态
+                            restoreState = true
                         }
                         closeSidebar()
                     },
-                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                    colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
                         unselectedContainerColor = Color.Transparent
                     )
