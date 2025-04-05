@@ -10,6 +10,7 @@ import com.lonx.ecjtu.pda.data.ApiConstants.ECJTU_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
+import com.lonx.ecjtu.pda.data.IspOption
 import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.StudentInfo
@@ -850,8 +851,13 @@ class JwxtService(
 
 
     /** 使用 PreferencesManager 保存凭据。 */
-    fun saveCredentials(studentId: String, studentPass: String) {
-        preferencesManager.saveCredentials(studentId, studentPass) // 调用 PreferencesManager 的方法保存
+    fun saveCredentials(studentId: String, studentPass: String, ispOption: Int? = null) {
+        if (ispOption != null){
+            preferencesManager.saveCredentials(studentId, studentPass, ispOption)
+        } else {
+            preferencesManager.saveCredentials(studentId, studentPass)
+        }
+
         Timber.d("凭据已保存到 PreferencesManager。")
     }
 
@@ -862,7 +868,7 @@ class JwxtService(
     suspend fun loginManually(studentId: String, studentPass: String): LoginResult = withContext(Dispatchers.IO) {
         // 1. 基本输入验证
         if (studentId.isBlank() || studentPass.isBlank()) {
-            Timber.w("尝试使用空白凭据进行手动登录。")
+            Timber.w("尝试使用空白凭据进行手动登录!")
             return@withContext LoginResult.Failure("账号或密码不能为空")
         }
 

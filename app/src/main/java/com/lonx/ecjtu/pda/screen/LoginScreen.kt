@@ -1,5 +1,6 @@
 package com.lonx.ecjtu.pda.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -179,8 +181,8 @@ fun LoginScreen(
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = ispDropdownExpanded)
                     },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                        // Match text field colors or use defaults
-                        // containerColor = ..., focusedBorderColor = ..., etc.
+                        focusedContainerColor = MiuixTheme.colorScheme.surface,
+                        unfocusedContainerColor = MiuixTheme.colorScheme.surfaceVariant,
                     ),
                     modifier = Modifier
                         .menuAnchor() // Important anchor for the dropdown
@@ -194,6 +196,11 @@ fun LoginScreen(
                 ) {
                     uiState.ispOptions.forEach { isp ->
                         DropdownMenuItem(
+                            modifier = Modifier
+                                .background(
+                                    color = MiuixTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(8.dp)
+                                ),
                             text = { Text(isp.name) },
                             onClick = {
                                 loginViewModel.onIspSelected(isp.id) // Update ViewModel state

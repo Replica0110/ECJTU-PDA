@@ -29,7 +29,11 @@ data class HomeUiState(
     val card: CardType? = null,
     val error: String? = null
 ): BaseUiState
-
+val availableIsp = listOf(
+    IspOption(1, "中国移动"),
+    IspOption(2, "中国电信"),
+    IspOption(3, "中国联通")
+)
 data class IspOption(val id: Int, val name: String)
 data class LoginUiState(
     val studentId: String = "",
@@ -37,11 +41,7 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val navigationEvent: NavigationTarget? = null,
-    val ispOptions: List<IspOption> = listOf(
-        IspOption(1, "中国移动"),
-        IspOption(2, "中国电信"),
-        IspOption(3, "中国联通")
-    ),
+    val ispOptions: List<IspOption> = availableIsp,
     val selectedIspId: Int = 1
 ): BaseUiState
 data class WifiUiState(
@@ -55,6 +55,9 @@ data class WifiUiState(
 ):BaseUiState
 
 data class SettingUiState(
+    val studentId: String = "",
+    val password: String = "",
+    val ispSelected: IspOption = IspOption(1, "中国移动"),
     val isLoading: Boolean = false,
     val error: String? = null
 ): BaseUiState

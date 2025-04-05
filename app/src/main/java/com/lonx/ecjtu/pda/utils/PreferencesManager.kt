@@ -53,11 +53,33 @@ class PreferencesManager private constructor(context: Context) {
             putString("password", password)
         }
     }
+    fun saveCredentials(studentId: String, password: String, isp: Int) {
+        edit {
+            putString("student_id", studentId)
+            putString("password", password)
+            putInt("isp", isp)
+        }
+    }
     /*清空账号及密码*/
     fun clearCredentials() {
         edit {
             remove("student_id")
             remove("password")
+            remove("isp")
         }
+    }
+    fun getCredentials(): Triple<String, String, Int> {
+        return if (
+            preferences.contains("student_id") && preferences.contains("password") && preferences.contains("isp")
+        ) {
+            Triple(
+                preferences.getString("student_id", "") ?: "",
+                preferences.getString("password", "") ?: "",
+                preferences.getInt("isp", 1)
+            )
+        } else {
+            Triple("", "", 1)
+        }
+
     }
 }
