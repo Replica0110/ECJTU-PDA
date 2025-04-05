@@ -2,7 +2,6 @@ package com.lonx.ecjtu.pda.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -10,10 +9,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -53,6 +52,8 @@ fun AlertDialogContainer(
     titleAlign: TextAlign = TextAlign.Center,
     confirmButtonText: String = "确认",
     onConfirm: (() -> Unit)? = null,
+    maxWidth: Dp = 400.dp,
+    minWidth: Dp = 220.dp,
     dismissButtonText: String = "取消",
     onDismissAction: (() -> Unit)? = null,
     isLoading: Boolean = false,
@@ -64,7 +65,7 @@ fun AlertDialogContainer(
             properties = properties
         ) {
             Card(
-                modifier = modifier.padding(16.dp),
+                modifier = modifier.padding(16.dp).widthIn(min = minWidth, max = maxWidth),
             ) {
                 Column(
                     modifier = Modifier
@@ -97,8 +98,7 @@ fun AlertDialogContainer(
                                     text = dismissButtonText,
                                     modifier = Modifier.weight(1f),
                                     onClick = {
-                                        onDismissAction()
-                                        onDismissRequest() },
+                                        onDismissAction() },
                                     enabled = !isLoading
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -109,8 +109,7 @@ fun AlertDialogContainer(
                             if (onConfirm != null) {
                                 TextButton(
                                     text = confirmButtonText,
-                                    onClick = { onConfirm()
-                                        onDismissRequest() },
+                                    onClick = { onConfirm() },
                                     colors = ButtonDefaults.textButtonColorsPrimary(),
                                     modifier = Modifier.weight(1f),
                                     enabled = !isLoading
@@ -186,6 +185,7 @@ fun InputAlertDialog(
     onDismissRequest: () -> Unit,
     onConfirm: (String) -> Unit,
     title: String,
+    modifier: Modifier = Modifier,
     label: String = "输入",
     initialValue: String = "",
     confirmButtonText: String = "确认",
@@ -196,6 +196,7 @@ fun InputAlertDialog(
     var inputText by remember(showDialog) { mutableStateOf(initialValue) }
 
     AlertDialogContainer(
+        modifier = modifier,
         showDialog = showDialog,
         onDismissRequest = onDismissRequest,
         title = title,

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
@@ -80,7 +81,7 @@ fun MainScreen(
     topLevelNavController: NavHostController,
     internalNavController: NavHostController
 ) {
-    val sidebarWidth = 200.dp
+    val sidebarWidth = 250.dp
     val sidebarWidthPx = with(LocalDensity.current) { sidebarWidth.toPx() }
     val animationSpec = tween<Float>(durationMillis = 300)
     val mainContentOffsetX = remember { Animatable(0f) }
@@ -332,7 +333,7 @@ fun MainScreen(
                                             },
                                         ) {
                                             top.yukonga.miuix.kmp.basic.Icon(
-                                                imageVector = MiuixIcons.Useful.Settings,
+                                                imageVector = Icons.Default.Menu,
                                                 tint = MiuixTheme.colorScheme.onBackground,
                                                 contentDescription = "侧边栏"
                                             )
@@ -358,7 +359,7 @@ fun MainScreen(
                                             },
                                         ) {
                                             top.yukonga.miuix.kmp.basic.Icon(
-                                                imageVector = MiuixIcons.Useful.Settings,
+                                                imageVector = Icons.Default.Menu,
                                                 tint = MiuixTheme.colorScheme.onBackground,
                                                 contentDescription = "侧边栏"
                                             )
@@ -411,21 +412,4 @@ fun MainScreen(
 
     }
 }
-class AppBarScrollStateHolder {
-    var scrollOffset: Float by mutableFloatStateOf(0f)
-        private set // 外部只能读取
 
-    fun updateScrollOffset(newOffset: Float) {
-        scrollOffset = newOffset
-        // 这里可以添加逻辑计算折叠比例等
-    }
-
-    fun resetScrollOffset() {
-        scrollOffset = 0f
-    }
-}
-
-@Composable
-fun rememberAppBarScrollStateHolder(): AppBarScrollStateHolder {
-    return remember { AppBarScrollStateHolder() }
-}

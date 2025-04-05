@@ -171,11 +171,10 @@ fun LoginScreen(
                 onExpandedChange = { ispDropdownExpanded = !ispDropdownExpanded },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // The TextField part of the dropdown
                 OutlinedTextField(
-                    value = selectedIspName, // Display the selected ISP's name
-                    onValueChange = {}, // Value change is handled by DropdownMenuItem click
-                    readOnly = true, // Make it non-editable
+                    value = selectedIspName,
+                    onValueChange = {},
+                    readOnly = true,
                     label = { Text("运营商") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = ispDropdownExpanded)
@@ -185,7 +184,7 @@ fun LoginScreen(
                         unfocusedContainerColor = MiuixTheme.colorScheme.surfaceVariant,
                     ),
                     modifier = Modifier
-                        .menuAnchor() // Important anchor for the dropdown
+                        .menuAnchor()
                         .fillMaxWidth()
                 )
 

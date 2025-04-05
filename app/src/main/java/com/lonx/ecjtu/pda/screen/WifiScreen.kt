@@ -21,14 +21,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +41,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
@@ -50,7 +48,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.ui.AlertDialogContainer
 import com.lonx.ecjtu.pda.ui.ConfirmAlertDialog
 import com.lonx.ecjtu.pda.ui.InfoAlertDialog
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
@@ -60,11 +57,10 @@ import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import timber.log.Timber
 import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.LazyColumn
+import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
@@ -83,9 +79,6 @@ fun WifiScreen(
     var dialogToShow by remember { mutableStateOf<DialogType?>(null) }
     var dialogTitle by remember { mutableStateOf("") }
     var dialogMessage by remember { mutableStateOf("") }
-    var showInfoDialog by remember { mutableStateOf(false) }
-    val infoDialogTitle by remember { mutableStateOf("") }
-    val infoDialogMessage by remember { mutableStateOf("") }
 
 
     val nestedScrollConnection = rememberAppBarNestedScrollConnection(
@@ -125,7 +118,7 @@ fun WifiScreen(
                 }
                 is UiEvent.RequestLocationPermission -> {
                     if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                        wifiViewModel.showPermissionExplain() // This will trigger ShowInfoDialog
+                        wifiViewModel.showPermissionExplain()
                     } else {
                         locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     }
@@ -148,17 +141,6 @@ fun WifiScreen(
             }
         }
     }
-    if (showInfoDialog) {
-        AlertDialog(
-            containerColor = MiuixTheme.colorScheme.background,
-            onDismissRequest = { showInfoDialog = false },
-            title = { Text(text = infoDialogTitle, style = MiuixTheme.textStyles.title3) },
-            text = { Text(text = infoDialogMessage)  },
-            confirmButton = {
-                TextButton(onClick = { showInfoDialog = false }, text = "确定")
-            }
-        )
-    }
     when (dialogToShow) {
         DialogType.INFO -> {
             InfoAlertDialog(
@@ -172,13 +154,13 @@ fun WifiScreen(
             ConfirmAlertDialog(
                 showDialog = true,
                 onDismissRequest = { dialogToShow = null },
+                onConfirm = {
+                    wifiViewModel.navigateToLocationSettings()
+                    dialogToShow = null
+                },
                 title = dialogTitle,
                 message = dialogMessage,
                 confirmButtonText = "去设置",
-                onConfirm = {
-                    wifiViewModel.userConfirmedNavigateToLocationSettings()
-                    dialogToShow = null
-                },
                 dismissButtonText = "取消"
             )
         }
@@ -186,170 +168,129 @@ fun WifiScreen(
             ConfirmAlertDialog(
                 showDialog = true,
                 onDismissRequest = { dialogToShow = null },
+                onConfirm = {
+                    wifiViewModel.navigateToAppSettings()
+                    dialogToShow = null // Hide dialog after action
+                },
                 title = dialogTitle,
                 message = dialogMessage,
                 confirmButtonText = "去设置",
-                onConfirm = {
-                    wifiViewModel.userConfirmedNavigateToAppSettings()
-                    dialogToShow = null // Hide dialog after action
-                },
                 dismissButtonText = "取消"
             )
         }
         null -> {
-            // No dialog to show
         }
     }
-//    if (showLocationEnablePromptDialog) {
-//        AlertDialog(
-//            containerColor = MiuixTheme.colorScheme.background,
-//            onDismissRequest = { showLocationEnablePromptDialog = false },
-//            title = { Text(text = "需要开启位置信息", style = MiuixTheme.textStyles.title3) },
-//            text = {  Text("应用需要您开启位置信息服务以获取WiFi信息，是否前往设置开启？")  },
-//            confirmButton = {
-//                TextButton(
-//                    colors = ButtonDefaults.textButtonColorsPrimary(),
-//                    onClick = {
-//                        wifiViewModel.userConfirmedNavigateToLocationSettings()
-//                        showLocationEnablePromptDialog = false
-//                    },
-//                    text = "去设置"
-//                )
-//            },
-//            dismissButton = {
-//                TextButton(onClick = { showLocationEnablePromptDialog = false }, text = "取消")
-//
-//            }
-//        )
-//    }
-//    if (showPermissionDeniedDialog) {
-//        AlertDialog(
-//            containerColor = MiuixTheme.colorScheme.background,
-//            onDismissRequest = { showPermissionDeniedDialog = false },
-//            title = { Text("需要位置权限", style = MiuixTheme.textStyles.title3) },
-//            text = {   Text("请在应用设置中手动授予位置权限以获取WiFi信息。")  },
-//            confirmButton = {
-//                TextButton(
-//                    colors = ButtonDefaults.textButtonColorsPrimary(),
-//                    onClick = {
-//                        wifiViewModel.userConfirmedNavigateToAppSettings()
-//                        showPermissionDeniedDialog = false
-//                    }, text = "去设置"
-//
-//                )
-//
-//            },
-//            dismissButton = {
-//                TextButton(onClick = { showPermissionDeniedDialog = false }, text = "取消")
-//            }
-//        )
-//    }
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(nestedScrollConnection),
-        contentPadding = padding
+
+    Scaffold(
     ) {
-        item {
-            Card(
-                modifier = Modifier
-                    .padding(16.dp),
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 90.dp)
-                            .clickable(onClick = { wifiViewModel.onOpenWifiSettingsClicked() }),
-                        contentAlignment = Alignment.Center
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection),
+            contentPadding = padding
+        ) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .padding(16.dp),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 90.dp)
+                                .clickable(onClick = { wifiViewModel.onOpenWifiSettingsClicked() }),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = uiState.wifiStatusIconRes),
+                                contentDescription = "WiFi Status Icon",
+                                modifier = Modifier.size(64.dp),
+                            )
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        ListItem(
+                            headlineContent = { Text("网络状态") },
+                            trailingContent = {
+                                Text(
+                                    style = MiuixTheme.textStyles.subtitle,
+                                    color = MiuixTheme.colorScheme.onSecondaryVariant,
+                                    text = uiState.wifiStatusText,
+                                )
+                            },
+                            modifier = Modifier.clickable(onClick = { wifiViewModel.onOpenWifiSettingsClicked() }),
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        ListItem(
+                            headlineContent = { Text("SSID / 状态") },
+                            trailingContent = {
+                                Text(
+                                    style = MiuixTheme.textStyles.subtitle,
+                                    color = MiuixTheme.colorScheme.onSecondaryVariant,
+                                    text = uiState.ssid,
+                                )
+                            },
+                            modifier = Modifier.clickable(onClick = { wifiViewModel.onCheckPermissionsClicked() }),
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            Timber.d("Login Button Clicked")
+                            wifiViewModel.onLoginClicked()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
                     ) {
-                        Icon(
-                            painter = painterResource(id = uiState.wifiStatusIconRes),
-                            contentDescription = "WiFi Status Icon",
-                            modifier = Modifier.size(64.dp),
-                        )
+                        if (uiState.isLoadingIn) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("登录")
+                        }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-                    ListItem(
-                        headlineContent = { Text("网络状态") },
-                        trailingContent = {
-                            Text(
-                                style = MiuixTheme.textStyles.subtitle,
-                                color = MiuixTheme.colorScheme.onSecondaryVariant,
-                                text = uiState.wifiStatusText,
-                            )
+                    Button(
+                        onClick = {
+                            Timber.d("Logout Button Clicked")
+                            wifiViewModel.onLogoutClicked()
                         },
-                        modifier = Modifier.clickable(onClick = { wifiViewModel.onOpenWifiSettingsClicked() }),
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-                    ListItem(
-                        headlineContent = { Text("SSID / 状态") },
-                        trailingContent = {
-                            Text(
-                                style = MiuixTheme.textStyles.subtitle,
-                                color = MiuixTheme.colorScheme.onSecondaryVariant,
-                                text = uiState.ssid,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
+                    ) {
+                        if (uiState.isLoadingOut) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
                             )
-                        },
-                        modifier = Modifier.clickable(onClick = { wifiViewModel.onCheckPermissionsClicked() }),
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
+                        } else {
+                            Text("注销")
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        Timber.d("Login Button Clicked")
-                        wifiViewModel.onLoginClicked()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
-                ) {
-                    if (uiState.isLoadingIn) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("登录")
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        Timber.d("Logout Button Clicked")
-                        wifiViewModel.onLogoutClicked()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
-                ) {
-                    if (uiState.isLoadingOut) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("注销")
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
-
     }
 }
 private enum class DialogType {

@@ -169,7 +169,7 @@ class WifiViewModel(
         }
     }
 
-    fun userConfirmedNavigateToLocationSettings() {
+    fun navigateToLocationSettings() {
         viewModelScope.launch {
             _uiEvent.emit(UiEvent.NavigateToLocationSettings)
         }
@@ -214,7 +214,7 @@ class WifiViewModel(
     }
 
 
-    fun userConfirmedNavigateToAppSettings() {
+    fun navigateToAppSettings() {
         viewModelScope.launch {
             _uiEvent.emit(UiEvent.NavigateToAppSettings)
         }

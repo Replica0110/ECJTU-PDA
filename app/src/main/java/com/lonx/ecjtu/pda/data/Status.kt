@@ -1,8 +1,10 @@
 package com.lonx.ecjtu.pda.data
 
+import android.os.Parcelable
 import androidx.annotation.DrawableRes
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.base.BaseUiState
+import kotlinx.parcelize.Parcelize
 
 enum class NavigationTarget { LOGIN, MAIN }
 
@@ -34,7 +36,11 @@ val availableIsp = listOf(
     IspOption(2, "中国电信"),
     IspOption(3, "中国联通")
 )
-data class IspOption(val id: Int, val name: String)
+@Parcelize
+data class IspOption(
+    val id: Int,
+    val name: String
+) : Parcelable
 data class LoginUiState(
     val studentId: String = "",
     val password: String = "",

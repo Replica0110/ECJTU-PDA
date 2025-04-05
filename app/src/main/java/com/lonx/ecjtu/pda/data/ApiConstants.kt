@@ -16,14 +16,15 @@ object ApiConstants {
     const val GET_ELERTIVE_COURSE_URL_TEMPLATE = "https://$JWXT_ECJTU_DOMAIN/infoQuery/XKStu_findTerm.action"  // 获取选修课程信息(get)
     const val GET_STU_PROFILE_URL = "http://portal.$ECJTU_DOMAIN/dcp/profile/profile.action" // 获取个人信息
     const val DCP_URL = "http://portal.$ECJTU_DOMAIN/dcp/"
-    const val GET_STU_INFO_URL= "https://$JWXT_ECJTU_DOMAIN/stuMag/UserInfoAction_findUserInfo.action#basic" // 个人信息主页
+    const val GET_STU_INFO_URL= "https://$JWXT_ECJTU_DOMAIN/stuMag/UserInfoAction_findUserInfo.action" // 个人信息主页
     const val STU_AVATAR_L_URL= "http://portal.$ECJTU_DOMAIN/dcp/uploadfiles/avatar/large/"
     const val DCP_SSO_URL = "http://portal.$ECJTU_DOMAIN/dcp/sso/sso.action"
-
-    // Cookie Names
+    const val UPDATE_PASSWORD = "https://$JWXT_ECJTU_DOMAIN/stuMag/UserInfoAction_passwordUpdate.action" //修改密码
     const val COOKIE_CASTGC = "CASTGC"
     const val COOKIE_JSESSIONID = "JSESSIONID"
 
     const val METHOD_GET_AVATAR = "getAvatar"
     const val METHOD_GET_YKT_NUM = "getYktNum"
+
+    const val JWXT_LOGIN_PAGE_IDENTIFIER = "华东交通大学教务管理系统-登录"
 }

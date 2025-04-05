@@ -3,6 +3,7 @@ package com.lonx.ecjtu.pda.screen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +43,7 @@ fun SplashScreen(navController: NavHostController, viewModel: SplashViewModel = 
             }
             null -> {
                 Timber.tag("SplashScreen").d("navigationEvent is null, doing nothing.")
-                // Do nothing, wait for the event
+
             }
         }
     }
@@ -54,6 +55,7 @@ fun SplashScreen(navController: NavHostController, viewModel: SplashViewModel = 
                 modifier = Modifier
                     .padding(15.dp)
                     .padding(horizontal = 30.dp)
+                    .widthIn(max = 400.dp)
             )
         }
     }
