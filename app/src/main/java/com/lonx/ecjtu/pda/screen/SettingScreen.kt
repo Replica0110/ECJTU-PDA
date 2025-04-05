@@ -64,6 +64,7 @@ import androidx.compose.ui.window.PopupPositionProvider
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.IspOption
 import com.lonx.ecjtu.pda.data.availableIsp
+import com.lonx.ecjtu.pda.ui.AlertDialogContainer
 import com.lonx.ecjtu.pda.ui.CustomDropdownMenu
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
@@ -117,19 +118,20 @@ fun SettingScreen(
 
         }
     }
-    if (showConfigDialog.value) {
+//    if (showConfigDialog.value) {
         AccountConfigDialog(
             currentStudentId = uiState.studentId,
             currentPassword = uiState.password,
             currentIsp = uiState.ispSelected,
             isLoading = uiState.isLoading,
             error = uiState.error,
-            onDismiss = { showConfigDialog.value = false },
+            onDismissRequest = { showConfigDialog.value = false },
             onSave = { studentId, password, selectedIsp ->
                 settingViewModel.updateConfig(studentId, password, selectedIsp)
-            }
+            },
+            show = showConfigDialog.value
         )
-    }
+//    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -170,123 +172,85 @@ fun SettingScreen(
 }
 @Composable
 fun AccountConfigDialog(
+    show: Boolean,
     currentStudentId: String,
     currentPassword: String,
     currentIsp: IspOption,
     isLoading: Boolean,
     error: String?,
-    onDismiss: () -> Unit,
+    onDismissRequest: () -> Unit,
     onSave: (String, String, IspOption) -> Unit
 ) {
-    var tempStudentId by remember { mutableStateOf(currentStudentId) }
-    var tempPassword by remember { mutableStateOf(currentPassword) }
-    var tempSelectedIsp by remember { mutableStateOf(currentIsp) }
+    var tempStudentId by remember(show) { mutableStateOf(currentStudentId) }
+    var tempPassword by remember(show) { mutableStateOf(currentPassword) }
+    var tempSelectedIsp by remember(show) { mutableStateOf(currentIsp) }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
 
-    LaunchedEffect(currentStudentId, currentPassword, currentIsp) {
-        tempStudentId = currentStudentId
-        tempPassword = currentPassword
-        tempSelectedIsp = currentIsp
-    }
+    AlertDialogContainer(
+        showDialog = show,
+        onDismissRequest = onDismissRequest,
+        title = "账号配置",
+        confirmButtonText = "保存",
+        onConfirm = {
+            onSave(tempStudentId, tempPassword, tempSelectedIsp)
 
+        },
+        dismissButtonText = "取消",
+        onDismissAction = { onDismissRequest() },
+        isLoading = isLoading
+    ) {
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        TextField(
+            label = "学号",
+            value = tempStudentId,
+            onValueChange = { tempStudentId = it },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
 
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Text("账号配置", style = MiuixTheme.textStyles.title3, textAlign = TextAlign.Center, modifier = Modifier
-                    .padding(top = 8.dp)
-                    .fillMaxWidth())
-                Spacer(modifier = Modifier.height(16.dp))
+        TextField(
+            label = "密码",
+            value = tempPassword,
+            onValueChange = { tempPassword = it },
+            singleLine = true,
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                val image = if (isPasswordVisible)
+                    painterResource(id = R.drawable.ic_visible)
+                else painterResource(id = R.drawable.ic_invisible)
 
-                TextField(
-                    label = "学号",
-                    value = tempStudentId,
-                    onValueChange = { tempStudentId = it },
-                    singleLine = true,
-
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next) // Adjust if needed
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                TextField(
-                    label = "密码",
-                    value = tempPassword,
-                    onValueChange = { tempPassword = it },
-                    singleLine = true,
-                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        val image = if (isPasswordVisible)
-                            painterResource(id = R.drawable.ic_visible)
-                        else painterResource(id = R.drawable.ic_invisible)
-
-                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                            Icon(image, contentDescription = if (isPasswordVisible) "隐藏密码" else "显示密码")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                CustomDropdownMenu(
-                    label = "运营商",
-                    options = availableIsp,
-                    selectedOption = tempSelectedIsp,
-                    onOptionSelected = { selectedIsp ->
-                        tempSelectedIsp = selectedIsp
-                    },
-                    optionToText = { ispOption -> ispOption.name },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                 
-                
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (error != null) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    Icon(image, contentDescription = if (isPasswordVisible) "隐藏密码" else "显示密码")
                 }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(36.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    TextButton(
-                        onClick = { onDismiss() },
-                        enabled = !isLoading,
-                        modifier = Modifier.weight(1f),
-                        text = "取消")
-                    Spacer(modifier = Modifier.width(20.dp))
-                    TextButton(
-                        text = "保存",
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            onSave(tempStudentId, tempPassword, tempSelectedIsp)
-                            onDismiss()
-                                  },
-                        enabled = !isLoading
-                    )
-                }
-            }
+        // Use your encapsulated StyledDropdownMenu here
+        CustomDropdownMenu(
+            label = "运营商",
+            options = availableIsp,
+            selectedOption = tempSelectedIsp,
+            onOptionSelected = { selectedIsp -> tempSelectedIsp = selectedIsp },
+            optionToText = { ispOption -> ispOption.name },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Optional: Error message placement can be inside or outside the container's content
+        if (error != null) {
+            Spacer(modifier = Modifier.height(10.dp)) // Add space before error
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                // modifier = Modifier.padding(bottom = 8.dp) // Padding handled by container spacing
+            )
         }
+        // --- End of specific content ---
     }
 }

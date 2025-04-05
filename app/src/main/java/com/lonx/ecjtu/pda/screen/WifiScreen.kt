@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
@@ -49,6 +50,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.lonx.ecjtu.pda.ui.AlertDialogContainer
+import com.lonx.ecjtu.pda.ui.ConfirmAlertDialog
+import com.lonx.ecjtu.pda.ui.InfoAlertDialog
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.UiEvent
@@ -76,14 +80,13 @@ fun WifiScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
-
+    var dialogToShow by remember { mutableStateOf<DialogType?>(null) }
+    var dialogTitle by remember { mutableStateOf("") }
+    var dialogMessage by remember { mutableStateOf("") }
     var showInfoDialog by remember { mutableStateOf(false) }
-    var infoDialogTitle by remember { mutableStateOf("") }
-    var infoDialogMessage by remember { mutableStateOf("") }
+    val infoDialogTitle by remember { mutableStateOf("") }
+    val infoDialogMessage by remember { mutableStateOf("") }
 
-    var showLocationEnablePromptDialog by remember { mutableStateOf(false) }
-
-    var showPermissionDeniedDialog by remember { mutableStateOf(false) }
 
     val nestedScrollConnection = rememberAppBarNestedScrollConnection(
         scrollBehavior = scrollBehavior
@@ -110,46 +113,37 @@ fun WifiScreen(
     LaunchedEffect(key1 = wifiViewModel) {
         wifiViewModel.uiEvent.collect { event ->
             Timber.tag("WifiScreen").d("Received UiEvent: $event")
+            dialogToShow = null
             when (event) {
-                is UiEvent.NavigateToWifiSettings -> {
-                    val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-                    context.startActivity(intent)
-                }
-                is UiEvent.NavigateToLocationSettings -> {
-                    val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                    context.startActivity(intent)
-                    showLocationEnablePromptDialog = false
-                }
+                is UiEvent.NavigateToWifiSettings -> context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                is UiEvent.NavigateToLocationSettings -> context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                 is UiEvent.NavigateToAppSettings -> {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                         data = Uri.fromParts("package", context.packageName, null)
                     }
                     context.startActivity(intent)
-                    showPermissionDeniedDialog = false
                 }
                 is UiEvent.RequestLocationPermission -> {
                     if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                        wifiViewModel.showPermissionExplain()
+                        wifiViewModel.showPermissionExplain() // This will trigger ShowInfoDialog
                     } else {
                         locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     }
                 }
                 is UiEvent.ShowInfoDialog -> {
-                    infoDialogTitle = event.title
-                    infoDialogMessage = event.message
-                    showInfoDialog = true
-                    showLocationEnablePromptDialog = false
-                    showPermissionDeniedDialog = false
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                    dialogToShow = DialogType.INFO
                 }
                 is UiEvent.ShowLocationEnablePromptDialog -> {
-                    showLocationEnablePromptDialog = true
-                    showInfoDialog = false
-                    showPermissionDeniedDialog = false
+                    dialogTitle = "需要开启位置信息"
+                    dialogMessage = "应用需要您开启位置信息服务以获取WiFi信息，是否前往设置开启？"
+                    dialogToShow = DialogType.LOCATION_PROMPT
                 }
                 is UiEvent.ShowPermissionDeniedAppSettingsPromptDialog -> {
-                    showPermissionDeniedDialog = true
-                    showInfoDialog = false
-                    showLocationEnablePromptDialog = false
+                    dialogTitle = "需要位置权限"
+                    dialogMessage = "请在应用设置中手动授予位置权限以获取WiFi信息。"
+                    dialogToShow = DialogType.PERMISSION_DENIED
                 }
             }
         }
@@ -165,51 +159,91 @@ fun WifiScreen(
             }
         )
     }
-
-    if (showLocationEnablePromptDialog) {
-        AlertDialog(
-            containerColor = MiuixTheme.colorScheme.background,
-            onDismissRequest = { showLocationEnablePromptDialog = false },
-            title = { Text(text = "需要开启位置信息", style = MiuixTheme.textStyles.title3) },
-            text = {  Text("应用需要您开启位置信息服务以获取WiFi信息，是否前往设置开启？")  },
-            confirmButton = {
-                TextButton(
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    onClick = {
-                        wifiViewModel.userConfirmedNavigateToLocationSettings()
-                        showLocationEnablePromptDialog = false
-                    },
-                    text = "去设置"
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = { showLocationEnablePromptDialog = false }, text = "取消")
-
-            }
-        )
+    when (dialogToShow) {
+        DialogType.INFO -> {
+            InfoAlertDialog(
+                showDialog = true,
+                onDismissRequest = { dialogToShow = null },
+                title = dialogTitle,
+                message = dialogMessage
+            )
+        }
+        DialogType.LOCATION_PROMPT -> {
+            ConfirmAlertDialog(
+                showDialog = true,
+                onDismissRequest = { dialogToShow = null },
+                title = dialogTitle,
+                message = dialogMessage,
+                confirmButtonText = "去设置",
+                onConfirm = {
+                    wifiViewModel.userConfirmedNavigateToLocationSettings()
+                    dialogToShow = null
+                },
+                dismissButtonText = "取消"
+            )
+        }
+        DialogType.PERMISSION_DENIED -> {
+            ConfirmAlertDialog(
+                showDialog = true,
+                onDismissRequest = { dialogToShow = null },
+                title = dialogTitle,
+                message = dialogMessage,
+                confirmButtonText = "去设置",
+                onConfirm = {
+                    wifiViewModel.userConfirmedNavigateToAppSettings()
+                    dialogToShow = null // Hide dialog after action
+                },
+                dismissButtonText = "取消"
+            )
+        }
+        null -> {
+            // No dialog to show
+        }
     }
-    if (showPermissionDeniedDialog) {
-        AlertDialog(
-            containerColor = MiuixTheme.colorScheme.background,
-            onDismissRequest = { showPermissionDeniedDialog = false },
-            title = { Text("需要位置权限", style = MiuixTheme.textStyles.title3) },
-            text = {   Text("请在应用设置中手动授予位置权限以获取WiFi信息。")  },
-            confirmButton = {
-                TextButton(
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    onClick = {
-                        wifiViewModel.userConfirmedNavigateToAppSettings()
-                        showPermissionDeniedDialog = false
-                    }, text = "去设置"
-
-                )
-
-            },
-            dismissButton = {
-                TextButton(onClick = { showPermissionDeniedDialog = false }, text = "取消")
-            }
-        )
-    }
+//    if (showLocationEnablePromptDialog) {
+//        AlertDialog(
+//            containerColor = MiuixTheme.colorScheme.background,
+//            onDismissRequest = { showLocationEnablePromptDialog = false },
+//            title = { Text(text = "需要开启位置信息", style = MiuixTheme.textStyles.title3) },
+//            text = {  Text("应用需要您开启位置信息服务以获取WiFi信息，是否前往设置开启？")  },
+//            confirmButton = {
+//                TextButton(
+//                    colors = ButtonDefaults.textButtonColorsPrimary(),
+//                    onClick = {
+//                        wifiViewModel.userConfirmedNavigateToLocationSettings()
+//                        showLocationEnablePromptDialog = false
+//                    },
+//                    text = "去设置"
+//                )
+//            },
+//            dismissButton = {
+//                TextButton(onClick = { showLocationEnablePromptDialog = false }, text = "取消")
+//
+//            }
+//        )
+//    }
+//    if (showPermissionDeniedDialog) {
+//        AlertDialog(
+//            containerColor = MiuixTheme.colorScheme.background,
+//            onDismissRequest = { showPermissionDeniedDialog = false },
+//            title = { Text("需要位置权限", style = MiuixTheme.textStyles.title3) },
+//            text = {   Text("请在应用设置中手动授予位置权限以获取WiFi信息。")  },
+//            confirmButton = {
+//                TextButton(
+//                    colors = ButtonDefaults.textButtonColorsPrimary(),
+//                    onClick = {
+//                        wifiViewModel.userConfirmedNavigateToAppSettings()
+//                        showPermissionDeniedDialog = false
+//                    }, text = "去设置"
+//
+//                )
+//
+//            },
+//            dismissButton = {
+//                TextButton(onClick = { showPermissionDeniedDialog = false }, text = "取消")
+//            }
+//        )
+//    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -317,4 +351,9 @@ fun WifiScreen(
         }
 
     }
+}
+private enum class DialogType {
+    INFO,
+    LOCATION_PROMPT,
+    PERMISSION_DENIED
 }
