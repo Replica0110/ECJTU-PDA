@@ -12,6 +12,8 @@ import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.LoginResult
+import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
+import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.StudentInfo
 import com.lonx.ecjtu.pda.utils.PersistentCookieJar
@@ -81,8 +83,8 @@ class JwxtService(
      * 处理密码加密、获取 LT 值和重定向。
      */
     suspend fun login(forceRefresh: Boolean = false): LoginResult = withContext(Dispatchers.IO) {
-        val studentId = preferencesManager.getString("student_id", "")
-        val studentPassword = preferencesManager.getString("password", "")
+        val studentId = preferencesManager.getString(STUDENT_ID, "")
+        val studentPassword = preferencesManager.getString(PASSWORD, "")
         val sessionTimeOut = checkSession()
         // 检查凭据是否存在
         if (studentId.isBlank() || studentPassword.isBlank()) {

@@ -126,7 +126,7 @@ class SettingViewModel(
     fun updateWeiXinId(weiXinId: String){
         viewModelScope.launch{
             try {
-                prefs.putString("weixin_id", weiXinId)
+                prefs.setWeiXinId(weiXinId)
                 _uiState.update { it.copy(weiXinId = weiXinId) }
                 _uiEvent.emit(SettingUiEvent.ShowSnackbar("保存成功", true))
             } catch (e: Exception) {

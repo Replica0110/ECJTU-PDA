@@ -233,10 +233,8 @@ class WifiViewModel(
         }
 
         d { "校园网登录中" }
-        val stuId = prefs.getString("student_id", "")
-        val stuPwd = prefs.getString("password", "")
-        val isp = prefs.getInt("isp", 1)
-
+        val credentials = prefs.getCredentials()
+        val (stuId, stuPwd, isp) = credentials
         if (stuId.isEmpty() || stuPwd.isEmpty()) {
             viewModelScope.launch {
                 _uiEvent.emit(UiEvent.ShowInfoDialog("登录信息", "请先设置学号和密码"))

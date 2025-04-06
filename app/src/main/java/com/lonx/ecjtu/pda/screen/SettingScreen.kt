@@ -91,7 +91,7 @@ fun SettingScreen(
                 old, new
             )
         },
-        initialOldPassword = "",
+        initialOldPassword = uiState.password,
         confirmButtonText = "确认",
         dismissButtonText = "取消",
         isLoading = uiState.isLoading

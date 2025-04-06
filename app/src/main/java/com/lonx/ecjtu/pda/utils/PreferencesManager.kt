@@ -2,6 +2,10 @@ package com.lonx.ecjtu.pda.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.lonx.ecjtu.pda.data.PrefKeys.ISP
+import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
+import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
+import com.lonx.ecjtu.pda.data.PrefKeys.WEI_XIN_ID
 import timber.log.Timber
 
 class PreferencesManager private constructor(context: Context) {
@@ -38,7 +42,7 @@ class PreferencesManager private constructor(context: Context) {
     }
     /** 检查是否已经保存学号和密码*/
     fun hasCredentials(): Boolean {
-        return preferences.contains("student_id") && preferences.contains("password")
+        return preferences.contains(STUDENT_ID) && preferences.contains(PASSWORD)
     }
 
     private fun edit(function: SharedPreferences.Editor.() -> Unit) {
@@ -46,37 +50,36 @@ class PreferencesManager private constructor(context: Context) {
     }
     fun setWeiXinId(id: String) {
         edit {
-            putString("weixin_id", id)
+            putString(WEI_XIN_ID, id)
         }
     }
     fun getWeiXinId(): String {
-        Timber.e("getWeiXinId - Retrieved: ID='${preferences.getString("weixin_id", "")}'")
-        return preferences.getString("weixin_id", "") ?: ""
+        return preferences.getString(WEI_XIN_ID, "") ?: ""
     }
     /**保存账号及密码 */
     fun saveCredentials(studentId: String, password: String, isp: Int? = null) {
         edit {
-            putString("student_id", studentId)
-            putString("password", password)
+            putString(STUDENT_ID, studentId)
+            putString(PASSWORD, password)
             if (isp != null) {
-                putInt("isp", isp)
+                putInt(ISP, isp)
             } else {
-                remove("isp")
+                remove(ISP)
             }
         }
     }
     /*清空账号及密码*/
     fun clearCredentials() {
         edit {
-            remove("student_id")
-            remove("password")
-            remove("isp")
+            remove(STUDENT_ID)
+            remove(PASSWORD)
+            remove(ISP)
         }
     }
     fun getCredentials(): Triple<String, String, Int> {
-        val studentId = preferences.getString("student_id", "") ?: ""
-        val password = preferences.getString("password", "") ?: ""
-        val ispId = preferences.getInt("isp", 1)
+        val studentId = preferences.getString(STUDENT_ID, "") ?: ""
+        val password = preferences.getString(PASSWORD, "") ?: ""
+        val ispId = preferences.getInt(ISP, 1)
 
         Timber.d("getCredentials - Retrieved: ID='$studentId', Pass='***', ISP=$ispId")
 
