@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.ui.InfoAlertDialog
 import com.lonx.ecjtu.pda.ui.InputAlertDialog
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection

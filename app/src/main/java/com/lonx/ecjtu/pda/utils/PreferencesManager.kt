@@ -46,7 +46,9 @@ class PreferencesManager private constructor(context: Context) {
     }
 
     private fun edit(function: SharedPreferences.Editor.() -> Unit) {
-        preferences.edit().apply(function)
+        preferences.edit().apply {
+            function()
+        }.apply()
     }
     fun setWeiXinId(id: String) {
         edit {
@@ -81,7 +83,7 @@ class PreferencesManager private constructor(context: Context) {
         val password = preferences.getString(PASSWORD, "") ?: ""
         val ispId = preferences.getInt(ISP, 1)
 
-        Timber.d("getCredentials - Retrieved: ID='$studentId', Pass='***', ISP=$ispId")
+        Timber.e("getCredentials - Retrieved: ID='$studentId', Pass='***', ISP=$ispId")
 
         return Triple(studentId, password, ispId)
     }

@@ -11,9 +11,12 @@ import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
+import com.lonx.ecjtu.pda.data.CourseData
+import com.lonx.ecjtu.pda.data.CourseInfo
 import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
 import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
+import com.lonx.ecjtu.pda.data.PrefKeys.WEI_XIN_ID
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.StudentInfo
 import com.lonx.ecjtu.pda.utils.PersistentCookieJar
@@ -38,14 +41,14 @@ import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
 class JwxtService(
-    private val preferencesManager: PreferencesManager, // 用于存储和读取设置（如学号密码）
+    private val prefes: PreferencesManager, // 用于存储和读取设置（如学号密码）
     private val cookieJar: PersistentCookieJar,         // 用于持久化存储 Cookie
     private val client: OkHttpClient                     // 用于执行网络请求
 ): BaseService {
     private val maxRetries = 3 // 最大重试次数
     private val gson = Gson()  // 用于 JSON 解析
     private val reLoginMutex = Mutex()
-    private val isReLoggingIn = AtomicBoolean(false)
+
     init {
         Timber.d("JwxtService 初始化完成。")
     }
@@ -83,8 +86,8 @@ class JwxtService(
      * 处理密码加密、获取 LT 值和重定向。
      */
     suspend fun login(forceRefresh: Boolean = false): LoginResult = withContext(Dispatchers.IO) {
-        val studentId = preferencesManager.getString(STUDENT_ID, "")
-        val studentPassword = preferencesManager.getString(PASSWORD, "")
+        val studentId = prefes.getString(STUDENT_ID, "")
+        val studentPassword = prefes.getString(PASSWORD, "")
         val sessionTimeOut = checkSession()
         // 检查凭据是否存在
         if (studentId.isBlank() || studentPassword.isBlank()) {
@@ -195,7 +198,7 @@ class JwxtService(
         Timber.d("CookieJar 已清除。")
 
         if (clearStoredCredentials) {
-            preferencesManager.clearCredentials()
+            prefes.clearCredentials()
             Timber.d("存储的凭据已清除。")
         } else {
             Timber.d("选择不清除存储的凭据。")
@@ -904,19 +907,11 @@ class JwxtService(
         }
     }
 
-
-    /** 使用 PreferencesManager 保存凭据。 */
-    fun saveCredentials(studentId: String, studentPass: String, ispOption: Int? = null) {
-         preferencesManager.saveCredentials(studentId, studentPass, ispOption)
-
-        Timber.d("凭据已保存到 PreferencesManager。")
-    }
-
     /**
      * 使用提供的凭据执行登录，并在成功时保存它们。
      * 在尝试登录前清除现有会话。
      */
-    suspend fun loginManually(studentId: String, studentPass: String): LoginResult = withContext(Dispatchers.IO) {
+    suspend fun loginManually(studentId: String, studentPass: String,ispOption: Int): LoginResult = withContext(Dispatchers.IO) {
         // 1. 基本输入验证
         if (studentId.isBlank() || studentPass.isBlank()) {
             Timber.w("尝试使用空白凭据进行手动登录!")
@@ -986,8 +981,8 @@ class JwxtService(
         }
 
         // --- 重要：完全成功后保存凭据 ---
-        Timber.i("用户 $studentId 手动登录成功。正在保存凭据。")
-        saveCredentials(studentId, studentPass) // 使用内部保存方法
+//        Timber.i("用户 $studentId 手动登录成功。正在保存凭据。")
+//        prefes.saveCredentials(studentId, studentPass, ispOption)
 
         Timber.i("用户 $studentId 的手动登录过程成功完成")
         return@withContext LoginResult.Success("登录成功")
@@ -1052,6 +1047,156 @@ class JwxtService(
         // 在 IO 线程执行
         return withContext(Dispatchers.IO) {
             client.newCall(requestBuilder.build()).execute()
+        }
+    }
+
+    /**
+     * 获取指定日期的课程表信息，返回包含日期和课程列表的 DayCourses 对象。
+     *
+     * @param [dateQuery] 查询日期，格式为 "YYYY-MM-DD"。如果为 null 或空，则获取当天的课表。
+     * @return [ServiceResult] 包含 [CourseData.DayCourses] 或错误信息。
+     */
+    suspend fun getCourseSchedule(dateQuery: String? = null): ServiceResult<CourseData.DayCourses> = withContext(Dispatchers.IO) {
+        Timber.e("开始获取课程表信息... 查询日期: ${dateQuery ?: "未指定"}")
+
+        val weiXinId = prefes.getWeiXinId()
+        if (weiXinId.isBlank()) {
+            Timber.e("警告：无法从持久化存储中获取 weiXinID。将尝试不带此参数请求课表。")
+            return@withContext ServiceResult.Error("配置错误：缺少 weiXinID")
+        }
+
+        try {
+            val urlBuilder = ApiConstants.COURSE_SCHEDULE_URL.toHttpUrlOrNull()?.newBuilder()
+                ?: return@withContext ServiceResult.Error("内部错误：课程表 URL 配置无效")
+
+            if (weiXinId.isNotBlank()) {
+                urlBuilder.addQueryParameter("weiXinID", weiXinId)
+            }
+            if (!dateQuery.isNullOrBlank()) {
+                urlBuilder.addQueryParameter("date", dateQuery)
+            }
+            val targetUrl = urlBuilder.build()
+
+
+            val request = Request.Builder()
+                .url(targetUrl)
+                .get()
+                .build()
+
+            Timber.d("正在向 $targetUrl 发送 GET 请求获取课程表")
+
+            val response = client.newCall(request).execute()
+
+            response.use { it ->
+                if (!it.isSuccessful) {
+                    Timber.e("获取课程表页面失败: HTTP ${it.code}")
+                    throw IOException("获取课程表页面失败: HTTP ${it.code}")
+                }
+
+                val htmlBody = it.body?.string()
+                if (htmlBody.isNullOrBlank()) {
+                    Timber.e("获取课程表页面成功，但响应体为空。")
+                    throw ParseException("课程表页面响应体为空")
+                }
+
+                Timber.d("获取课程表页面成功，开始解析 HTML...")
+                val document = Jsoup.parse(htmlBody)
+
+                val extractedDate = document.selectFirst("div.center")?.text()?.trim()
+                val scheduleDate = if (extractedDate.isNullOrBlank()) {
+                    Timber.e("无法从 'div.center' 解析日期，将使用默认值。")
+                    "日期未知"
+                } else {
+                    extractedDate
+                }
+                Timber.e("解析得到的日期: $scheduleDate")
+
+                val courseListElement = document.selectFirst("div.calendar ul.rl_info")
+
+                if (courseListElement == null) {
+                    Timber.e("无法在 HTML 中找到课程列表容器 (div.calendar ul.rl_info)。页面结构可能已更改。返回带日期的空课表。")
+                    return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, emptyList()))
+                }
+
+                val hasImagePlaceholder = courseListElement.selectFirst("li > p > img") != null
+                if (hasImagePlaceholder) {
+                    Timber.e("检测到图片占位符，表示当天无课。返回带日期的空课表。")
+                    return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, emptyList()))
+                }
+
+                val courses = mutableListOf<CourseData.CourseInfo>()
+                val listItems = courseListElement.select("li")
+
+                if (listItems.isEmpty()) {
+                    Timber.i("课程列表容器存在，但未找到 'li' 元素（且非图片占位符），表示当天无课。返回带日期的空课表。")
+                    return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, emptyList()))
+                }
+
+                Timber.e("找到 ${listItems.size} 个课程条目，开始解析...")
+                for (item in listItems) {
+                    try {
+                        val pElement = item.selectFirst("p")
+                        if (pElement == null) {
+                            Timber.w("跳过一个 'li' 条目，因为它不包含 'p' 标签。")
+                            continue
+                        }
+                        val contentNodes = pElement.childNodes()
+                        val textParts = mutableListOf<String>()
+                        contentNodes.forEach { node ->
+                            if (node is org.jsoup.nodes.TextNode) {
+                                val text = node.text().trim()
+                                if (text.isNotEmpty()) {
+                                    textParts.add(text)
+                                }
+                            }
+                        }
+
+                        val courseName = textParts.getOrNull(0) ?: "N/A"
+
+                        val rawTimeInfo = textParts.getOrNull(1) ?: ""
+                        val timeParts = rawTimeInfo.substringAfter("时间：", "").trim().split(' ', limit = 2)
+                        val courseWeek = if (timeParts.isNotEmpty()) timeParts[0].trim().takeIf { it.isNotEmpty() } ?: "N/A" else "N/A"
+                        val courseTime = if (timeParts.size > 1) timeParts[1].trim().takeIf { it.isNotEmpty() } ?: "N/A" else "N/A"
+
+
+                        val courseLocation = textParts.getOrNull(2)?.substringAfter("地点：", "")?.trim()?.takeIf { it.isNotEmpty() } ?: "N/A"
+
+                        val courseTeacher = textParts.getOrNull(3)?.substringAfter("教师：", "")?.trim()?.takeIf { it.isNotEmpty() } ?: "N/A"
+
+
+                        if (courseName != "N/A") {
+                            courses.add(
+                                CourseData.CourseInfo(
+                                    courseName = courseName,
+                                    courseTime = courseTime,
+                                    courseWeek = courseWeek,
+                                    courseLocation = courseLocation,
+                                    courseTeacher = courseTeacher
+                                )
+                            )
+                        } else {
+                            Timber.e("跳过一个条目，因为未能解析出有效的课程名称: ${pElement.text()}")
+                        }
+
+                    } catch (e: Exception) {
+                        Timber.e(e, "解析单个课程条目时出错: ${item.html()}")
+                        continue
+                    }
+                }
+
+                Timber.i("课程表解析成功，日期: $scheduleDate, 课程数: ${courses.size}")
+                return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, courses))
+
+            }
+        } catch (e: IOException) {
+            Timber.e(e, "获取课程表时发生网络或IO错误: ${e.message}")
+            return@withContext ServiceResult.Error("网络请求失败: ${e.message}", e)
+        } catch (e: ParseException) {
+            Timber.e(e, "解析课程表HTML时出错: ${e.message}")
+            return@withContext ServiceResult.Error("数据解析失败: ${e.message}", e)
+        } catch (e: Exception) {
+            Timber.e(e, "获取课程表时发生未知错误: ${e.message}")
+            return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
         }
     }
 

@@ -1,6 +1,8 @@
 package com.lonx.ecjtu.pda.data
 
 object ApiConstants {
+    const val COURSE_SCHEDULE_URL ="https://jwxt.ecjtu.edu.cn/weixin/CalendarServlet"
+
     const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/58.0.3029.110 Safari/537.3"
     const val ECJTU_DOMAIN = "ecjtu.edu.cn"
     const val PORTAL_ECJTU_DOMAIN = "http://portal.$ECJTU_DOMAIN/dcp/index.jsp"

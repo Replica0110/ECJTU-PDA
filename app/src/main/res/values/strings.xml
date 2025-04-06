@@ -2,4 +2,11 @@
     <string name="app_name">花椒PDA</string>
     <string name="back">返回</string>
     <string name="tile_click2login">一键登录</string>
+    <string name="widget_title_today">今日课程</string>
+    <string name="widget_title_tomorrow">明日课程</string>
+    <string name="empty_course">ο(=•ω＜=)ρ⌒☆</string>
+    <string name="widget_divider">分隔符</string>
+    <string name="sample_date">11.45</string>
+    <string name="widget_sample_week_number">星期八</string>
+    <string name="widget_sample_weekday">第十四周</string>
 </resources>

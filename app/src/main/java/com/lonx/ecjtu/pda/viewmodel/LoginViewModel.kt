@@ -39,11 +39,18 @@ class LoginViewModel(
             try {
                 val result = service.loginManually(
                     studentId = currentState.studentId,
-                    studentPass = currentState.password
+                    studentPass = currentState.password,
+                    ispOption = currentState.selectedIspId
                 )
 
                 if (result is LoginResult.Success) {
                     Timber.i("ViewModel: Manual login successful, navigating to Main.")
+                    prefs.saveCredentials(
+                        studentId = currentState.studentId,
+                        password = currentState.password,
+                        isp = currentState.selectedIspId
+                    )
+                    Timber.e("保存的信息如下：${prefs.getCredentials()}")
                     _uiState.update { it.copy(isLoading = false, navigationEvent = NavigationTarget.MAIN) }
                 } else {
                     val errorMsg = (result as LoginResult.Failure).error

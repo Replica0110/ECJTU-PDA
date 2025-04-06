@@ -73,8 +73,8 @@ class SettingViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                 service.saveCredentials(studentId, password, selectedIsp.id)
-                Timber.d("Saving: ID=$studentId, Pass=***, ISP=${selectedIsp.name}")
+                 prefs.saveCredentials(studentId, password, selectedIsp.id)
+                Timber.e("Saving: ID=$studentId, Pass=***, ISP=${selectedIsp.name}")
 
                 _uiState.update {
                     it.copy(
@@ -118,7 +118,7 @@ class SettingViewModel(
                 if (operationSuccessful) {
                     try {
                         val currentState = _uiState.value
-                        service.saveCredentials(currentState.studentId, newPassword, currentState.ispSelected.id)
+                        prefs.saveCredentials(currentState.studentId, newPassword, currentState.ispSelected.id)
 
                         _uiState.update { it.copy(password = newPassword, isLoading = false) }
 

@@ -57,7 +57,7 @@ val appModule = module {
 
     single<JwxtService> {
         JwxtService(
-            preferencesManager = get(),
+            prefes = get(),
             cookieJar = get(),
             client = get()
         )

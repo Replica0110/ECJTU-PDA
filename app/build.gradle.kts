@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.haze)
     implementation(libs.miuix)
     implementation(libs.koin.androidx.compose)
@@ -63,6 +64,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.library)
     implementation(libs.androidx.foundation.android)
+    implementation(libs.androidx.preference.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
