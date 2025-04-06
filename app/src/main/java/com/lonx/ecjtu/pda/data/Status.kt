@@ -65,6 +65,7 @@ data class SettingUiState(
     val studentId: String = "",
     val password: String = "",
     val ispSelected: IspOption = IspOption(1, "中国移动"),
+    val weiXinId:String = "",
     val isLoading: Boolean = false,
     val error: String? = null
 ): BaseUiState

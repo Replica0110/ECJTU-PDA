@@ -44,6 +44,15 @@ class PreferencesManager private constructor(context: Context) {
     private fun edit(function: SharedPreferences.Editor.() -> Unit) {
         preferences.edit().apply(function)
     }
+    fun setWeiXinId(id: String) {
+        edit {
+            putString("weixin_id", id)
+        }
+    }
+    fun getWeiXinId(): String {
+        Timber.e("getWeiXinId - Retrieved: ID='${preferences.getString("weixin_id", "")}'")
+        return preferences.getString("weixin_id", "") ?: ""
+    }
     /**保存账号及密码 */
     fun saveCredentials(studentId: String, password: String, isp: Int? = null) {
         edit {

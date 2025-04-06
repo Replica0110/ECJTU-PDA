@@ -45,11 +45,13 @@ class SettingViewModel(
                 val savedId = credentials.first
                 val savedPassword =  credentials.second
                 val savedIspId = credentials.third
+                val savedWeiXinId = prefs.getWeiXinId()
                 val selectedIsp = availableIsp.find { it.id == savedIspId } ?: currentState.ispSelected
                 currentState.copy(
                     studentId = savedId,
                     password = savedPassword,
-                    ispSelected = selectedIsp
+                    ispSelected = selectedIsp,
+                    weiXinId = savedWeiXinId
                 )
             }
         }
@@ -120,5 +122,18 @@ class SettingViewModel(
                 }
             }
         }
+    }
+    fun updateWeiXinId(weiXinId: String){
+        viewModelScope.launch{
+            try {
+                prefs.putString("weixin_id", weiXinId)
+                _uiState.update { it.copy(weiXinId = weiXinId) }
+                _uiEvent.emit(SettingUiEvent.ShowSnackbar("保存成功", true))
+            } catch (e: Exception) {
+                Timber.e(e, "保存weixinid失败")
+                _uiEvent.emit(SettingUiEvent.ShowSnackbar("保存失败", false))
+            }
+        }
+
     }
 }
