@@ -2,10 +2,10 @@ package com.lonx.ecjtu.pda.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.data.IspOption
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.SettingUiState
 import com.lonx.ecjtu.pda.data.availableIsp
 import com.lonx.ecjtu.pda.service.JwxtService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
@@ -17,11 +17,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
+
+
 sealed class SettingUiEvent {
     data class ShowSnackbar(val message: String,val success: Boolean) : SettingUiEvent()
 
     data object CloseDialog : SettingUiEvent()
 }
+
+data class SettingUiState(
+    val studentId: String = "",
+    val password: String = "",
+    val ispSelected: IspOption = IspOption(1, "中国移动"),
+    val weiXinId:String = "",
+    val isLoading: Boolean = false,
+    val error: String? = null
+): BaseUiState
+
 
 class SettingViewModel(
     override val service: JwxtService,
