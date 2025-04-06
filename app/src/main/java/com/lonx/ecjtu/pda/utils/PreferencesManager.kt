@@ -2,6 +2,7 @@ package com.lonx.ecjtu.pda.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import timber.log.Timber
 
 class PreferencesManager private constructor(context: Context) {
     private val preferences: SharedPreferences = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
@@ -41,23 +42,18 @@ class PreferencesManager private constructor(context: Context) {
     }
 
     private fun edit(function: SharedPreferences.Editor.() -> Unit) {
-        preferences.edit().apply {
-            function()
-            apply()
-        }
+        preferences.edit().apply(function)
     }
     /**保存账号及密码 */
-    fun saveCredentials(studentId: String, password: String) {
+    fun saveCredentials(studentId: String, password: String, isp: Int? = null) {
         edit {
             putString("student_id", studentId)
             putString("password", password)
-        }
-    }
-    fun saveCredentials(studentId: String, password: String, isp: Int) {
-        edit {
-            putString("student_id", studentId)
-            putString("password", password)
-            putInt("isp", isp)
+            if (isp != null) {
+                putInt("isp", isp)
+            } else {
+                remove("isp")
+            }
         }
     }
     /*清空账号及密码*/
@@ -69,17 +65,12 @@ class PreferencesManager private constructor(context: Context) {
         }
     }
     fun getCredentials(): Triple<String, String, Int> {
-        return if (
-            preferences.contains("student_id") && preferences.contains("password") && preferences.contains("isp")
-        ) {
-            Triple(
-                preferences.getString("student_id", "") ?: "",
-                preferences.getString("password", "") ?: "",
-                preferences.getInt("isp", 1)
-            )
-        } else {
-            Triple("", "", 1)
-        }
+        val studentId = preferences.getString("student_id", "") ?: ""
+        val password = preferences.getString("password", "") ?: ""
+        val ispId = preferences.getInt("isp", 1)
 
+        Timber.d("getCredentials - Retrieved: ID='$studentId', Pass='***', ISP=$ispId")
+
+        return Triple(studentId, password, ispId)
     }
 }
