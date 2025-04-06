@@ -86,7 +86,7 @@ class JwxtService(
         val sessionTimeOut = checkSession()
         // 检查凭据是否存在
         if (studentId.isBlank() || studentPassword.isBlank()) {
-            Timber.d("登录失败：账号为${studentId}，密码为${studentPassword}。")
+            Timber.e("登录失败：账号为${studentId}，密码为${studentPassword}。")
             Timber.e("登录失败：PreferencesManager 中缺少凭据。")
             return@withContext LoginResult.Failure("请先设置学号和密码")
         }
@@ -340,7 +340,7 @@ class JwxtService(
 
                         Timber.i("获取锁，检测到登录页，执行强制重新登录...")
                         try {
-                            logout(clearStoredCredentials = false) // 清理可能无效的旧 Cookie，注意不要清除账号密码
+                            logout(clearStoredCredentials = false) // 清理可能无效的旧 Cookie，不清除账号密码
                             val reLoginResult = login(forceRefresh = true) // 强制刷新登录
                             if (reLoginResult is LoginResult.Success) {
                                 // 重新登录成功后，最好再验证一下
@@ -905,11 +905,7 @@ class JwxtService(
 
     /** 使用 PreferencesManager 保存凭据。 */
     fun saveCredentials(studentId: String, studentPass: String, ispOption: Int? = null) {
-        if (ispOption != null){
-            preferencesManager.saveCredentials(studentId, studentPass, ispOption)
-        } else {
-            preferencesManager.saveCredentials(studentId, studentPass)
-        }
+         preferencesManager.saveCredentials(studentId, studentPass, ispOption)
 
         Timber.d("凭据已保存到 PreferencesManager。")
     }

@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
@@ -29,7 +30,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * @param selectedOption The currently selected option of type T.
  * @param onOptionSelected A callback invoked when an option is selected, returning the selected option T.
  * @param modifier Modifier to be applied to the root ExposedDropdownMenuBox.
- * @param optionToString A lambda function to convert an option of type T to its display String. Defaults to T.toString().
+ * @param optionToText A lambda function to convert an option of type T to its display String. Defaults to T.toString().
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +40,7 @@ fun <T> CustomDropdownMenu(
     selectedOption: T,
     onOptionSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
+    leadingIcon: @Composable () -> Unit = {},
     optionToText: (T) -> String
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -53,21 +55,21 @@ fun <T> CustomDropdownMenu(
             value = optionToText(selectedOption),
             onValueChange = {},
             label = label,
+            leadingIcon = leadingIcon,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
-                .menuAnchor()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                 .fillMaxWidth()
         )
 
         ExposedDropdownMenu(
-            modifier = Modifier,
             shape = RoundedCornerShape(16.dp),
             containerColor = MiuixTheme.colorScheme.surface,
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             options.forEach { option ->
-                val isSelected = option == selectedOption
+                val isSelected = remember(option, selectedOption) { option == selectedOption }
                 DropdownMenuItem(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     text = {

@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 sealed class SettingUiEvent {
-    data class ShowSnackbar(val message: String) : SettingUiEvent()
+    data class ShowSnackbar(val message: String,val success: Boolean) : SettingUiEvent()
 
     data object CloseDialog : SettingUiEvent()
 }
@@ -97,14 +97,26 @@ class SettingViewModel(
             } catch (e: Exception) {
                 feedbackMessage = "更新密码时发生错误: ${e.message ?: "未知错误"}"
             } finally {
-                _uiState.update { it.copy(isLoading = false) }
-
                 if (feedbackMessage.isNotBlank()) {
-                    _uiEvent.emit(SettingUiEvent.ShowSnackbar(feedbackMessage))
+                    _uiEvent.emit(SettingUiEvent.ShowSnackbar(feedbackMessage, operationSuccessful))
                 }
 
                 if (operationSuccessful) {
-                    _uiEvent.emit(SettingUiEvent.CloseDialog)
+                    try {
+                        val currentState = _uiState.value
+                        service.saveCredentials(currentState.studentId, newPassword, currentState.ispSelected.id)
+
+                        _uiState.update { it.copy(password = newPassword, isLoading = false) }
+
+                        _uiEvent.emit(SettingUiEvent.CloseDialog)
+
+                    } catch (saveError: Exception) {
+                        Timber.e(saveError, "Failed to save new password locally after successful server update!")
+                        _uiEvent.emit(SettingUiEvent.ShowSnackbar("密码已在服务器更新，但本地保存失败。", false))
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             }
         }

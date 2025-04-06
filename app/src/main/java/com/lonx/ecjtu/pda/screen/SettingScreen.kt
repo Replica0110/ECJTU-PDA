@@ -9,7 +9,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -24,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -65,6 +72,16 @@ fun SettingScreen(
     var showAccountDialog by rememberSaveable { mutableStateOf(false) }
     var showPasswordDialog by rememberSaveable  { mutableStateOf(false) }
     val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
+    // --- State for Snackbar Colors ---
+    var snackbarContainerColor by remember { mutableStateOf(Color.Unspecified) }
+    var snackbarContentColor by remember { mutableStateOf(Color.Unspecified) }
+
+    val successContainerColor = MiuixTheme.colorScheme.primaryContainer
+    val successContentColor = MiuixTheme.colorScheme.onPrimaryContainer
+    val errorContainerColor = MaterialTheme.colorScheme.errorContainer
+    val errorContentColor = MaterialTheme.colorScheme.onError
+    val defaultContainerColor = MiuixTheme.colorScheme.onSurfaceContainer
+    val defaultContentColor = MiuixTheme.colorScheme.onSurface
     // 账号配置对话框
     AccountConfigDialog(
         currentStudentId = uiState.studentId,
@@ -97,6 +114,13 @@ fun SettingScreen(
         settingViewModel.uiEvent.collect { event ->
             when (event) {
                 is SettingUiEvent.ShowSnackbar -> {
+                    if (event.success) {
+                        snackbarContainerColor = successContainerColor
+                        snackbarContentColor = successContentColor
+                    } else {
+                        snackbarContainerColor = errorContainerColor
+                        snackbarContentColor = errorContentColor
+                    }
                     snackbarHostState.showSnackbar(
                         message = event.message,
                         duration = SnackbarDuration.Short
@@ -109,7 +133,16 @@ fun SettingScreen(
         }
     }
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { snackbarData ->
+                Snackbar(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    containerColor = snackbarContainerColor.takeOrElse { defaultContainerColor },
+                    contentColor = snackbarContentColor.takeOrElse { defaultContentColor },
+                    snackbarData = snackbarData
+                )
+            }
+        },
     ) {
         LazyColumn(
             modifier = Modifier
@@ -216,6 +249,7 @@ fun AccountConfigDialog(
             value = tempStudentId,
             onValueChange = { tempStudentId = it },
             singleLine = true,
+            leadingIcon = { Icon( Icons.Default.Person, contentDescription = "学号图标", modifier = Modifier.padding(horizontal = 4.dp)) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
         )
@@ -227,6 +261,7 @@ fun AccountConfigDialog(
             singleLine = true,
             visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "密码图标", modifier = Modifier.padding(horizontal = 4.dp)) },
             trailingIcon = {
                 val image = if (isPasswordVisible)
                     painterResource(id = R.drawable.ic_visible)
@@ -242,6 +277,7 @@ fun AccountConfigDialog(
         CustomDropdownMenu(
             label = "运营商",
             options = availableIsp,
+            leadingIcon = { Icon(Icons.Default.Call, contentDescription = "运营商图标", modifier = Modifier.padding(horizontal = 4.dp))},
             selectedOption = tempSelectedIsp,
             onOptionSelected = { selectedIsp -> tempSelectedIsp = selectedIsp },
             optionToText = { ispOption -> ispOption.name },
@@ -296,6 +332,9 @@ fun ChangePasswordDialog(
             focusManager.clearFocus()
             onConfirm(oldPassword, newPassword)
             if (internalError == null) {
+                oldPassword = ""
+                newPassword = ""
+                confirmPassword = ""
                 onDismissRequest()
             }
         },
@@ -308,6 +347,13 @@ fun ChangePasswordDialog(
             onValueChange = { oldPassword = it; internalError = null },
             label = "当前密码",
             singleLine = true,
+            leadingIcon = {
+                androidx.compose.material3.Icon(
+                    Icons.Default.Lock,
+                    contentDescription = "密码图标",
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            },
             visualTransformation = if (isOldPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
@@ -329,6 +375,13 @@ fun ChangePasswordDialog(
             onValueChange = { newPassword = it; internalError = null },
             label = "新密码",
             singleLine = true,
+            leadingIcon = {
+                androidx.compose.material3.Icon(
+                    Icons.Default.Lock,
+                    contentDescription = "密码图标",
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            },
             visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
@@ -349,6 +402,13 @@ fun ChangePasswordDialog(
             onValueChange = { confirmPassword = it; internalError = null },
             label = "确认新密码",
             singleLine = true,
+            leadingIcon = {
+                androidx.compose.material3.Icon(
+                    Icons.Default.Lock,
+                    contentDescription = "密码图标",
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            },
             visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,

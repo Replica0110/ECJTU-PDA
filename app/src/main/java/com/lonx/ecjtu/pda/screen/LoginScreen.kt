@@ -1,6 +1,5 @@
 package com.lonx.ecjtu.pda.screen
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,30 +7,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -54,27 +42,25 @@ import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.data.NavigationTarget
+import com.lonx.ecjtu.pda.ui.CustomDropdownMenu
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    loginViewModel: LoginViewModel = koinViewModel(), // Use Koin or your DI
+    loginViewModel: LoginViewModel = koinViewModel(),
     onLoginSuccess: () -> Unit
 ) {
     val uiState by loginViewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     var passwordVisible by remember { mutableStateOf(false) }
-    var ispDropdownExpanded by remember { mutableStateOf(false) }
-
-    val selectedIspName = remember(uiState.selectedIspId, uiState.ispOptions) {
-        uiState.ispOptions.find { it.id == uiState.selectedIspId }?.name ?: "选择运营商" // Fallback text
-    }
 
     LaunchedEffect(uiState.navigationEvent) {
         if (uiState.navigationEvent == NavigationTarget.MAIN) {
@@ -112,34 +98,30 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
 
-            OutlinedTextField(
+            TextField(
                 value = uiState.studentId,
                 onValueChange = { loginViewModel.onStudentIdChange(it) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("学号") },
-                placeholder = { Text("请输入学号") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "学号图标") },
+                label = "学号",
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "学号图标", modifier = Modifier.padding(horizontal = 4.dp)) },
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text, // Changed to Text, can be Numbers if needed
-                    imeAction = ImeAction.Next // Move to next field
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
                 singleLine = true,
-                isError = uiState.error != null // Indicate error on both fields
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Password Input ---
-            OutlinedTextField(
+            TextField(
                 value = uiState.password,
                 onValueChange = { loginViewModel.onPasswordChange(it) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("密码") },
-                placeholder = { Text("请输入密码") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "密码图标") },
+                label = "密码",
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "密码图标", modifier = Modifier.padding(horizontal = 4.dp))},
                 trailingIcon = {
                     val image = if (passwordVisible)
                         painterResource(id = R.drawable.ic_visible)
@@ -153,99 +135,73 @@ fun LoginScreen(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Next // Change to Next to move to ISP selection
+                    imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
-                    // Move focus to the dropdown (or Login button if dropdown not focused)
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
                 singleLine = true,
-                isError = uiState.error != null // Indicate error on both fields
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- ISP Selection Dropdown ---
-            ExposedDropdownMenuBox(
-                expanded = ispDropdownExpanded,
-                onExpandedChange = { ispDropdownExpanded = !ispDropdownExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedIspName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("运营商") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = ispDropdownExpanded)
-                    },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                        focusedContainerColor = MiuixTheme.colorScheme.surface,
-                        unfocusedContainerColor = MiuixTheme.colorScheme.surfaceVariant,
-                    ),
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth()
-                )
+            val selectedIspObject = remember(uiState.selectedIspId, uiState.ispOptions) {
+                uiState.ispOptions.find { it.id == uiState.selectedIspId }
+            }
 
-                // The actual dropdown menu
-                ExposedDropdownMenu(
-                    expanded = ispDropdownExpanded,
-                    onDismissRequest = { ispDropdownExpanded = false } // Close when clicking outside
-                ) {
-                    uiState.ispOptions.forEach { isp ->
-                        DropdownMenuItem(
-                            modifier = Modifier
-                                .background(
-                                    color = MiuixTheme.colorScheme.surface,
-                                    shape = RoundedCornerShape(8.dp)
-                                ),
-                            text = { Text(isp.name) },
-                            onClick = {
-                                loginViewModel.onIspSelected(isp.id) // Update ViewModel state
-                                ispDropdownExpanded = false // Close the dropdown
-                                // Optionally move focus to login button or clear focus
-                                focusManager.moveFocus(FocusDirection.Down) // Move to Login button
-                            }
-                        )
-                    }
-                }
+            if (selectedIspObject != null && uiState.ispOptions.isNotEmpty()) {
+                CustomDropdownMenu(
+                    label = "运营商",
+                    options = uiState.ispOptions,
+                    leadingIcon = { Icon(Icons.Default.Call, contentDescription = "运营商图标", modifier = Modifier.padding(horizontal = 4.dp))},
+                    selectedOption = selectedIspObject,
+                    onOptionSelected = { selectedIsp ->
+                        loginViewModel.onIspSelected(selectedIsp.id)
+                        focusManager.moveFocus(FocusDirection.Down)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    optionToText = { isp -> isp.name }
+                )
+            } else {
+                TextField(
+                    value = if (uiState.ispOptions.isEmpty()) "加载中..." else "选择运营商",
+                    onValueChange = {},
+                    label = "运营商",
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- Login Button ---
-            Button( // Using standard Button, replace with ItemButton if needed
+            Button(
                 onClick = {
-                    focusManager.clearFocus() // Hide keyboard
+                    focusManager.clearFocus()
                     loginViewModel.attemptLogin()
                 },
-                enabled = !uiState.isLoading, // Disable button when loading
-                modifier = Modifier.fillMaxWidth().height(48.dp) // Ensure good button size
+                enabled = !uiState.isLoading,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary, // Color for indicator on button
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
                     )
                 } else {
                     Text("登录")
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp)) // Space before the hint text
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Hint Text ---
             Text(
-                text = "运营商选择用于校园网登录认证，如不清楚或不需要可忽略（将使用默认）。",
-                style = MaterialTheme.typography.bodySmall, // Smaller text style
-                color = MaterialTheme.colorScheme.onSurfaceVariant // Less prominent color
+                text = "运营商选择用于校园网登录认证，如不清楚或不需要可忽略。",
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceSecondary
             )
 
-            Spacer(modifier = Modifier.height(16.dp)) // Bottom padding within the Column
+            Spacer(modifier = Modifier.height(16.dp))
 
-        } // End Main Column
+        }
     }
 }
