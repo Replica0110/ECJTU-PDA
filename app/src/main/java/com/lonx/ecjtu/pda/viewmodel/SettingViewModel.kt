@@ -82,24 +82,20 @@ class SettingViewModel(
             var operationSuccessful = false
             var feedbackMessage = ""
 
-            try { // Add try block for service call
+            try {
                 when (val result = service.updatePassword(oldPassword, newPassword)) {
                     is ServiceResult.Success -> {
-                        Timber.i("Password update successful: ${result.data}") // Use Timber.i for info
-                        feedbackMessage = result.data ?: "密码修改成功"
+                        Timber.i("Password update successful: ${result.data}")
+                        feedbackMessage = result.data
                         operationSuccessful = true
                     }
                     is ServiceResult.Error -> {
-                        Timber.w("Password update failed: ${result.message}") // Use Timber.w for warning
-                        feedbackMessage = result.message ?: "密码修改失败"
-                        // Optionally update uiState.error here if needed
-                        // _uiState.update { it.copy(error = feedbackMessage) }
+                        Timber.w("Password update failed: ${result.message}")
+                        feedbackMessage = result.message
                     }
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Exception during password update service call.")
                 feedbackMessage = "更新密码时发生错误: ${e.message ?: "未知错误"}"
-                // _uiState.update { it.copy(error = feedbackMessage) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
 

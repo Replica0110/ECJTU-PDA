@@ -16,6 +16,7 @@ data class StuInfoUiState(
 
 data class SplashUiState(
     val isLoading: Boolean = true,
+    val message:String = "",
     val navigationEvent: NavigationTarget? = null
 ): BaseUiState
 enum class CardType {

@@ -203,7 +203,7 @@ class JwxtService(
     }
     /**登录过期检查方法*/
 
-    private suspend fun checkSession(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun checkSession(): Boolean = withContext(Dispatchers.IO) {
         if (!hasLogin(1)) {
             Timber.d("JWXT Session Check: Failed (JSESSIONID cookie missing).")
             return@withContext false
