@@ -18,11 +18,16 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -57,6 +62,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.AppRoutes
+import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberNavHostAwareScrollBehavior
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -64,6 +70,7 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
@@ -78,351 +85,391 @@ fun MainScreen(
     topLevelNavController: NavHostController,
     internalNavController: NavHostController
 ) {
-    val sidebarWidth = 250.dp
-    val sidebarWidthPx = with(LocalDensity.current) { sidebarWidth.toPx() }
-    val animationSpec = tween<Float>(durationMillis = 300)
-    val mainContentOffsetX = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val  interactionSource = remember { MutableInteractionSource() }
-    val navHostAwareScrollBehavior = rememberNavHostAwareScrollBehavior()
+    val sidebarWidth = 220.dp
+    val wideScreenThreshold = 600.dp
 
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isWideScreen = maxWidth >= wideScreenThreshold
 
-    val hazeState = remember { HazeState() }
+        val sidebarWidthPx = with(LocalDensity.current) { sidebarWidth.toPx() }
+        val animationSpec = tween<Float>(durationMillis = 300)
+        val mainContentOffsetX = remember { Animatable(0f) }
+        val scope = rememberCoroutineScope()
 
-    val hazeStyleTopBar = HazeStyle(
-        backgroundColor = MiuixTheme.colorScheme.background,
-        tint = HazeTint(
-            MiuixTheme.colorScheme.background.copy(
-                if (navHostAwareScrollBehavior.state.collapsedFraction <= 0f) 1f
-                else lerp(1f, 0.67f, (navHostAwareScrollBehavior.state.collapsedFraction))
-            )
-        )
-    )
+        val isOpen by remember {
+            derivedStateOf { mainContentOffsetX.value > 0f }
+        }
+        val isFullyOpen by remember {
+            derivedStateOf { mainContentOffsetX.value == sidebarWidthPx }
+        }
 
-    val hazeStyle = HazeStyle(
-        backgroundColor = MiuixTheme.colorScheme.background,
-        tint = HazeTint(MiuixTheme.colorScheme.background.copy(0.67f))
-    )
+        fun openSidebar() {
+            scope.launch { mainContentOffsetX.animateTo(sidebarWidthPx, animationSpec) }
+        }
 
-    val showTopAppBar = remember { mutableStateOf(true) }
+        fun closeSidebar() {
+            scope.launch { mainContentOffsetX.animateTo(0f, animationSpec) }
+        }
 
+        BackHandler(enabled = !isWideScreen && isOpen) {
+            closeSidebar()
+        }
 
-    val isOpen by remember {
-        derivedStateOf { mainContentOffsetX.value > 0f } // 打开状态判断调整
-    }
-    val isFullyOpen by remember {
-        derivedStateOf { mainContentOffsetX.value == sidebarWidthPx }
-    }
+        val navHostAwareScrollBehavior = rememberNavHostAwareScrollBehavior()
+        val hazeState = remember { HazeState() }
+        val showTopAppBar = remember { mutableStateOf(true) }
+        val navBackStackEntry by internalNavController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
 
-    fun openSidebar() {
-        scope.launch { mainContentOffsetX.animateTo(sidebarWidthPx, animationSpec) }
-    }
+        val sidebarItemClickAction: () -> Unit = if (isWideScreen) {
+            {  }
+        } else {
+            { closeSidebar() }
+        }
 
-    fun closeSidebar() {
-        scope.launch { mainContentOffsetX.animateTo(0f, animationSpec) }
-    }
-
-    BackHandler(enabled = isOpen) {
-        closeSidebar()
-    }
-
-    val navBackStackEntry by internalNavController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MiuixTheme.colorScheme.background)
-            .draggable(
-                orientation = Orientation.Horizontal,
-                state = rememberDraggableState { delta ->
-                    val newOffset =
-                        (mainContentOffsetX.value + delta).coerceIn(0f, sidebarWidthPx)
-                    scope.launch { mainContentOffsetX.snapTo(newOffset) }
-                },
-                onDragStopped = { velocity ->
-                    scope.launch {
-                        if (velocity > 300f || (velocity > -300f && mainContentOffsetX.value > sidebarWidthPx / 2)) {
-                            openSidebar()
-                        } else {
-                            closeSidebar()
-                        }
-                    }
+        if (isWideScreen) {
+            Row(Modifier
+                .fillMaxSize()
+                .background(MiuixTheme.colorScheme.background)
+                .safeContentPadding()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .requiredWidth(sidebarWidth)
+                        .background(MiuixTheme.colorScheme.background)
+                ) {
+                    SidebarContent(
+                        modifier = Modifier.fillMaxSize(),
+                        internalNavController = internalNavController,
+                        currentRoute = currentRoute,
+                        onItemClick = sidebarItemClickAction
+                    )
                 }
-            )
-    ) {
 
-        Scaffold(
-            containerColor = MiuixTheme.colorScheme.background,
-            modifier = Modifier
-                .fillMaxHeight()
-                .requiredWidth(sidebarWidth)
-                .offset { IntOffset((mainContentOffsetX.value - sidebarWidthPx).roundToInt(), 0) },
+                VerticalDivider(modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(vertical = 8.dp))
 
-        ) { innerPadding ->
-            LazyColumn(
+                MainContent(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    internalNavController = internalNavController,
+                    topLevelNavController = topLevelNavController,
+                    currentRoute = currentRoute,
+                    hazeState = hazeState,
+                    navHostAwareScrollBehavior = navHostAwareScrollBehavior,
+                    showTopAppBar = showTopAppBar.value,
+                    isWideScreen = true,
+                    onMenuClick = { },
+                    onContentAreaClick = {  },
+                    contentAreaClickEnabled = false,
+                    topBarHazeStyle = HazeStyle(
+                        backgroundColor = MiuixTheme.colorScheme.background,
+                        tint = HazeTint(MiuixTheme.colorScheme.background.copy(0.67f))
+                    )
+                )
+            }
+        } else {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(vertical = 16.dp)
-            ) { item {
-                    NavigationDrawerItem(
-                        shape = RoundedCornerShape(8.dp),
-                        icon = {
-                            Icon(
-                                Icons.Outlined.AccountCircle,
-                                contentDescription = "个人信息"
+                    .background(MiuixTheme.colorScheme.background)
+                    .safeContentPadding()
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            val newOffset =
+                                (mainContentOffsetX.value + delta).coerceIn(0f, sidebarWidthPx)
+                            scope.launch { mainContentOffsetX.snapTo(newOffset) }
+                        },
+                        onDragStopped = { velocity ->
+                            scope.launch {
+                                if (velocity > 300f || (velocity > -300f && mainContentOffsetX.value > sidebarWidthPx / 2)) {
+                                    openSidebar()
+                                } else {
+                                    closeSidebar()
+                                }
+                            }
+                        }
+                    )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .requiredWidth(sidebarWidth)
+                        .offset {
+                            IntOffset(
+                                (mainContentOffsetX.value - sidebarWidthPx).roundToInt(),
+                                0
                             )
-                        },
-                        label = { Text("个人信息") },
-                        selected = currentRoute == AppRoutes.PROFILE,
-                        onClick = {
-                            internalNavController.navigate(AppRoutes.PROFILE) { // 导航到目标路由
-                                // popUpTo 查找导航图的起始目的地
-                                popUpTo(internalNavController.graph.findStartDestination().id) {
-                                    saveState = true // 保存当前堆栈的状态
-                                }
-                                // 确保只有一个实例在顶部
-                                launchSingleTop = true
-                                // 恢复之前保存的目标堆栈状态
-                                restoreState = true
-                            }
-                            closeSidebar()
-                        },
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                            unselectedContainerColor = Color.Transparent
-                        )
+                        }
+                        .background(MiuixTheme.colorScheme.background)
+                ) {
+                    SidebarContent(
+                        modifier = Modifier.fillMaxSize(),
+                        internalNavController = internalNavController,
+                        currentRoute = currentRoute,
+                        onItemClick = sidebarItemClickAction
                     )
+                }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
+                VerticalDivider(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(vertical = 8.dp)
+                        .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) }
+                )
 
-                    NavigationDrawerItem(
-                        shape = RoundedCornerShape(8.dp),
-                        icon = { Icon(Icons.Outlined.Home, contentDescription = "主页") },
-                        label = { Text("主页") },
-                        selected = currentRoute == AppRoutes.HOME, // 选中状态判断
-                        onClick = {
-                            internalNavController.navigate(AppRoutes.HOME) {
-                                // popUpTo 查找导航图的起始目的地
-                                popUpTo(internalNavController.graph.findStartDestination().id) {
-                                    saveState = true // 保存当前堆栈的状态
-                                }
-                                // 确保只有一个实例在顶部
-                                launchSingleTop = true
-                                // 恢复之前保存的目标堆栈状态
-                                restoreState = true
-                            }
-                            closeSidebar()
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                            unselectedContainerColor = Color.Transparent
-                        )
-                    )
-                    NavigationDrawerItem(
-                        shape = RoundedCornerShape(8.dp),
-                        icon = { Icon(Icons.Outlined.AccountBox, contentDescription = "教务系统") },
-                        label = { Text("教务系统") },
-                        selected = currentRoute == AppRoutes.JWXT,
-                        onClick = {
-                            internalNavController.navigate(AppRoutes.JWXT) {
-                                // popUpTo 查找导航图的起始目的地
-                                popUpTo(internalNavController.graph.findStartDestination().id) {
-                                    saveState = true // 保存当前堆栈的状态
-                                }
-                                // 确保只有一个实例在顶部
-                                launchSingleTop = true
-                                // 恢复之前保存的目标堆栈状态
-                                restoreState = true
-                            }
-                            closeSidebar()
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                            unselectedContainerColor = Color.Transparent
-                        )
-                    )
-                    NavigationDrawerItem(
-                        shape = RoundedCornerShape(8.dp),
-                        icon = {
-                            Icon(
-                                painterResource(R.drawable.ic_menu_wifi),
-                                contentDescription = "校园网"
+
+                MainContent(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) },
+                    internalNavController = internalNavController,
+                    topLevelNavController = topLevelNavController,
+                    currentRoute = currentRoute,
+                    hazeState = hazeState,
+                    navHostAwareScrollBehavior = navHostAwareScrollBehavior,
+                    showTopAppBar = showTopAppBar.value,
+                    isWideScreen = false,
+                    onMenuClick = { if (isFullyOpen) closeSidebar() else openSidebar() },
+                    onContentAreaClick = { if (isFullyOpen) closeSidebar() },
+                    contentAreaClickEnabled = isFullyOpen,
+                    topBarHazeStyle = HazeStyle(
+                        backgroundColor = MiuixTheme.colorScheme.background,
+                        tint = HazeTint(
+                            MiuixTheme.colorScheme.background.copy(
+                                if (navHostAwareScrollBehavior.state.collapsedFraction <= 0f) 1f
+                                else lerp(1f, 0.67f, (navHostAwareScrollBehavior.state.collapsedFraction))
                             )
-                        },
-                        label = { Text("校园网") },
-                        selected = currentRoute == AppRoutes.WIFI,
-                        onClick = {
-                            internalNavController.navigate(AppRoutes.WIFI) {
-                                // popUpTo 查找导航图的起始目的地
-                                popUpTo(internalNavController.graph.findStartDestination().id) {
-                                    saveState = true // 保存当前堆栈的状态
-                                }
-                                // 确保只有一个实例在顶部
-                                launchSingleTop = true
-                                // 恢复之前保存的目标堆栈状态
-                                restoreState = true
-                            }
-                            closeSidebar()
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                            unselectedContainerColor = Color.Transparent
                         )
                     )
+                )
+            }
+        }
+    }
+}
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
+@Composable
+fun SidebarContent(
+    modifier: Modifier = Modifier,
+    internalNavController: NavHostController,
+    currentRoute: String?,
+    onItemClick: () -> Unit
+) {
+    val navOptionsBuilder: androidx.navigation.NavOptionsBuilder.() -> Unit = {
+        popUpTo(internalNavController.graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
 
-                    NavigationDrawerItem(
-                        shape = RoundedCornerShape(8.dp),
-                        icon = { Icon(Icons.Outlined.Settings, contentDescription = "设置") },
-                        label = { Text("设置") },
-                        selected = currentRoute == AppRoutes.SETTING,
-                        onClick = {
-                            internalNavController.navigate(AppRoutes.SETTING) {
-                                // popUpTo 查找导航图的起始目的地
-                                popUpTo(internalNavController.graph.findStartDestination().id) {
-                                    saveState = true // 保存当前堆栈的状态
-                                }
-                                // 确保只有一个实例在顶部
-                                launchSingleTop = true
-                                // 恢复之前保存的目标堆栈状态
-                                restoreState = true
-                            }
-                            closeSidebar()
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                            unselectedContainerColor = Color.Transparent
+    LazyColumn(
+        modifier = modifier
+            .padding(horizontal = 8.dp, vertical = 16.dp)
+    ) {
+        item {
+            Card {
+                NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
+                    icon = { Icon(Icons.Outlined.AccountCircle, contentDescription = "个人信息") },
+                    label = { Text("个人信息") },
+                    selected = currentRoute == AppRoutes.PROFILE,
+                    onClick = {
+                        internalNavController.navigate(AppRoutes.PROFILE, navOptionsBuilder)
+                        onItemClick()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Card {
+                NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "主页") },
+                    label = { Text("主页") },
+                    selected = currentRoute == AppRoutes.HOME,
+                    onClick = {
+                        internalNavController.navigate(AppRoutes.HOME, navOptionsBuilder)
+                        onItemClick()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
+                )
+                NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
+                    icon = { Icon(Icons.Outlined.AccountBox, contentDescription = "教务系统") },
+                    label = { Text("教务系统") },
+                    selected = currentRoute == AppRoutes.JWXT,
+                    onClick = {
+                        internalNavController.navigate(AppRoutes.JWXT, navOptionsBuilder)
+                        onItemClick()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
+                )
+                NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
+                    icon = {
+                        Icon(
+                            painterResource(R.drawable.ic_menu_wifi),
+                            contentDescription = "校园网"
                         )
+                    },
+                    label = { Text("校园网") },
+                    selected = currentRoute == AppRoutes.WIFI,
+                    onClick = {
+                        internalNavController.navigate(AppRoutes.WIFI, navOptionsBuilder)
+                        onItemClick()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Card {
+                NavigationDrawerItem(
+                    shape = RoundedCornerShape(8.dp),
+                    icon = { Icon(Icons.Outlined.Settings, contentDescription = "设置") },
+                    label = { Text("设置") },
+                    selected = currentRoute == AppRoutes.SETTING,
+                    onClick = {
+                        internalNavController.navigate(AppRoutes.SETTING, navOptionsBuilder)
+                        onItemClick()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                        unselectedContainerColor = Color.Transparent
+                    )
+                )
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@Composable
+fun MainContent(
+    modifier: Modifier = Modifier,
+    internalNavController: NavHostController,
+    topLevelNavController: NavHostController,
+    currentRoute: String?,
+    hazeState: HazeState,
+    navHostAwareScrollBehavior: UpdatableScrollBehavior,
+    showTopAppBar: Boolean,
+    isWideScreen: Boolean,
+    onMenuClick: () -> Unit,
+    onContentAreaClick: () -> Unit,
+    contentAreaClickEnabled: Boolean,
+    topBarHazeStyle: HazeStyle
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Scaffold(
+        containerColor = Color.Transparent,
+        modifier = modifier,
+        topBar = {
+            val currentScreenTitle = when (currentRoute) {
+                AppRoutes.HOME -> "主页"
+                AppRoutes.JWXT -> "教务系统"
+                AppRoutes.WIFI -> "校园网"
+                AppRoutes.SETTING -> "设置"
+                AppRoutes.PROFILE -> "个人信息"
+                else -> stringResource(R.string.app_name)
+            }
+
+            AnimatedVisibility(
+                visible = showTopAppBar,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                val useSmallTopAppBar = isWideScreen // 在宽屏下使用小顶栏
+
+                if (useSmallTopAppBar) {
+                    SmallTopAppBar(
+                        title = currentScreenTitle,
+                        modifier = Modifier.hazeEffect(state = hazeState) {
+                            style = topBarHazeStyle
+                            blurRadius = 25.dp
+                            noiseFactor = 0f
+                        },
+                        scrollBehavior = navHostAwareScrollBehavior,
+                        color = Color.Transparent,
+                        navigationIcon = {
+                            if (!isWideScreen) {
+                                IconButton(
+                                    modifier = Modifier.padding(start = 20.dp),
+                                    onClick = onMenuClick,
+                                ) {
+                                    top.yukonga.miuix.kmp.basic.Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        tint = MiuixTheme.colorScheme.onBackground,
+                                        contentDescription = "侧边栏"
+                                    )
+                                }
+                            }
+                        }
+                    )
+                } else {
+                    TopAppBar(
+                        title = currentScreenTitle,
+                        modifier = Modifier.hazeEffect(state = hazeState) {
+                            style = topBarHazeStyle
+                            blurRadius = 25.dp
+                            noiseFactor = 0f
+                        },
+                        scrollBehavior = navHostAwareScrollBehavior,
+                        color = Color.Transparent,
+                        navigationIcon = {
+                            if (!isWideScreen) {
+                                IconButton(
+                                    modifier = Modifier.padding(start = 20.dp),
+                                    onClick = onMenuClick,
+                                ) {
+                                    top.yukonga.miuix.kmp.basic.Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        tint = MiuixTheme.colorScheme.onBackground,
+                                        contentDescription = "侧边栏"
+                                    )
+                                }
+                            }
+                        }
                     )
                 }
             }
-        }
-        VerticalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Scaffold(
-                containerColor = MiuixTheme.colorScheme.background,
+        },
+        content = { innerPadding ->
+            NavHost(
+                navController = internalNavController,
+                startDestination = AppRoutes.HOME,
                 modifier = Modifier
                     .fillMaxSize()
-                    .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) },
-                topBar = {
-                    val currentScreenTitle = when (currentRoute) {
-                        AppRoutes.HOME -> "主页"
-                        AppRoutes.JWXT -> "教务系统"
-                        AppRoutes.WIFI -> "校园网"
-                        AppRoutes.SETTING -> "设置"
-                        AppRoutes.PROFILE -> "个人信息"
-                        else -> stringResource(R.string.app_name)
-                    }
-                    AnimatedVisibility(
-                        visible = showTopAppBar.value,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        BoxWithConstraints {
-                            if (maxWidth > 840.dp) {
-                                SmallTopAppBar(
-                                    title = currentScreenTitle,
-                                    modifier = Modifier.hazeEffect(state = hazeState) {
-                                        style = hazeStyle
-                                        blurRadius = 25.dp
-                                        noiseFactor = 0f
-                                    },
-                                    scrollBehavior = navHostAwareScrollBehavior,
-                                    color = Color.Transparent,
-                                    navigationIcon = {
-                                        IconButton(
-                                            modifier = Modifier.padding(start = 20.dp),
-                                            onClick = {
-                                                run { if (isFullyOpen) closeSidebar() else openSidebar() }
-                                            },
-                                        ) {
-                                            top.yukonga.miuix.kmp.basic.Icon(
-                                                imageVector = Icons.Default.Menu,
-                                                tint = MiuixTheme.colorScheme.onBackground,
-                                                contentDescription = "侧边栏"
-                                            )
-                                        }
-                                    }
-                                )
-                            } else {
-                                TopAppBar(
-                                    title = currentScreenTitle,
-                                    modifier = Modifier
-                                        .hazeEffect(state = hazeState) {
-                                            style = hazeStyleTopBar
-                                            blurRadius = 25.dp
-                                            noiseFactor = 0f
-                                        },
-                                    scrollBehavior = navHostAwareScrollBehavior,
-                                    color = Color.Transparent,
-                                    navigationIcon = {
-                                        IconButton(
-                                            modifier = Modifier.padding(start = 20.dp),
-                                            onClick = {
-                                                run { if (isFullyOpen) closeSidebar() else openSidebar() }
-                                            },
-                                        ) {
-                                            top.yukonga.miuix.kmp.basic.Icon(
-                                                imageVector = Icons.Default.Menu,
-                                                tint = MiuixTheme.colorScheme.onBackground,
-                                                contentDescription = "侧边栏"
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                },
-                content = { innerPadding ->
-
-                    NavHost(
-                        navController = internalNavController,
-                        startDestination = AppRoutes.HOME,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable(
-                                onClick = { if (isFullyOpen) closeSidebar() else openSidebar() },
-                                indication = null,
-                                interactionSource = interactionSource
-                            )
-
-                            .hazeSource(state = hazeState)
-                    ) {
-                        composable(AppRoutes.HOME) { HomeScreen(
-                            internalNavController=internalNavController,
-                            topLevelNavController = topLevelNavController,
-                            scrollBehavior = navHostAwareScrollBehavior,
-                            padding = innerPadding
-                        ) }
-                        composable(AppRoutes.JWXT) { JwxtScreen(
-                            internalNavController = internalNavController,
-                            topLevelNavController = topLevelNavController,
-                            scrollBehavior = navHostAwareScrollBehavior,
-                            padding = innerPadding
-                        ) }
-                        composable(AppRoutes.WIFI) { WifiScreen(
-                            internalNavController = internalNavController,
-                            padding = innerPadding,
-                            scrollBehavior = navHostAwareScrollBehavior,
-                        ) }
-                        composable(AppRoutes.SETTING) { SettingScreen(
-                            padding = innerPadding,
-                            scrollBehavior = navHostAwareScrollBehavior
-                        ) }
-                        composable(AppRoutes.PROFILE) { StuInfoScreen(
-                            internalNavController = internalNavController,
-                            topLevelNavController = topLevelNavController,
-                            padding = innerPadding,
-                            scrollBehavior = navHostAwareScrollBehavior
-                        ) }
-                    }
-                }
-            )
-
-    }
+                    .clickable(
+                        enabled = contentAreaClickEnabled,
+                        onClick = onContentAreaClick,
+                        indication = null,
+                        interactionSource = interactionSource
+                    )
+                    .hazeSource(state = hazeState)
+            ) {
+                composable(AppRoutes.HOME) { HomeScreen(internalNavController=internalNavController, topLevelNavController = topLevelNavController, scrollBehavior = navHostAwareScrollBehavior, padding = innerPadding) }
+                composable(AppRoutes.JWXT) { JwxtScreen(internalNavController = internalNavController, topLevelNavController = topLevelNavController, scrollBehavior = navHostAwareScrollBehavior, padding = innerPadding) }
+                composable(AppRoutes.WIFI) { WifiScreen(internalNavController = internalNavController, padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
+                composable(AppRoutes.SETTING) { SettingScreen(padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
+                composable(AppRoutes.PROFILE) { StuInfoScreen(internalNavController = internalNavController, topLevelNavController = topLevelNavController, padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
+            }
+        }
+    )
 }
 
