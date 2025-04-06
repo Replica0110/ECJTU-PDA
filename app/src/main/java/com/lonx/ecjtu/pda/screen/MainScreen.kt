@@ -11,18 +11,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -38,11 +39,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -70,8 +69,6 @@ import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.VerticalDivider
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Settings
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
 
@@ -86,7 +83,7 @@ fun MainScreen(
     val animationSpec = tween<Float>(durationMillis = 300)
     val mainContentOffsetX = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-
+    val  interactionSource = remember { MutableInteractionSource() }
     val navHostAwareScrollBehavior = rememberNavHostAwareScrollBehavior()
 
 
@@ -163,135 +160,145 @@ fun MainScreen(
                 .offset { IntOffset((mainContentOffsetX.value - sidebarWidthPx).roundToInt(), 0) },
 
         ) { innerPadding ->
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 16.dp)
-            ) {
-                NavigationDrawerItem(
-                    shape = RoundedCornerShape(8.dp),
-                    icon = { Icon(Icons.Outlined.AccountCircle, contentDescription = "个人信息") },
-                    label = { Text("个人信息") },
-                    selected = currentRoute == AppRoutes.PROFILE,
-                    onClick = {
-                        internalNavController.navigate(AppRoutes.PROFILE) { // 导航到目标路由
-                            // popUpTo 查找导航图的起始目的地
-                            popUpTo(internalNavController.graph.findStartDestination().id) {
-                                saveState = true // 保存当前堆栈的状态
+                    .padding(vertical = 16.dp)
+            ) { item {
+                    NavigationDrawerItem(
+                        shape = RoundedCornerShape(8.dp),
+                        icon = {
+                            Icon(
+                                Icons.Outlined.AccountCircle,
+                                contentDescription = "个人信息"
+                            )
+                        },
+                        label = { Text("个人信息") },
+                        selected = currentRoute == AppRoutes.PROFILE,
+                        onClick = {
+                            internalNavController.navigate(AppRoutes.PROFILE) { // 导航到目标路由
+                                // popUpTo 查找导航图的起始目的地
+                                popUpTo(internalNavController.graph.findStartDestination().id) {
+                                    saveState = true // 保存当前堆栈的状态
+                                }
+                                // 确保只有一个实例在顶部
+                                launchSingleTop = true
+                                // 恢复之前保存的目标堆栈状态
+                                restoreState = true
                             }
-                            // 确保只有一个实例在顶部
-                            launchSingleTop = true
-                            // 恢复之前保存的目标堆栈状态
-                            restoreState = true
-                        }
-                        closeSidebar()
-                    },
-                    modifier = Modifier.padding(bottom = 8.dp) ,
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                        unselectedContainerColor = Color.Transparent
+                            closeSidebar()
+                        },
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                            unselectedContainerColor = Color.Transparent
+                        )
                     )
-                )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
 
-                NavigationDrawerItem(
-                    shape = RoundedCornerShape(8.dp),
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "主页") },
-                    label = { Text("主页") },
-                    selected = currentRoute == AppRoutes.HOME, // 选中状态判断
-                    onClick = {
-                        internalNavController.navigate(AppRoutes.HOME) {
-                            // popUpTo 查找导航图的起始目的地
-                            popUpTo(internalNavController.graph.findStartDestination().id) {
-                                saveState = true // 保存当前堆栈的状态
+                    NavigationDrawerItem(
+                        shape = RoundedCornerShape(8.dp),
+                        icon = { Icon(Icons.Outlined.Home, contentDescription = "主页") },
+                        label = { Text("主页") },
+                        selected = currentRoute == AppRoutes.HOME, // 选中状态判断
+                        onClick = {
+                            internalNavController.navigate(AppRoutes.HOME) {
+                                // popUpTo 查找导航图的起始目的地
+                                popUpTo(internalNavController.graph.findStartDestination().id) {
+                                    saveState = true // 保存当前堆栈的状态
+                                }
+                                // 确保只有一个实例在顶部
+                                launchSingleTop = true
+                                // 恢复之前保存的目标堆栈状态
+                                restoreState = true
                             }
-                            // 确保只有一个实例在顶部
-                            launchSingleTop = true
-                            // 恢复之前保存的目标堆栈状态
-                            restoreState = true
-                        }
-                        closeSidebar()
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                        unselectedContainerColor = Color.Transparent
+                            closeSidebar()
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                            unselectedContainerColor = Color.Transparent
+                        )
                     )
-                )
-                NavigationDrawerItem(
-                    shape = RoundedCornerShape(8.dp),
-                    icon = { Icon(Icons.Outlined.AccountBox, contentDescription = "教务系统") },
-                    label = { Text("教务系统") },
-                    selected = currentRoute == AppRoutes.JWXT,
-                    onClick = {
-                        internalNavController.navigate(AppRoutes.JWXT) {
-                            // popUpTo 查找导航图的起始目的地
-                            popUpTo(internalNavController.graph.findStartDestination().id) {
-                                saveState = true // 保存当前堆栈的状态
+                    NavigationDrawerItem(
+                        shape = RoundedCornerShape(8.dp),
+                        icon = { Icon(Icons.Outlined.AccountBox, contentDescription = "教务系统") },
+                        label = { Text("教务系统") },
+                        selected = currentRoute == AppRoutes.JWXT,
+                        onClick = {
+                            internalNavController.navigate(AppRoutes.JWXT) {
+                                // popUpTo 查找导航图的起始目的地
+                                popUpTo(internalNavController.graph.findStartDestination().id) {
+                                    saveState = true // 保存当前堆栈的状态
+                                }
+                                // 确保只有一个实例在顶部
+                                launchSingleTop = true
+                                // 恢复之前保存的目标堆栈状态
+                                restoreState = true
                             }
-                            // 确保只有一个实例在顶部
-                            launchSingleTop = true
-                            // 恢复之前保存的目标堆栈状态
-                            restoreState = true
-                        }
-                        closeSidebar()
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                        unselectedContainerColor = Color.Transparent
+                            closeSidebar()
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                            unselectedContainerColor = Color.Transparent
+                        )
                     )
-                )
-                NavigationDrawerItem(
-                    shape = RoundedCornerShape(8.dp),
-                    icon = { Icon(painterResource(R.drawable.ic_menu_wifi), contentDescription = "校园网") },
-                    label = { Text("校园网") },
-                    selected = currentRoute == AppRoutes.WIFI,
-                    onClick = {
-                        internalNavController.navigate(AppRoutes.WIFI) {
-                            // popUpTo 查找导航图的起始目的地
-                            popUpTo(internalNavController.graph.findStartDestination().id) {
-                                saveState = true // 保存当前堆栈的状态
+                    NavigationDrawerItem(
+                        shape = RoundedCornerShape(8.dp),
+                        icon = {
+                            Icon(
+                                painterResource(R.drawable.ic_menu_wifi),
+                                contentDescription = "校园网"
+                            )
+                        },
+                        label = { Text("校园网") },
+                        selected = currentRoute == AppRoutes.WIFI,
+                        onClick = {
+                            internalNavController.navigate(AppRoutes.WIFI) {
+                                // popUpTo 查找导航图的起始目的地
+                                popUpTo(internalNavController.graph.findStartDestination().id) {
+                                    saveState = true // 保存当前堆栈的状态
+                                }
+                                // 确保只有一个实例在顶部
+                                launchSingleTop = true
+                                // 恢复之前保存的目标堆栈状态
+                                restoreState = true
                             }
-                            // 确保只有一个实例在顶部
-                            launchSingleTop = true
-                            // 恢复之前保存的目标堆栈状态
-                            restoreState = true
-                        }
-                        closeSidebar()
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                        unselectedContainerColor = Color.Transparent
+                            closeSidebar()
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                            unselectedContainerColor = Color.Transparent
+                        )
                     )
-                )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) // 分隔线
 
-                NavigationDrawerItem(
-                    shape = RoundedCornerShape(8.dp),
-                    icon = { Icon(Icons.Outlined.Settings, contentDescription = "设置") },
-                    label = { Text("设置") },
-                    selected = currentRoute == AppRoutes.SETTING,
-                    onClick = {
-                        internalNavController.navigate(AppRoutes.SETTING) {
-                            // popUpTo 查找导航图的起始目的地
-                            popUpTo(internalNavController.graph.findStartDestination().id) {
-                                saveState = true // 保存当前堆栈的状态
+                    NavigationDrawerItem(
+                        shape = RoundedCornerShape(8.dp),
+                        icon = { Icon(Icons.Outlined.Settings, contentDescription = "设置") },
+                        label = { Text("设置") },
+                        selected = currentRoute == AppRoutes.SETTING,
+                        onClick = {
+                            internalNavController.navigate(AppRoutes.SETTING) {
+                                // popUpTo 查找导航图的起始目的地
+                                popUpTo(internalNavController.graph.findStartDestination().id) {
+                                    saveState = true // 保存当前堆栈的状态
+                                }
+                                // 确保只有一个实例在顶部
+                                launchSingleTop = true
+                                // 恢复之前保存的目标堆栈状态
+                                restoreState = true
                             }
-                            // 确保只有一个实例在顶部
-                            launchSingleTop = true
-                            // 恢复之前保存的目标堆栈状态
-                            restoreState = true
-                        }
-                        closeSidebar()
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
-                        unselectedContainerColor = Color.Transparent
+                            closeSidebar()
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MiuixTheme.colorScheme.secondaryContainer,
+                            unselectedContainerColor = Color.Transparent
+                        )
                     )
-                )
+                }
             }
         }
         VerticalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -377,6 +384,12 @@ fun MainScreen(
                         startDestination = AppRoutes.HOME,
                         modifier = Modifier
                             .fillMaxSize()
+                            .clickable(
+                                onClick = { if (isFullyOpen) closeSidebar() else openSidebar() },
+                                indication = null,
+                                interactionSource = interactionSource
+                            )
+
                             .hazeSource(state = hazeState)
                     ) {
                         composable(AppRoutes.HOME) { HomeScreen(
