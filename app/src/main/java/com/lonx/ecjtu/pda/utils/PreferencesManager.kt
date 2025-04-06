@@ -2,6 +2,7 @@ package com.lonx.ecjtu.pda.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import com.lonx.ecjtu.pda.data.PrefKeys.ISP
 import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
 import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
@@ -50,9 +51,31 @@ class PreferencesManager private constructor(context: Context) {
             function()
         }.apply()
     }
-    fun setWeiXinId(id: String) {
-        edit {
-            putString(WEI_XIN_ID, id)
+    fun setWeiXinId(weixinidInput: String) {
+        if (weixinidInput.isBlank()) {
+            return
+        }
+
+        val targetPrefix = "https://jwxt.ecjtu.edu.cn/weixin/"
+        var extractedId: String? = null
+
+        if (weixinidInput.startsWith(targetPrefix)) {
+            try {
+                val uri = Uri.parse(weixinidInput)
+                extractedId = uri.getQueryParameter("weiXinID")
+            } catch (e: Exception) {
+                Timber.e("Failed to parse URL: ${e.message}")
+            }
+        } else {
+            extractedId = weixinidInput
+        }
+
+        if (!extractedId.isNullOrBlank()) {
+            edit {
+                putString(WEI_XIN_ID, extractedId)
+            }
+        } else {
+            Timber.e("Failed to extract ID from URL: $weixinidInput")
         }
     }
     fun getWeiXinId(): String {

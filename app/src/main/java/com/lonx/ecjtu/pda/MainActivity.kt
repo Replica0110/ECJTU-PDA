@@ -1,5 +1,6 @@
 package com.lonx.ecjtu.pda
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,18 +12,23 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.data.AppRoutes
+import com.lonx.ecjtu.pda.data.PrefKeys.WEI_XIN_ID
 import com.lonx.ecjtu.pda.screen.LoginScreen
 import com.lonx.ecjtu.pda.screen.MainScreen
 import com.lonx.ecjtu.pda.screen.SplashScreen
+import com.lonx.ecjtu.pda.utils.PreferencesManager
+import org.koin.android.ext.android.inject
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.darkColorScheme
 import top.yukonga.miuix.kmp.theme.lightColorScheme
 
 class MainActivity : ComponentActivity() {
+    private val prefs:PreferencesManager by inject<PreferencesManager>()
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        parseIntent(intent)
         setContent {
             MiuixTheme(colors = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 val topLevelNavController = rememberNavController()
@@ -54,6 +60,21 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                }
+            }
+        }
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        parseIntent(intent)
+    }
+    private fun parseIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            val uri = intent.data
+            uri?.let {
+                val weixinID = it.getQueryParameter("weiXinID")
+                weixinID?.let { id ->
+                    prefs.setWeiXinId(id)
                 }
             }
         }

@@ -24,10 +24,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.lonx.ecjtu.pda.R
+import com.lonx.ecjtu.pda.ui.InfoAlertDialog
 import com.lonx.ecjtu.pda.ui.InputAlertDialog
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
@@ -56,10 +62,12 @@ fun SettingScreen(
     var showAccountDialog by rememberSaveable { mutableStateOf(false) }
     var showPasswordDialog by rememberSaveable  { mutableStateOf(false) }
     var showWeiXinIdDialog by rememberSaveable { mutableStateOf(false) }
+    var showWeiXinIdTutorialDialog by rememberSaveable { mutableStateOf(false) }
     // 标题栏滚动
     val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
 
     // snackBar通知
+    val snackbarHostState = remember { SnackbarHostState() }
     var snackbarContainerColor by remember { mutableStateOf(Color.Unspecified) }
     var snackbarContentColor by remember { mutableStateOf(Color.Unspecified) }
     // snackBar通知颜色
@@ -95,7 +103,8 @@ fun SettingScreen(
         dismissButtonText = "取消",
         isLoading = uiState.isLoading
     )
-    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 修改微信ID对话框
     InputAlertDialog(
         showDialog = showWeiXinIdDialog,
         onDismissRequest = {
@@ -114,6 +123,30 @@ fun SettingScreen(
             keyboardType = KeyboardType.NumberPassword,
             imeAction = ImeAction.Done
         )
+    )
+    val weiXinIdTutorial = buildAnnotatedString {
+        append("·关注华交教务微信公众号\n")
+        append("·绑定个人账号\n")
+        append("·点击[更多功能]->[我的日历]\n")
+        append("·点击右上角三点，选择[复制链接]\n")
+        append("·将复制的链接粘贴到设置中\n")
+        append("·图文教程请参阅")
+        val tutorialUrl = "https://github.com/Replica0110/ECJTU-Calendar"
+        pushLink(LinkAnnotation.Url(tutorialUrl))
+        withStyle(style = SpanStyle(color = Color.DarkGray, textDecoration = TextDecoration.Underline)) {
+            append("https://github.com/Replica0110/ECJTU-Calendar")
+        }
+        pop()
+        append("\n")
+    }
+    // 教程对话框
+    InfoAlertDialog(
+        showDialog = showWeiXinIdTutorialDialog,
+        onDismissRequest = {
+            showWeiXinIdTutorialDialog = false
+        },
+        title = "获取WeiXinID",
+        message = weiXinIdTutorial
     )
     LaunchedEffect(key1 = settingViewModel) {
         settingViewModel.uiEvent.collect { event ->
@@ -224,6 +257,31 @@ fun SettingScreen(
                     )
                 }
 
+            }
+            item {
+                SmallTitle("教程")
+                Card(modifier = Modifier.padding(12.dp)) {
+                    SuperArrow(
+                        leftAction = {
+                            Box(
+                                contentAlignment = Alignment.TopStart,
+                                modifier = Modifier.padding(end = 16.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_tutorial),
+                                    contentDescription = "获取WeiXinID",
+                                    tint = MiuixTheme.colorScheme.onBackground
+                                )
+                            }
+                        },
+                        title = "获取WeiXinID",
+                        summary = "如何获取WeiXinID？",
+                        onClick = {
+                            showWeiXinIdTutorialDialog = true
+                        },
+                        holdDownState = false
+                    )
+                }
             }
         }
     }

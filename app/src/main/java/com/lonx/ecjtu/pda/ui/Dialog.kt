@@ -10,6 +10,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -128,8 +130,9 @@ fun InfoAlertDialog(
     onDismissRequest: () -> Unit,
     title: String,
     modifier: Modifier = Modifier,
-    message: String,
-    confirmButtonText: String = "确认"
+    message: AnnotatedString,
+    confirmButtonText: String = "确认",
+    messageStyle: TextStyle = MiuixTheme.textStyles.main
 ) {
     AlertDialogContainer(
         modifier = modifier,
@@ -142,7 +145,7 @@ fun InfoAlertDialog(
     ) {
         Text(
             text = message,
-            style = MiuixTheme.textStyles.main,
+            style = messageStyle,
             modifier = Modifier.padding(vertical = 8.dp)
         )
     }

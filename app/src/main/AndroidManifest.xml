@@ -29,6 +29,15 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="jwxt.ecjtu.edu.cn"
+                    android:pathPrefix="/weixin" />
+            </intent-filter>
         </activity>
         <service
             android:name="com.lonx.ecjtu.pda.service.WifiTileService"

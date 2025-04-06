@@ -42,7 +42,6 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.glance.appwidget)
     implementation(libs.haze)
     implementation(libs.miuix)
     implementation(libs.koin.androidx.compose)

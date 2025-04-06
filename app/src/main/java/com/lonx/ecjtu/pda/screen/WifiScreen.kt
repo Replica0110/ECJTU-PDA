@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
@@ -147,7 +148,7 @@ fun WifiScreen(
                 showDialog = true,
                 onDismissRequest = { dialogToShow = null },
                 title = dialogTitle,
-                message = dialogMessage
+                message = buildAnnotatedString{ append(dialogMessage )}
             )
         }
         DialogType.LOCATION_PROMPT -> {
