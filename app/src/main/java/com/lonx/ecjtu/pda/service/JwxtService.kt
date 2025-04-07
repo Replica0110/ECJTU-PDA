@@ -1168,10 +1168,10 @@ class JwxtService(
                             courses.add(
                                 CourseData.CourseInfo(
                                     courseName = courseName,
-                                    courseTime = courseTime,
-                                    courseWeek = courseWeek,
-                                    courseLocation = courseLocation,
-                                    courseTeacher = courseTeacher
+                                    courseTime = "节次：${courseTime}",
+                                    courseWeek = "上课周：${courseWeek}",
+                                    courseLocation = "地点：${courseLocation}",
+                                    courseTeacher = "教师：${courseTeacher}"
                                 )
                             )
                         } else {
