@@ -7,8 +7,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.widget.RemoteViews
+import androidx.core.content.ContextCompat.getString
 import com.google.gson.Gson
+import com.lonx.ecjtu.pda.MainActivity
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.CourseData
 import com.lonx.ecjtu.pda.data.ServiceResult
@@ -33,7 +36,11 @@ class CourseWidgetProvider : AppWidgetProvider() {
     private var lastUpdateTime = 0L
     private fun resolveDependencies() {
         if (!::service.isInitialized) {
-            service = GlobalContext.get().get()
+            try {
+                service = GlobalContext.get().get()
+            } catch (e: Exception) {
+                Timber.tag("WidgetDeps").e(e, "Failed to resolve JwxtService dependency")
+            }
         }
     }
     override fun onReceive(context: Context, intent: Intent) {
@@ -103,7 +110,7 @@ class CourseWidgetProvider : AppWidgetProvider() {
                     is ServiceResult.Error -> {
                         Timber.tag("CourseWidgetProvider")
                             .e("获取今天课程失败: ${todayResult.message}")
-                        // 你也可以选择展示错误信息，或保留空课程
+
                     }
                 }
 
@@ -117,7 +124,15 @@ class CourseWidgetProvider : AppWidgetProvider() {
 
                 withContext(Dispatchers.Main) {
                     appWidgetIds.forEach { appWidgetId ->
-                        updateAppWidget(context, appWidgetManager, appWidgetId, todayCourses, tomorrowCourses)
+                        updateAppWidget(
+                            context,
+                            appWidgetManager,
+                            appWidgetId,
+                            todayCourses,
+                            tomorrowCourses,
+                            todayResult is ServiceResult.Error,
+                            tomorrowResult is ServiceResult.Error)
+
                     }
                 }
 
@@ -128,13 +143,15 @@ class CourseWidgetProvider : AppWidgetProvider() {
         }
 
     }
-
+    @Suppress("deprecation")
     private fun updateAppWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int,
         todayCourses: CourseData.DayCourses,
-        tomorrowCourses: CourseData.DayCourses
+        tomorrowCourses: CourseData.DayCourses,
+        todayFetchFailed: Boolean,
+        tomorrowFetchFailed: Boolean
     ) {
         val now = System.currentTimeMillis()
         if (now - lastUpdateTime < 1000) { // 小于1秒的更新直接跳过
@@ -143,25 +160,37 @@ class CourseWidgetProvider : AppWidgetProvider() {
         }
         lastUpdateTime = now
         resolveDependencies()
-        val randomNumber = System.currentTimeMillis() // Use a unique value for each update
+        val itemClickIntent = Intent(context, MainActivity::class.java).apply {
+            action = "com.lonx.ecjtu.pda.action.VIEW_COURSE_DETAIL"
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            data = Uri.parse("widget://item_click_template/$appWidgetId")
+        }
+
+        val flags =
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val itemClickPendingIntentTemplate = PendingIntent.getActivity(
+            context,
+            appWidgetId,
+            itemClickIntent,
+            flags
+        )
+        val randomNumber = System.currentTimeMillis()
         val intentToday = Intent(context, CourseRemoteViewsService::class.java).apply {
             putExtra("dayCourses", Gson().toJson(todayCourses))
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            putExtra("random", randomNumber) // Adding random number to the intent
-            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME)) // Make the intent unique
+            data = Uri.parse("widget://${context.packageName}/$appWidgetId/today/$randomNumber")
         }
 
         val intentTomorrow = Intent(context, CourseRemoteViewsService::class.java).apply {
             putExtra("dayCourses", Gson().toJson(tomorrowCourses))
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            putExtra("random", randomNumber) // Adding random number to the intent
-            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME)) // Make the intent unique
+            data = Uri.parse("widget://${context.packageName}/$appWidgetId/tomorrow/$randomNumber")
         }
         // 点击刷新按钮
         val refreshIntent = Intent(context, CourseWidgetProvider::class.java).apply {
             action = ACTION_MANUAL_REFRESH
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME)) // 唯一化 Intent
+            data = Uri.parse("widget://${context.packageName}/$appWidgetId/refresh")
         }
         val refreshPendingIntent = PendingIntent.getBroadcast(
             context,
@@ -173,13 +202,19 @@ class CourseWidgetProvider : AppWidgetProvider() {
         val views = RemoteViews(context.packageName, R.layout.widget_course).apply {
             setRemoteAdapter(R.id.lv_course_today, intentToday)
             setRemoteAdapter(R.id.lv_course_next_day, intentTomorrow)
+            setPendingIntentTemplate(R.id.lv_course_today, itemClickPendingIntentTemplate)
+            setPendingIntentTemplate(R.id.lv_course_next_day, itemClickPendingIntentTemplate)
             setEmptyView(R.id.lv_course_today, R.id.empty_today)
             setEmptyView(R.id.lv_course_next_day, R.id.empty_next_day)
+            setTextViewText(R.id.empty_today, if (todayFetchFailed) "加载今日课程失败" else context.getString(R.string.empty_course))
+            setTextViewText(R.id.empty_next_day, if (tomorrowFetchFailed) "加载明日课程失败" else context.getString(R.string.empty_course))
             setTextViewText(R.id.tv_date, date)
             setTextViewText(R.id.tv_week, weekDay)
             setTextViewText(R.id.tv_week_number, weekNumber)
             setOnClickPendingIntent(R.id.refresh_button, refreshPendingIntent)
         }
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_course_today)
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.lv_course_next_day)
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 

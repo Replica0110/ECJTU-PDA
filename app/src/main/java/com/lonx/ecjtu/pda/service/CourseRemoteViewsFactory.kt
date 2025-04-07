@@ -2,75 +2,101 @@ package com.lonx.ecjtu.pda.service
 
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle // Needed for putting extras neatly
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.CourseData
+import com.google.gson.reflect.TypeToken // Keep this if needed for complex types
+import com.lonx.ecjtu.pda.R // Make sure R is imported correctly
+import com.lonx.ecjtu.pda.data.CourseData // Assuming CourseData contains CourseInfo
+// Import Timber or Log
 import timber.log.Timber
 
-class CourseRemoteViewsFactory(private val context: Context, private val intent: Intent) : RemoteViewsService.RemoteViewsFactory {
+const val EXTRA_COURSE_NAME = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_NAME"
+const val EXTRA_COURSE_TIME = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_TIME"
+const val EXTRA_COURSE_LOCATION = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_LOCATION"
 
-    private var courseList: ArrayList<CourseData.CourseInfo> = ArrayList()
+class CourseRemoteViewsFactory(private val context: Context, private val intent: Intent?) :
+    RemoteViewsService.RemoteViewsFactory {
+
+    private var courseList: List<CourseData.CourseInfo> = emptyList()
 
     override fun onCreate() {
         Timber.tag("RemoteViewsFactory").e("Factory created.")
     }
 
     override fun onDataSetChanged() {
-        loadDataInBackground()
+        val json = intent?.getStringExtra("dayCourses")
+        if (json != null) {
+            try {
+                val type = object : TypeToken<CourseData.DayCourses>() {}.type
+                val deserializedDayCourses: CourseData.DayCourses = Gson().fromJson(json, type)
+
+                courseList = deserializedDayCourses.courses
+
+
+            } catch (e: Exception) {
+                courseList = emptyList()
+            }
+        } else {
+            courseList = emptyList()
+        }
     }
 
     override fun onDestroy() {
-        courseList.clear()
+        Timber.tag("CourseFactory").d("onDestroy")
+        courseList = emptyList()
     }
-    override fun getLoadingView(): RemoteViews? = null
 
-    override fun getViewTypeCount(): Int = 1
-
-    override fun getItemId(position: Int): Long = position.toLong()
     override fun getCount(): Int {
-        return courseList.size.takeIf { it != 1 || courseList[0].courseName != "今天没有课程" } ?: 0
+        val count = courseList.size
+        Timber.tag("CourseFactory").v("getCount: $count")
+        return count
     }
 
     override fun getViewAt(position: Int): RemoteViews? {
+        Timber.tag("CourseFactory").v("getViewAt: position $position")
+
+        if (position < 0 || position >= courseList.size) {
+            return null
+        }
+
         val course = courseList[position]
 
-        // 如果是“今天无课程”的占位项，返回 null，让 setEmptyView 生效
-        return if (course.courseName == "今天没有课程") {
-            null
-        } else {
-            RemoteViews(context.packageName, R.layout.widget_course_item).apply {
-                setTextViewText(R.id.tv_course_name, course.courseName)
-                setTextViewText(R.id.tv_course_time, course.courseTime)
-                setTextViewText(R.id.tv_course_location, course.courseLocation)
-            }
+        val itemView = RemoteViews(context.packageName, R.layout.widget_course_item).apply {
+            setTextViewText(R.id.tv_course_name, course.courseName)
+            setTextViewText(R.id.tv_course_time, course.courseTime)
+            setTextViewText(R.id.tv_course_location, course.courseLocation)
         }
+
+        val fillInIntent = Intent().apply {
+            val extras = Bundle()
+            extras.putString(EXTRA_COURSE_NAME, course.courseName)
+            extras.putString(EXTRA_COURSE_TIME, course.courseTime)
+            extras.putString(EXTRA_COURSE_LOCATION, course.courseLocation)
+            putExtras(extras)
+        }
+
+        itemView.setOnClickFillInIntent(R.id.widget_item_container, fillInIntent)
+        // -----------------------------------------------------
+
+        return itemView
     }
 
-    override fun hasStableIds(): Boolean = true
+    override fun getLoadingView(): RemoteViews? {
+        return null
+    }
 
-    private fun loadDataInBackground() {
-        val dayCourses = intent.getStringExtra("dayCourses")
-        val type = object : TypeToken<CourseData.DayCourses>() {}.type
-        val deserializedDayCourses: CourseData.DayCourses = Gson().fromJson(dayCourses, type)
 
-        courseList.clear()
+    override fun getViewTypeCount(): Int {
+        return 1
+    }
 
-        if (deserializedDayCourses.courses.isEmpty()) {
-            // 添加一个“无课程”占位
-            courseList.add(
-                CourseData.CourseInfo(
-                    courseName = "今天没有课程",
-                    courseTime = "",
-                    courseWeek = "",
-                    courseLocation = "",
-                    courseTeacher = ""
-                )
-            )
-        } else {
-            courseList.addAll(deserializedDayCourses.courses)
-        }
+    override fun getItemId(position: Int): Long {
+        return position.toLong()
+    }
+
+    override fun hasStableIds(): Boolean {
+        return false
     }
 }
