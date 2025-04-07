@@ -13,7 +13,7 @@ object ApiConstants {
     const val JWXT_LOGIN_URL = "https://$JWXT_ECJTU_DOMAIN/stuMag/Login_dcpLogin.action"  // 教务系统登录页
     const val ECJTU2JWXT_URL = "http://$CAS_ECJTU_DOMAIN/cas/login?service=https%3A%2F%2Fjwxt.ecjtu.edu.cn%2FstuMag%2FLogin_dcpLogin.action"  // 智慧交大登录教务系统
     const val GET_CLASSES_URL = "https://$JWXT_ECJTU_DOMAIN/Schedule/Weekcalendar_getStudentWeekcalendar.action?item=0208"  // 获取课程信息(post)
-    const val GET_GPA_URL = "https://$JWXT_ECJTU_DOMAIN/scoreQuery/stuScoreQue_getStuScore.action?item=0401"  // 获取成绩信息(get)
+    const val GET_SCORE_URL = "https://$JWXT_ECJTU_DOMAIN/scoreQuery/stuScoreQue_getStuScore.action?item=0401"  // 获取成绩信息(get)
     const val WEIXIN_JWXT_URL = "https://$JWXT_ECJTU_DOMAIN/weixin/CalendarServlet"
     const val GET_ELERTIVE_COURSE_URL_TEMPLATE = "https://$JWXT_ECJTU_DOMAIN/infoQuery/XKStu_findTerm.action"  // 获取选修课程信息(get)
     const val GET_STU_PROFILE_URL = "http://portal.$ECJTU_DOMAIN/dcp/profile/profile.action" // 获取个人信息

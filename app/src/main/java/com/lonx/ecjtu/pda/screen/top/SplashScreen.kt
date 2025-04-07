@@ -1,4 +1,4 @@
-package com.lonx.ecjtu.pda.screen
+package com.lonx.ecjtu.pda.screen.top
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

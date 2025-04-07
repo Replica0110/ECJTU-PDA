@@ -12,10 +12,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.data.AppRoutes
-import com.lonx.ecjtu.pda.data.PrefKeys.WEI_XIN_ID
-import com.lonx.ecjtu.pda.screen.LoginScreen
-import com.lonx.ecjtu.pda.screen.MainScreen
-import com.lonx.ecjtu.pda.screen.SplashScreen
+import com.lonx.ecjtu.pda.screen.top.LoginScreen
+import com.lonx.ecjtu.pda.screen.top.MainScreen
+import com.lonx.ecjtu.pda.screen.top.SplashScreen
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import org.koin.android.ext.android.inject
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -54,9 +53,11 @@ class MainActivity : ComponentActivity() {
 
                     composable(AppRoutes.MAIN) {
                         val mainInternalNavController = rememberNavController()
+                        val jwxtNavController = rememberNavController()
                         MainScreen(
                             topLevelNavController = topLevelNavController,
-                            internalNavController = mainInternalNavController
+                            internalNavController = mainInternalNavController,
+                            jwxtNavController = jwxtNavController
                         )
                     }
 

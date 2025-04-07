@@ -1,4 +1,4 @@
-package com.lonx.ecjtu.pda.screen
+package com.lonx.ecjtu.pda.screen.top
 
 import android.os.Build
 import androidx.activity.compose.BackHandler
@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,7 +35,6 @@ import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
@@ -62,6 +60,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.AppRoutes
+import com.lonx.ecjtu.pda.screen.main.HomeScreen
+import com.lonx.ecjtu.pda.screen.main.SettingScreen
+import com.lonx.ecjtu.pda.screen.main.StuInfoScreen
+import com.lonx.ecjtu.pda.screen.main.WifiScreen
+import com.lonx.ecjtu.pda.screen.jwxt.JwxtScreen
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberNavHostAwareScrollBehavior
 import dev.chrisbanes.haze.HazeState
@@ -74,7 +77,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.VerticalDivider
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
@@ -83,7 +85,8 @@ import kotlin.math.roundToInt
 @Composable
 fun MainScreen(
     topLevelNavController: NavHostController,
-    internalNavController: NavHostController
+    internalNavController: NavHostController,
+    jwxtNavController: NavHostController
 ) {
     val sidebarWidth = 220.dp
     val wideScreenThreshold = 600.dp
@@ -156,6 +159,7 @@ fun MainScreen(
                         .fillMaxHeight(),
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
+                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -228,6 +232,7 @@ fun MainScreen(
                         .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) },
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
+                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -364,6 +369,7 @@ fun MainContent(
     modifier: Modifier = Modifier,
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
+    jwxtNavController: NavHostController,
     currentRoute: String?,
     hazeState: HazeState,
     navHostAwareScrollBehavior: UpdatableScrollBehavior,
@@ -394,9 +400,6 @@ fun MainContent(
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                val useSmallTopAppBar = isWideScreen // 在宽屏下使用小顶栏
-
-                if (useSmallTopAppBar) {
                     SmallTopAppBar(
                         title = currentScreenTitle,
                         modifier = Modifier.hazeEffect(state = hazeState) {
@@ -421,32 +424,6 @@ fun MainContent(
                             }
                         }
                     )
-                } else {
-                    TopAppBar(
-                        title = currentScreenTitle,
-                        modifier = Modifier.hazeEffect(state = hazeState) {
-                            style = topBarHazeStyle
-                            blurRadius = 25.dp
-                            noiseFactor = 0f
-                        },
-                        scrollBehavior = navHostAwareScrollBehavior,
-                        color = Color.Transparent,
-                        navigationIcon = {
-                            if (!isWideScreen) {
-                                IconButton(
-                                    modifier = Modifier.padding(start = 20.dp),
-                                    onClick = onMenuClick,
-                                ) {
-                                    top.yukonga.miuix.kmp.basic.Icon(
-                                        imageVector = Icons.Default.Menu,
-                                        tint = MiuixTheme.colorScheme.onBackground,
-                                        contentDescription = "侧边栏"
-                                    )
-                                }
-                            }
-                        }
-                    )
-                }
             }
         },
         content = { innerPadding ->
@@ -464,7 +441,7 @@ fun MainContent(
                     .hazeSource(state = hazeState)
             ) {
                 composable(AppRoutes.HOME) { HomeScreen(internalNavController=internalNavController, topLevelNavController = topLevelNavController, scrollBehavior = navHostAwareScrollBehavior, padding = innerPadding) }
-                composable(AppRoutes.JWXT) { JwxtScreen(internalNavController = internalNavController, topLevelNavController = topLevelNavController, scrollBehavior = navHostAwareScrollBehavior, padding = innerPadding) }
+                composable(AppRoutes.JWXT) { JwxtScreen(internalNavController = internalNavController, topLevelNavController = topLevelNavController, jwxtNavController = jwxtNavController, scrollBehavior = navHostAwareScrollBehavior, padding = innerPadding) }
                 composable(AppRoutes.WIFI) { WifiScreen(internalNavController = internalNavController, padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
                 composable(AppRoutes.SETTING) { SettingScreen(padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
                 composable(AppRoutes.PROFILE) { StuInfoScreen(internalNavController = internalNavController, topLevelNavController = topLevelNavController, padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }

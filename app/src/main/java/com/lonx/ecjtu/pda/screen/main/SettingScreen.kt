@@ -1,4 +1,4 @@
-package com.lonx.ecjtu.pda.screen
+package com.lonx.ecjtu.pda.screen.main
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +33,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.lonx.ecjtu.pda.R
+import com.lonx.ecjtu.pda.screen.AccountConfigDialog
+import com.lonx.ecjtu.pda.screen.ChangePasswordDialog
 import com.lonx.ecjtu.pda.ui.InfoAlertDialog
 import com.lonx.ecjtu.pda.ui.InputAlertDialog
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior

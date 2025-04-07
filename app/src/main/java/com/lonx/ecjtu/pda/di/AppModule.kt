@@ -13,12 +13,14 @@ import com.lonx.ecjtu.pda.utils.PersistentCookieJar
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import com.lonx.ecjtu.pda.utils.SharedPrefsCookiePersistor
 import com.lonx.ecjtu.pda.network.WifiStatusMonitor
+import com.lonx.ecjtu.pda.service.StuScoreService
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import com.lonx.ecjtu.pda.viewmodel.JwxtViewModel
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
+import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
@@ -62,7 +64,11 @@ val appModule = module {
             client = get()
         )
     }
-
+    single<StuScoreService> {
+        StuScoreService(
+            service = get()
+        )
+    }
     // --- 系统服务 ---
     single { androidContext().getSystemService(Context.WIFI_SERVICE) as WifiManager }
     single { androidContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
@@ -74,11 +80,11 @@ val appModule = module {
         prefs = get(), wifiStatusMonitor = get(), locationStatusMonitor = get(),
         applicationContext = androidContext()
     ) }
-    viewModel { JwxtViewModel(service = get(), prefs = get()) }
+    viewModel { JwxtViewModel(jwxtService = get(),stuScoreService = get(), prefs = get()) }
     viewModel { SplashViewModel(service = get(), prefs = get()) }
     viewModel { LoginViewModel(service = get(), prefs = get()) }
     viewModel { StuInfoViewModel(service = get(),prefs = get()) }
     viewModel { HomeViewModel(service = get(), prefs = get()) }
     viewModel { SettingViewModel(service = get(), prefs = get()) }
-
+    viewModel {StuScoreViewModel(service = get(), prefs = get())}
 }

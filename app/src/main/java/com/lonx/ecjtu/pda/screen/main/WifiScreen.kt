@@ -1,4 +1,4 @@
-package com.lonx.ecjtu.pda.screen
+package com.lonx.ecjtu.pda.screen.main
 
 import android.Manifest
 import android.app.Activity
@@ -26,8 +26,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect

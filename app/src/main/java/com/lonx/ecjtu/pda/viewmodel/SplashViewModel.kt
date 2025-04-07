@@ -18,15 +18,14 @@ import timber.log.Timber
 import kotlin.coroutines.cancellation.CancellationException
 
 class SplashViewModel(
-    override val service: JwxtService, // Assuming JwxtService has checkSession and login
-    override val prefs: PreferencesManager  // Assuming PreferencesManager has hasCredentials
+    override val service: JwxtService,
+    override val prefs: PreferencesManager
 ) : ViewModel(), BaseViewModel {
 
-    private val _uiState = MutableStateFlow(SplashUiState(isLoading = true, message = "正在加载...")) // Start with loading true and initial message
+    private val _uiState = MutableStateFlow(SplashUiState(isLoading = true, message = "正在加载..."))
     override val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
 
-    // Optional: Minimum display time for the splash screen
-    private val minSplashTimeMillis = 1500L // 1.5 seconds
+    private val minSplashTimeMillis = 1500L
 
     init {
         Timber.tag("SplashVM").d("初始化 SplashViewModel")
@@ -37,11 +36,10 @@ class SplashViewModel(
         viewModelScope.launch {
             val startTime = System.currentTimeMillis()
             var finalNavigationTarget: NavigationTarget? = null
-            var finalMessage: String = ""
-            var shouldBeLoading = true // Keep loading until the very end by default
+            var finalMessage = ""
+            var shouldBeLoading = true
 
             try {
-                // --- Stage 1: Basic Checks (Combine messages) ---
                 _uiState.update { it.copy(isLoading = true, message = "正在准备应用...", navigationEvent = null) }
 
 
@@ -49,7 +47,7 @@ class SplashViewModel(
 
                 if (!hasCreds) {
                     Timber.tag("SplashVM").d("未找到本地凭据")
-                    finalMessage = "请先登录" // Simplified message
+                    finalMessage = "请先登录"
                     finalNavigationTarget = NavigationTarget.LOGIN
                     shouldBeLoading = false
                 } else {

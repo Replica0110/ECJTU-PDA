@@ -7,16 +7,15 @@ import com.lonx.ecjtu.pda.data.ApiConstants
 import com.lonx.ecjtu.pda.data.ApiConstants.COOKIE_CASTGC
 import com.lonx.ecjtu.pda.data.ApiConstants.COOKIE_JSESSIONID
 import com.lonx.ecjtu.pda.data.ApiConstants.ECJTU_LOGIN_URL
+import com.lonx.ecjtu.pda.data.ApiConstants.GET_SCORE_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.CourseData
-import com.lonx.ecjtu.pda.data.CourseInfo
 import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
 import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
-import com.lonx.ecjtu.pda.data.PrefKeys.WEI_XIN_ID
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.StudentInfo
 import com.lonx.ecjtu.pda.utils.PersistentCookieJar
@@ -38,7 +37,6 @@ import okio.IOException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import timber.log.Timber
-import java.util.concurrent.atomic.AtomicBoolean
 
 class JwxtService(
     private val prefes: PreferencesManager, // 用于存储和读取设置（如学号密码）
@@ -46,6 +44,7 @@ class JwxtService(
     private val client: OkHttpClient                     // 用于执行网络请求
 ): BaseService {
     private val maxRetries = 3 // 最大重试次数
+    private val maxLoginAttempts = 2
     private val gson = Gson()  // 用于 JSON 解析
     private val reLoginMutex = Mutex()
 
@@ -1199,5 +1198,152 @@ class JwxtService(
             return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
         }
     }
+    suspend fun getStudentScores(item: String = "0401", attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
+        Timber.d("开始获取成绩页面 HTML (item: $item)... (尝试次数: $attempt)")
+
+        // --- 1. 初始登录状态检查 ---
+        // 与 getStuInfo 类似，如果完全未登录，则先尝试登录
+        if (!hasLogin(1) && attempt == 1) {
+            Timber.d("获取成绩页面: 用户未登录或 JWXT 会话无效，尝试登录...")
+            val loginResult = login()
+            if (loginResult is LoginResult.Failure) {
+                Timber.e("获取成绩页面失败：需要登录，但登录失败: ${loginResult.error}")
+                return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
+            }
+            kotlinx.coroutines.delay(100) // 短暂延迟，让 Cookie 生效
+            if (!hasLogin(1)) {
+                Timber.e("获取成绩页面失败：登录尝试后仍然缺少 JWXT 会话。")
+                return@withContext ServiceResult.Error("无法建立教务系统会话，请重新登录")
+            }
+            Timber.d("获取成绩页面: 初始登录成功。")
+        } else if (!hasLogin(1) && attempt > 1) {
+            // 如果在重试时仍然没有登录，说明之前的自动重登录失败了
+            Timber.w("在第 $attempt 次尝试获取成绩页面时，仍然未登录。")
+            return@withContext ServiceResult.Error("登录会话无效，且自动重登录失败")
+        } else {
+            Timber.d("获取成绩页面: 用户已登录或正在进行重试。")
+        }
+
+        try {
+            // 构建 URL
+            val urlBuilder = GET_SCORE_URL.toHttpUrlOrNull()?.newBuilder()
+                ?: return@withContext ServiceResult.Error("无效的教务系统域名配置")
+            val url = urlBuilder
+                .addQueryParameter("item", item)
+                .build()
+
+            Timber.d("目标 URL: $url")
+
+            val headers = Headers.Builder()
+                .add("Host", url.host)
+                .add("Connection", "keep-alive")
+                .add("Upgrade-Insecure-Requests", "1")
+                .add("User-Agent", ApiConstants.USER_AGENT)
+                .add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+                .add("Sec-Fetch-Site", "same-origin")
+                .add("Sec-Fetch-Mode", "navigate")
+                .add("Sec-Fetch-User", "?1")
+                .add("Sec-Fetch-Dest", "document")
+                .add("Referer", "$JWXT_ECJTU_DOMAIN/")
+                .add("Accept-Language", "zh-CN,zh;q=0.9")
+                .build()
+
+            // 构建请求
+            val request = Request.Builder()
+                .url(url)
+                .headers(headers)
+                .get()
+                .build()
+
+            Timber.d("正在向 $url 发送 GET 请求 (尝试 $attempt)")
+            val response = client.newCall(request).execute()
+
+            response.use {
+                if (!it.isSuccessful && it.code != 302) {
+                    Timber.e("获取成绩页面失败: HTTP ${it.code}")
+                    throw IOException("获取成绩页面失败: HTTP ${it.code}")
+                }
+
+                // 读取响应体内容
+                val htmlBody = it.body?.string()
+
+                // --- 3. 检查是否返回了登录页面 (会话过期) ---
+                val isLoginPage = htmlBody?.contains(JWXT_LOGIN_PAGE_IDENTIFIER) == true ||
+                        (it.code == 302 && it.header("Location")?.contains("login", ignoreCase = true) == true)
+
+
+                if (isLoginPage) {
+                    Timber.w("获取成绩页面: 检测到返回的是登录页面或重定向到登录页 (HTTP ${it.code})，会话可能已过期。尝试次数 $attempt/$maxLoginAttempts")
+
+                    // 如果尝试次数已达上限，则失败
+                    if (attempt >= maxLoginAttempts) {
+                        Timber.e("获取成绩页面: 已达到最大登录尝试次数 ($maxLoginAttempts)，失败。")
+                        return@withContext ServiceResult.Error("登录已过期，自动重新登录失败")
+                    }
+
+                    // --- 触发重新登录逻辑 ---
+                    var loginSuccess = false
+                    // 使用互斥锁确保只有一个线程执行登录操作
+                    reLoginMutex.withLock {
+                        Timber.i("获取锁 (getScoresHtml)，检测到登录页，执行强制重新登录...")
+                        try {
+                            if (checkSession()) {
+                                Timber.i("会话在等待锁期间已由另一线程恢复。跳过重新登录。")
+                                loginSuccess = true
+                            } else {
+                                logout(clearStoredCredentials = false) // 清理旧 Cookie，保留凭据
+                                val reLoginResult = login(forceRefresh = true) // 强制刷新登录
+                                if (reLoginResult is LoginResult.Success && checkSession()) { // 再次验证
+                                    Timber.i("自动重新登录成功并验证有效。")
+                                    loginSuccess = true
+                                } else {
+                                    Timber.e("自动重新登录失败或会话无效: ${(reLoginResult as? LoginResult.Failure)?.error ?: "会话验证失败"}")
+                                    loginSuccess = false
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Timber.e(e, "在强制重新登录过程中发生异常 (getScoresHtml)")
+                            loginSuccess = false
+                        }
+                    }
+
+                    // 根据登录结果决定下一步
+                    if (loginSuccess) {
+                        Timber.d("重新登录或会话恢复成功，将重试获取成绩页面。")
+                        kotlinx.coroutines.delay(200) // 短暂延迟后重试
+                        // ***递归调用进行重试***
+                        return@withContext getStudentScores(item, attempt + 1) // 传递增加后的尝试次数
+                    } else {
+                        // 重新登录失败，返回错误
+                        return@withContext ServiceResult.Error("登录已过期，且自动重新登录失败")
+                    }
+                }
+
+                // --- 4. 如果不是登录页面，返回 HTML ---
+                if (htmlBody.isNullOrBlank()) {
+                    // If response was successful but body is empty/null (and wasn't login page)
+                    Timber.e("获取成绩页面成功 (HTTP ${it.code})，但响应体为空。")
+                    // Log headers or other info for debugging if needed
+                    Timber.v("Response Headers: ${it.headers}")
+                    return@withContext ServiceResult.Error("获取成绩页面成功，但响应内容为空")
+                }
+
+                Timber.i("成功获取成绩页面 HTML (item: $item)。")
+                return@withContext ServiceResult.Success(htmlBody)
+            } // response.use 结束
+
+        } catch (e: IOException) {
+            // 处理网络IO错误或之前抛出的非成功HTTP代码错误
+            Timber.w(e, "获取成绩页面时发生 IO 错误 (尝试 $attempt): ${e.message}")
+            // 这里可以添加针对网络抖动的重试逻辑，但这通常由 safeServiceCall 处理，
+            // 但由于我们需要自定义登录重试，所以直接在这里处理或返回错误
+            return@withContext ServiceResult.Error("网络请求失败: ${e.message}", e)
+        } catch (e: Exception) {
+            // 处理其他意外错误
+            Timber.e(e, "获取成绩页面时发生未知错误 (尝试 $attempt): ${e.message}")
+            return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
+        }
+    }
+
 
 }
