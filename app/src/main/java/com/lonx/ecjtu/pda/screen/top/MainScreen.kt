@@ -58,6 +58,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.screen.main.HomeScreen
@@ -85,11 +86,12 @@ import kotlin.math.roundToInt
 @Composable
 fun MainScreen(
     topLevelNavController: NavHostController,
-    internalNavController: NavHostController,
-    jwxtNavController: NavHostController
+    internalNavController: NavHostController
 ) {
     val sidebarWidth = 220.dp
     val wideScreenThreshold = 600.dp
+
+    val jwxtNavController = rememberNavController()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isWideScreen = maxWidth >= wideScreenThreshold

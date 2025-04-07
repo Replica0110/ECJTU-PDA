@@ -53,11 +53,9 @@ class MainActivity : ComponentActivity() {
 
                     composable(AppRoutes.MAIN) {
                         val mainInternalNavController = rememberNavController()
-                        val jwxtNavController = rememberNavController()
                         MainScreen(
                             topLevelNavController = topLevelNavController,
-                            internalNavController = mainInternalNavController,
-                            jwxtNavController = jwxtNavController
+                            internalNavController = mainInternalNavController
                         )
                     }
 
