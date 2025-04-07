@@ -91,7 +91,6 @@ fun MainScreen(
     val sidebarWidth = 220.dp
     val wideScreenThreshold = 600.dp
 
-    val jwxtNavController = rememberNavController()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isWideScreen = maxWidth >= wideScreenThreshold
@@ -161,7 +160,6 @@ fun MainScreen(
                         .fillMaxHeight(),
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
-                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -234,7 +232,6 @@ fun MainScreen(
                         .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) },
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
-                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -371,7 +368,6 @@ fun MainContent(
     modifier: Modifier = Modifier,
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
-    jwxtNavController: NavHostController,
     currentRoute: String?,
     hazeState: HazeState,
     navHostAwareScrollBehavior: UpdatableScrollBehavior,
@@ -383,7 +379,7 @@ fun MainContent(
     topBarHazeStyle: HazeStyle
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-
+    val jwxtNavController = rememberNavController()
     Scaffold(
         containerColor = Color.Transparent,
         modifier = modifier,
