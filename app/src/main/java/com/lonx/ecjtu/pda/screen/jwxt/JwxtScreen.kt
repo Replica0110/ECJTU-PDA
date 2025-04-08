@@ -46,6 +46,11 @@ fun JwxtScreen(
             )
         }
         // TODO:素拓学分界面
-        composable(JwxtDestinations.SECOND_CREDIT_ROUTE) {  }
+        composable(JwxtDestinations.SECOND_CREDIT_ROUTE) {
+            StuSecondCreditScreen(
+                onBack = {jwxtNavController.popBackStack()},
+                scrollBehavior = scrollBehavior
+            )
+        }
     }
 }

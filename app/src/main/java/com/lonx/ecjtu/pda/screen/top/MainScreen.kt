@@ -40,11 +40,13 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -53,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -69,6 +72,7 @@ import com.lonx.ecjtu.pda.screen.main.StuInfoScreen
 import com.lonx.ecjtu.pda.screen.main.WifiScreen
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberNavHostAwareScrollBehavior
+import com.lonx.ecjtu.pda.viewmodel.JwxtNavHostViewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -162,7 +166,7 @@ fun MainScreen(
                         .fillMaxHeight(),
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
-                    jwxtNavController = jwxtNavController,
+//                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -235,7 +239,7 @@ fun MainScreen(
                         .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) },
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
-                    jwxtNavController = jwxtNavController,
+//                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -372,7 +376,7 @@ fun MainContent(
     modifier: Modifier = Modifier,
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
-    jwxtNavController: NavHostController,
+//    jwxtNavController: NavHostController,
     currentRoute: String?,
     hazeState: HazeState,
     navHostAwareScrollBehavior: UpdatableScrollBehavior,
@@ -384,24 +388,14 @@ fun MainContent(
     topBarHazeStyle: HazeStyle
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val jwxtNavBackStackEntry by jwxtNavController.currentBackStackEntryAsState()
-    val currentJwxtRoute = jwxtNavBackStackEntry?.destination?.route
+    var jwxtTitleState by remember { mutableStateOf("教务系统") }
     Scaffold(
         containerColor = Color.Transparent,
         modifier = modifier,
         topBar = {
             val currentScreenTitle = when (currentRoute) {
                 AppRoutes.HOME -> "主页"
-                AppRoutes.JWXT -> {
-                    when (currentJwxtRoute) {
-                        JwxtDestinations.MENU_ROUTE -> "教务系统"
-                        JwxtDestinations.SCORE_ROUTE -> "我的成绩"
-                        JwxtDestinations.COURSE_SCHEDULE_ROUTE -> "我的课表"
-                        JwxtDestinations.EXAM_INFO_ROUTE -> "考试安排"
-                        JwxtDestinations.SECOND_CREDIT_ROUTE -> "素拓学分"
-                        else -> "教务系统"
-                    }
-                }
+                AppRoutes.JWXT ->  jwxtTitleState
                 AppRoutes.WIFI -> "校园网"
                 AppRoutes.SETTING -> "设置"
                 AppRoutes.PROFILE -> "个人信息"
@@ -454,7 +448,34 @@ fun MainContent(
                     .hazeSource(state = hazeState)
             ) {
                 composable(AppRoutes.HOME) { HomeScreen(internalNavController=internalNavController, topLevelNavController = topLevelNavController, scrollBehavior = navHostAwareScrollBehavior, padding = innerPadding) }
-                composable(AppRoutes.JWXT) { JwxtScreen(internalNavController = internalNavController, topLevelNavController = topLevelNavController, jwxtNavController = jwxtNavController, scrollBehavior = navHostAwareScrollBehavior, padding = innerPadding) }
+                composable(AppRoutes.JWXT) { navBackStackEntry ->
+
+                    val jwxtNavHostViewModel: JwxtNavHostViewModel = viewModel(
+                        viewModelStoreOwner = navBackStackEntry
+                    )
+
+                    val jwxtNavController = rememberNavController()
+
+                    LaunchedEffect(jwxtNavController) {
+                        jwxtNavController.currentBackStackEntryFlow.collect { backStackEntry ->
+                            jwxtTitleState = when (backStackEntry.destination.route) {
+                                JwxtDestinations.MENU_ROUTE -> "教务系统"
+                                JwxtDestinations.EXAM_INFO_ROUTE -> "考试信息"
+                                JwxtDestinations.COURSE_SCHEDULE_ROUTE -> "我的课表"
+                                JwxtDestinations.SECOND_CREDIT_ROUTE -> "素质拓展学分"
+                                JwxtDestinations.SCORE_ROUTE -> "我的成绩"
+                                else -> "教务系统"
+                            }
+                        }
+                    }
+                    JwxtScreen(
+                        internalNavController = internalNavController,
+                        topLevelNavController = topLevelNavController,
+                        jwxtNavController = jwxtNavController,
+                        scrollBehavior = navHostAwareScrollBehavior,
+                        padding = innerPadding
+                    )
+                }
                 composable(AppRoutes.WIFI) { WifiScreen(internalNavController = internalNavController, padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
                 composable(AppRoutes.SETTING) { SettingScreen(padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
                 composable(AppRoutes.PROFILE) { StuInfoScreen(internalNavController = internalNavController, topLevelNavController = topLevelNavController, padding = innerPadding, scrollBehavior = navHostAwareScrollBehavior) }
