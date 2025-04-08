@@ -12,12 +12,12 @@ import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
-import com.lonx.ecjtu.pda.data.CourseData
+import com.lonx.ecjtu.pda.data.CourseInfo
+import com.lonx.ecjtu.pda.data.DayCourses
 import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
 import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.StudentInfo
 import com.lonx.ecjtu.pda.utils.PersistentCookieJar
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.Dispatchers
@@ -35,11 +35,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 import timber.log.Timber
 
 class JwxtService(
-    private val prefes: PreferencesManager, // 用于存储和读取设置（如学号密码）
+    private val prefs: PreferencesManager, // 用于存储和读取设置（如学号密码）
     private val cookieJar: PersistentCookieJar,         // 用于持久化存储 Cookie
     private val client: OkHttpClient                     // 用于执行网络请求
 ): BaseService {
@@ -57,7 +56,7 @@ class JwxtService(
      * 类型 0: 检查 CASTGC (主要的 CAS 票据)。
      * 类型 1: 同时检查 CASTGC 和 JSESSIONID (特别是针对教务系统 JWXT)。
      */
-    fun hasLogin(type: Int = 0): Boolean {
+    private fun hasLogin(type: Int = 0): Boolean {
         // 需要检查的 URL 列表 (CAS 和 JWXT 的登录相关 URL)
         val urlsToCheck = listOf(ECJTU_LOGIN_URL.toHttpUrl(), JWXT_LOGIN_URL.toHttpUrl(),
             PORTAL_ECJTU_DOMAIN.toHttpUrl())
@@ -83,10 +82,12 @@ class JwxtService(
     /**
      * 尝试使用存储在 PreferencesManager 中的凭据进行登录。
      * 处理密码加密、获取 LT 值和重定向。
+     * @param [forceRefresh] 是否强制刷新登录，即使已经登录。
+     * @return [LoginResult] 登录结果。
      */
     suspend fun login(forceRefresh: Boolean = false): LoginResult = withContext(Dispatchers.IO) {
-        val studentId = prefes.getString(STUDENT_ID, "")
-        val studentPassword = prefes.getString(PASSWORD, "")
+        val studentId = prefs.getString(STUDENT_ID, "")
+        val studentPassword = prefs.getString(PASSWORD, "")
         val sessionTimeOut = checkSession()
         // 检查凭据是否存在
         if (studentId.isBlank() || studentPassword.isBlank()) {
@@ -188,7 +189,7 @@ class JwxtService(
     /**
      * 执行退出登录操作。
      * 清除网络会话 (Cookies) 和可选地清除存储的凭据。
-     * @param clearStoredCredentials 是否同时清除 PreferencesManager 中保存的学号密码，默认为 true。
+     * @param [clearStoredCredentials] 是否同时清除 PreferencesManager 中保存的学号密码，默认为 true。
      */
     fun logout(clearStoredCredentials: Boolean = true) {
         Timber.i("正在执行退出登录...")
@@ -197,7 +198,7 @@ class JwxtService(
         Timber.d("CookieJar 已清除。")
 
         if (clearStoredCredentials) {
-            prefes.clearCredentials()
+            prefs.clearCredentials()
             Timber.d("存储的凭据已清除。")
         } else {
             Timber.d("选择不清除存储的凭据。")
@@ -205,8 +206,10 @@ class JwxtService(
 
         Timber.i("退出登录操作完成。")
     }
-    /**登录过期检查方法*/
-
+    /**
+     * 登录过期检查方法
+     * @return true 表示会话有效，false 表示会话已过期。
+    */
     suspend fun checkSession(): Boolean = withContext(Dispatchers.IO) {
         if (!hasLogin(1)) {
             Timber.d("JWXT Session Check: Failed (JSESSIONID cookie missing).")
@@ -257,195 +260,141 @@ class JwxtService(
             }
         } catch (e: IOException) {
             Timber.e(e, "JWXT Session Check: Failed (Network IO Error).")
-            return@withContext false // Network error means we can't confirm session validity
+            return@withContext false
         } catch (e: Exception) {
             Timber.e(e, "JWXT Session Check: Failed (Unknown Error).")
-            return@withContext false // Other errors also mean failure to confirm
+            return@withContext false
         }
     }
-    /** 通过解析教务系统页面的 HTML 获取学生信息。 */
-    suspend fun getStuInfo(attempt: Int = 1): ServiceResult<StudentInfo> = withContext(Dispatchers.IO) {
-        Timber.d("开始获取学生信息... (尝试次数: $attempt)")
-        val maxLoginAttempts = 2 // 允许因会话过期而触发的登录尝试次数
+    /**
+     * 获取学生基本信息页面的原始 HTML 内容。
+     *
+     * @param attempt 当前尝试次数 (用于内部重试逻辑).
+     * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
+     */
+    suspend fun getStudentInfoHtml(attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
+        Timber.d("JwxtService: 开始获取学生信息页面 HTML... (尝试次数: $attempt)")
 
-        // --- 1. 初始登录状态检查 ---
-        // 如果连初始的Cookie都没有，先尝试登录一次
-        if (!hasLogin(1) && attempt == 1) { // 只在首次尝试时检查并主动登录
-            Timber.d("用户未登录或 JWXT 会话无效，尝试登录...")
+        if (!hasLogin(1) && attempt == 1) {
+            Timber.d("JwxtService: 获取学生信息页面: 用户未登录或 JWXT 会话无效，尝试登录...")
             val loginResult = login()
             if (loginResult is LoginResult.Failure) {
-                Timber.e("获取学生信息失败：需要登录，但登录失败: ${loginResult.error}")
+                Timber.e("JwxtService: 获取学生信息页面失败：需要登录，但登录失败: ${loginResult.error}")
                 return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
             }
             kotlinx.coroutines.delay(100)
             if (!hasLogin(1)) {
-                Timber.e("获取学生信息失败：登录尝试后仍然缺少 JWXT 会话。")
+                Timber.e("JwxtService: 获取学生信息页面失败：登录尝试后仍然缺少 JWXT 会话。")
                 return@withContext ServiceResult.Error("无法建立教务系统会话，请重新登录")
             }
-            Timber.d("初始登录成功，继续获取学生信息。")
+            Timber.d("JwxtService: 获取学生信息页面: 初始登录成功。")
         } else if (!hasLogin(1) && attempt > 1) {
-            // 如果不是首次尝试，并且仍然没有登录状态，说明之前的自动重登录可能失败了
-            Timber.w("在第 $attempt 次尝试获取学生信息时，仍然未登录。")
-            // 这里可以选择直接失败，或者依赖后续请求失败时的重登录逻辑
-        } else {
-            Timber.d("用户已登录或正在进行重试，直接获取学生信息。")
+            Timber.w("JwxtService: 在第 $attempt 次尝试获取学生信息页面时，仍然未登录。")
+            return@withContext ServiceResult.Error("登录会话无效，且自动重登录失败")
         }
 
-
-        // --- 2. 发起请求并处理响应 ---
         try {
-            // 构建请求头
+            val infoUrl = try {
+                ApiConstants.GET_STU_INFO_URL.toHttpUrl()
+            } catch (e: IllegalArgumentException) {
+                Timber.e("JwxtService: 无效的学生信息 URL: ${ApiConstants.GET_STU_INFO_URL}")
+                return@withContext ServiceResult.Error("配置的学生信息URL无效")
+            }
+
             val headers = Headers.Builder()
-                .add("Host", ApiConstants.GET_STU_INFO_URL.toHttpUrl().host)
-                // ... (其他请求头) ...
+                .add("Host", infoUrl.host)
                 .add("User-Agent", ApiConstants.USER_AGENT)
                 .add("Referer", "$JWXT_ECJTU_DOMAIN/index.action")
+                .add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 .build()
 
-            // 构建请求
             val request = Request.Builder()
-                .url(ApiConstants.GET_STU_INFO_URL)
+                .url(infoUrl)
                 .headers(headers)
                 .get()
                 .build()
 
-            Timber.d("正在向 ${ApiConstants.GET_STU_INFO_URL} 发送 GET 请求 (尝试 $attempt)")
+            Timber.d("JwxtService: 正在向 ${ApiConstants.GET_STU_INFO_URL} 发送 GET 请求 (尝试 $attempt)")
             val response = client.newCall(request).execute()
 
             response.use {
-                if (!it.isSuccessful) {
-                    Timber.e("获取学生信息页面失败: HTTP ${it.code}")
+                if (!it.isSuccessful && it.code != 302) {
+                    Timber.e("JwxtService: 获取学生信息页面失败: HTTP ${it.code}")
                     throw IOException("获取学生信息页面失败: HTTP ${it.code}")
                 }
 
-                // 读取响应体内容 (需要读取才能检查)
                 val htmlBody = it.body?.string()
 
-                if (htmlBody.isNullOrBlank()) {
-                    Timber.e("获取学生信息页面成功，但响应体为空。")
-                    throw ParseException("学生信息页面响应体为空")
-                }
+                val loginPageIdentifier = JWXT_LOGIN_PAGE_IDENTIFIER
+                val isLoginPage = htmlBody?.contains(loginPageIdentifier) == true ||
+                        (it.code == 302 && it.header("Location")?.contains("login", ignoreCase = true) == true)
 
-                // --- 3. 检查是否返回了登录页面 ---
-                val loginPageMetaTag = """华东交通大学教务管理系统-登录"""
-                if (htmlBody.contains(loginPageMetaTag)) {
-                    Timber.w("检测到返回的是登录页面，会话可能已过期。尝试次数 $attempt/$maxLoginAttempts")
-
-                    // 如果尝试次数已达上限，则失败
+                if (isLoginPage) {
+                    Timber.w("JwxtService: 获取学生信息页面: 检测到登录页 (HTTP ${it.code})，会话可能已过期。尝试次数 $attempt/$maxLoginAttempts")
                     if (attempt >= maxLoginAttempts) {
-                        Timber.e("已达到最大登录尝试次数 ($maxLoginAttempts)，获取学生信息失败。")
+                        Timber.e("JwxtService: 获取学生信息页面: 已达到最大登录尝试次数 ($maxLoginAttempts)，失败。")
                         return@withContext ServiceResult.Error("登录已过期，自动重新登录失败")
                     }
 
-                    // --- 触发重新登录逻辑 ---
                     var loginSuccess = false
-                    // 使用互斥锁确保只有一个线程执行登录操作
                     reLoginMutex.withLock {
-
-                        Timber.i("获取锁，检测到登录页，执行强制重新登录...")
+                        Timber.i("JwxtService: 获取锁 (getInfoHtml)，检测到登录页，执行强制重新登录...")
                         try {
-                            logout(clearStoredCredentials = false) // 清理可能无效的旧 Cookie，不清除账号密码
-                            val reLoginResult = login(forceRefresh = true) // 强制刷新登录
-                            if (reLoginResult is LoginResult.Success) {
-                                // 重新登录成功后，最好再验证一下
-                                if (hasLogin(1)) {
-                                    Timber.i("自动重新登录成功。")
+                            if (checkSession()) {
+                                Timber.i("JwxtService: 会话在等待锁期间已恢复。")
+                                loginSuccess = true
+                            } else {
+                                logout(clearStoredCredentials = false)
+                                val reLoginResult = login(forceRefresh = true)
+                                if (reLoginResult is LoginResult.Success && checkSession()) {
+                                    Timber.i("JwxtService: 自动重新登录成功并验证有效。")
                                     loginSuccess = true
                                 } else {
-                                    Timber.e("自动重新登录声称成功，但必要的 Cookie 仍然缺失。")
-                                    loginSuccess = false // 保持失败状态
+                                    Timber.e("JwxtService: 自动重新登录失败或会话无效: ${(reLoginResult as? LoginResult.Failure)?.error ?: "会话验证失败"}")
+                                    loginSuccess = false
                                 }
-                            } else {
-                                Timber.e("自动重新登录失败: ${(reLoginResult as LoginResult.Failure).error}")
-                                loginSuccess = false
                             }
                         } catch (e: Exception) {
-                            // 处理 logout 或 login 可能抛出的异常
-                            Timber.e(e, "在强制重新登录过程中发生异常")
+                            Timber.e(e, "JwxtService: 在强制重新登录过程中发生异常 (getInfoHtml)")
                             loginSuccess = false
                         }
-                    } // Mutex 释放
+                    }
 
-                    // 根据登录结果决定下一步
                     if (loginSuccess) {
-                        Timber.d("重新登录成功，将重试获取学生信息。")
-                        // 短暂延迟可能有助于 Cookie 传播或避免立即再次请求
-                        kotlinx.coroutines.delay(200) // 保留延迟
-                        // ***递归调用或使用循环进行重试***
-                        return@withContext getStuInfo(attempt + 1) // 传递增加后的尝试次数
+                        Timber.d("JwxtService: 重新登录或会话恢复成功，将重试获取学生信息页面。")
+                        kotlinx.coroutines.delay(200)
+                        return@withContext getStudentInfoHtml(attempt + 1) // Recursive call
                     } else {
-                        // 重新登录失败，返回错误
                         return@withContext ServiceResult.Error("登录已过期，且自动重新登录失败")
                     }
                 }
 
-                // --- 4. 如果不是登录页面，则正常解析 ---
-                Timber.d("获取学生信息页面成功，开始解析 HTML...")
-                val document = Jsoup.parse(htmlBody)
-                val infoTable = document.selectFirst("div#basic table.table_border")
+                if (htmlBody.isNullOrBlank()) {
 
-                if (infoTable == null) {
-                    Timber.e("无法在 HTML 中找到基本信息表格 (div#basic table.table_border)")
+                    Timber.e("JwxtService: 获取学生信息页面成功 (HTTP ${it.code})，但响应体为空。")
 
-                    Timber.v("Received HTML body (first 500 chars): ${htmlBody.take(2000)}")
-                    throw ParseException("无法在页面中找到学生信息表格结构")
+                    return@withContext ServiceResult.Error("获取学生信息页面成功，但响应内容为空")
                 }
 
-                fun extractValue(table: Element, key: String): String? {
-                    val valueTd = table.select("td.k:containsOwn(${key})").first()?.nextElementSibling()
-                    return valueTd?.text()?.trim()?.takeIf { it.isNotEmpty() }
-                }
+                Timber.i("JwxtService: 成功获取学生信息页面 HTML。")
+                return@withContext ServiceResult.Success(htmlBody)
 
-                fun extractRequiredValue(table: Element, key: String, fieldName: String): String {
-                    return extractValue(table, key) ?: throw ParseException("无法解析必需字段: $fieldName")
-                }
-
-                try {
-                    val studentInfo = StudentInfo(
-                        studentId = extractRequiredValue(infoTable, "学号：", "学号"),
-                        classInternalId = extractRequiredValue(infoTable, "在班编号：", "在班编号"),
-                        name = extractRequiredValue(infoTable, "姓名：", "姓名"),
-                        className = extractRequiredValue(infoTable, "班级：", "班级"),
-                        gender = extractRequiredValue(infoTable, "性别：", "性别"),
-                        ethnicity = extractRequiredValue(infoTable, "民族：", "民族"),
-                        dateOfBirth = extractRequiredValue(infoTable, "出生日期：", "出生日期"),
-                        idCardNumber = extractRequiredValue(infoTable, "身份证号：", "身份证号"),
-                        politicalStatus = extractRequiredValue(infoTable, "政治面貌：", "政治面貌"),
-                        nativePlace = extractValue(infoTable, "籍贯："), // Nullable
-                        curriculumPlanId = extractValue(infoTable, "培养方案编号："), // Nullable
-                        englishLevel = extractValue(infoTable, "英语分级级别："), // Nullable
-                        studentStatus = extractRequiredValue(infoTable, "学籍状态：", "学籍状态"),
-                        disciplinaryStatus = extractRequiredValue(infoTable, "处分状态：", "处分状态"),
-                        gaokaoExamId = extractValue(infoTable, "高考考生号："), // Nullable
-                        gaokaoScore = extractValue(infoTable, "高考成绩："), // Nullable
-                        placeOfOrigin = extractRequiredValue(infoTable, "生源地：", "生源地")
-                    )
-                    Timber.i("学生信息解析成功: ${studentInfo.name} (${studentInfo.studentId})")
-                    return@withContext ServiceResult.Success(studentInfo) // 返回成功结果
-                } catch (e: ParseException) {
-                    Timber.e(e, "解析学生信息时出错: ${e.message}")
-                    throw e // 抛出解析异常
-                } catch (e: Exception) {
-                    Timber.e(e, "解析学生信息时发生意外错误。")
-                    throw ParseException("解析学生信息HTML时发生未知错误") // 包装其他异常
-                }
-            } // response.use 结束
-
+            } // response.use
         } catch (e: IOException) {
-            // 处理网络IO错误或之前抛出的非成功HTTP代码错误
-            Timber.w(e, "获取学生信息时发生 IO 错误 (尝试 $attempt): ${e.message}")
-            // 这里可以根据需要添加重试逻辑 (针对网络抖动)，但与登录过期的重试分开
+            Timber.w(e, "JwxtService: 获取学生信息页面时发生 IO 错误 (尝试 $attempt): ${e.message}")
             return@withContext ServiceResult.Error("网络请求失败: ${e.message}", e)
-        } catch (e: ParseException) {
-            // 处理上面try-catch块中抛出的解析异常
-            return@withContext ServiceResult.Error("数据解析失败: ${e.message}", e)
         } catch (e: Exception) {
-            // 处理其他意外错误
-            Timber.e(e, "获取学生信息时发生未知错误 (尝试 $attempt): ${e.message}")
+            Timber.e(e, "JwxtService: 获取学生信息页面时发生未知错误 (尝试 $attempt): ${e.message}")
             return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
         }
     }
-    /**修改密码*/
+
+    /**
+     * 修改密码
+     * @param [oldPassword] 旧密码
+     * @param [newPassword] 新密码
+     * @return [ServiceResult] 修改密码结果
+     */
     suspend fun updatePassword(oldPassword: String, newPassword: String): ServiceResult<String> = withContext(Dispatchers.IO) {
         Timber.d("开始修改密码...")
 
@@ -548,7 +497,10 @@ class JwxtService(
     }
 
     class PasswordChangeException(message: String) : IOException(message)
-    /** 获取 YKT (一卡通) 余额。 */
+    /**
+     * 获取 YKT (一卡通) 余额。
+     * @return [ServiceResult] 包含一卡通余额的字符串，或错误信息
+    */
     suspend fun getYktNum(): ServiceResult<String> = withContext(Dispatchers.IO) {
         // 1. 确保 CAS 登录 (访问 DCP 通常需要 CAS 认证)
         if (!hasLogin(0)) { // 检查 CASTGC
@@ -875,7 +827,7 @@ class JwxtService(
 
     /**
      * API 调用的包装器，用于处理常见网络异常和重试。
-     * 返回 ServiceResult<T> (Success 或 Error)。
+     * @return [ServiceResult] ([ServiceResult.Success] 或 [ServiceResult.Error])。
      */
     private suspend fun <T> safeServiceCall(
         currentRetries: Int = 0,
@@ -909,6 +861,10 @@ class JwxtService(
     /**
      * 使用提供的凭据执行登录，并在成功时保存它们。
      * 在尝试登录前清除现有会话。
+     * @param [studentId] 学号
+     * @param [studentPass] 密码
+     * @param [ispOption] 运营商对应id
+     * @return [LoginResult] ([LoginResult.Success] 或 [LoginResult.Failure])。
      */
     suspend fun loginManually(studentId: String, studentPass: String,ispOption: Int): LoginResult = withContext(Dispatchers.IO) {
         // 1. 基本输入验证
@@ -980,8 +936,8 @@ class JwxtService(
         }
 
         // --- 重要：完全成功后保存凭据 ---
-//        Timber.i("用户 $studentId 手动登录成功。正在保存凭据。")
-//        prefes.saveCredentials(studentId, studentPass, ispOption)
+        Timber.i("用户 $studentId 手动登录成功。正在保存凭据。")
+        prefs.saveCredentials(studentId, studentPass, ispOption)
 
         Timber.i("用户 $studentId 的手动登录过程成功完成")
         return@withContext LoginResult.Success("登录成功")
@@ -1055,10 +1011,10 @@ class JwxtService(
      * @param [dateQuery] 查询日期，格式为 "YYYY-MM-DD"。如果为 null 或空，则获取当天的课表。
      * @return [ServiceResult] 包含 [CourseData.DayCourses] 或错误信息。
      */
-    suspend fun getCourseSchedule(dateQuery: String? = null): ServiceResult<CourseData.DayCourses> = withContext(Dispatchers.IO) {
+    suspend fun getCourseSchedule(dateQuery: String? = null): ServiceResult<DayCourses> = withContext(Dispatchers.IO) {
         Timber.e("开始获取课程表信息... 查询日期: ${dateQuery ?: "未指定"}")
 
-        val weiXinId = prefes.getWeiXinId()
+        val weiXinId = prefs.getWeiXinId()
         if (weiXinId.isBlank()) {
             Timber.e("警告：无法从持久化存储中获取 weiXinID。将尝试不带此参数请求课表。")
             return@withContext ServiceResult.Error("配置错误：缺少 weiXinID")
@@ -1114,21 +1070,21 @@ class JwxtService(
 
                 if (courseListElement == null) {
                     Timber.e("无法在 HTML 中找到课程列表容器 (div.calendar ul.rl_info)。页面结构可能已更改。返回带日期的空课表。")
-                    return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, emptyList()))
+                    return@withContext ServiceResult.Success(DayCourses(scheduleDate, emptyList()))
                 }
 
                 val hasImagePlaceholder = courseListElement.selectFirst("li > p > img") != null
                 if (hasImagePlaceholder) {
                     Timber.e("检测到图片占位符，表示当天无课。返回带日期的空课表。")
-                    return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, emptyList()))
+                    return@withContext ServiceResult.Success(DayCourses(scheduleDate, emptyList()))
                 }
 
-                val courses = mutableListOf<CourseData.CourseInfo>()
+                val courses = mutableListOf<CourseInfo>()
                 val listItems = courseListElement.select("li")
 
                 if (listItems.isEmpty()) {
                     Timber.i("课程列表容器存在，但未找到 'li' 元素（且非图片占位符），表示当天无课。返回带日期的空课表。")
-                    return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, emptyList()))
+                    return@withContext ServiceResult.Success(DayCourses(scheduleDate, emptyList()))
                 }
 
                 Timber.e("找到 ${listItems.size} 个课程条目，开始解析...")
@@ -1165,7 +1121,7 @@ class JwxtService(
 
                         if (courseName != "N/A") {
                             courses.add(
-                                CourseData.CourseInfo(
+                                CourseInfo(
                                     courseName = courseName,
                                     courseTime = "节次：${courseTime}",
                                     courseWeek = "上课周：${courseWeek}",
@@ -1184,7 +1140,7 @@ class JwxtService(
                 }
 
                 Timber.i("课程表解析成功，日期: $scheduleDate, 课程数: ${courses.size}")
-                return@withContext ServiceResult.Success(CourseData.DayCourses(scheduleDate, courses))
+                return@withContext ServiceResult.Success(DayCourses(scheduleDate, courses))
 
             }
         } catch (e: IOException) {
@@ -1198,8 +1154,8 @@ class JwxtService(
             return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
         }
     }
-    suspend fun getStudentScores(item: String = "0401", attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
-        Timber.d("开始获取成绩页面 HTML (item: $item)... (尝试次数: $attempt)")
+    suspend fun getStudentScoresHtml(attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
+        Timber.d("开始获取成绩页面 HTML... (尝试次数: $attempt)")
 
         // --- 1. 初始登录状态检查 ---
         // 与 getStuInfo 类似，如果完全未登录，则先尝试登录
@@ -1229,7 +1185,6 @@ class JwxtService(
             val urlBuilder = GET_SCORE_URL.toHttpUrlOrNull()?.newBuilder()
                 ?: return@withContext ServiceResult.Error("无效的教务系统域名配置")
             val url = urlBuilder
-                .addQueryParameter("item", item)
                 .build()
 
             Timber.d("目标 URL: $url")
@@ -1250,7 +1205,7 @@ class JwxtService(
 
             // 构建请求
             val request = Request.Builder()
-                .url(url)
+                .url(GET_SCORE_URL)
                 .headers(headers)
                 .get()
                 .build()
@@ -1312,7 +1267,7 @@ class JwxtService(
                         Timber.d("重新登录或会话恢复成功，将重试获取成绩页面。")
                         kotlinx.coroutines.delay(200) // 短暂延迟后重试
                         // ***递归调用进行重试***
-                        return@withContext getStudentScores(item, attempt + 1) // 传递增加后的尝试次数
+                        return@withContext getStudentScoresHtml(attempt + 1) // 传递增加后的尝试次数
                     } else {
                         // 重新登录失败，返回错误
                         return@withContext ServiceResult.Error("登录已过期，且自动重新登录失败")
@@ -1328,7 +1283,7 @@ class JwxtService(
                     return@withContext ServiceResult.Error("获取成绩页面成功，但响应内容为空")
                 }
 
-                Timber.i("成功获取成绩页面 HTML (item: $item)。")
+                Timber.i("成功获取成绩页面 HTML")
                 return@withContext ServiceResult.Success(htmlBody)
             } // response.use 结束
 
@@ -1344,6 +1299,129 @@ class JwxtService(
             return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
         }
     }
+    /**
+     * 获取素质拓展学分详情页面的原始 HTML 内容。
+     * Handles session checking and automatic re-login attempts internally.
+     *
+     * @param attempt 当前尝试次数 (用于内部重试逻辑).
+     * @return ServiceResult 包含成功获取的 HTML 字符串或错误信息.
+     */
+    suspend fun getSecondCreditHtml(attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
+        val targetUrlString = ApiConstants.GET_SECOND_CREDIT
+        Timber.d("JwxtService: 开始获取素质拓展学分页面 HTML ($targetUrlString)... (尝试次数: $attempt)")
 
+        if (!hasLogin(1) && attempt == 1) {
+            Timber.d("JwxtService: 获取素质拓展学分页面: 用户未登录或 JWXT 会话无效，尝试登录...")
+            val loginResult = login()
+            if (loginResult is LoginResult.Failure) {
+                Timber.e("JwxtService: 获取素质拓展页面失败：需要登录，但登录失败: ${loginResult.error}")
+                return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
+            }
+            kotlinx.coroutines.delay(100)
+            if (!hasLogin(1)) {
+                Timber.e("JwxtService: 获取素质拓展页面失败：登录尝试后仍然缺少 JWXT 会话。")
+                return@withContext ServiceResult.Error("无法建立教务系统会话，请重新登录")
+            }
+            Timber.d("JwxtService: 获取素质拓展页面: 初始登录成功。")
+        } else if (!hasLogin(1) && attempt > 1) {
+            Timber.w("JwxtService: 在第 $attempt 次尝试获取素质拓展页面时，仍然未登录。")
+            return@withContext ServiceResult.Error("登录会话无效，且自动重登录失败")
+        }
+
+        try {
+            val url = targetUrlString.toHttpUrlOrNull()
+                ?: return@withContext ServiceResult.Error("无效的素质拓展学分URL配置: $targetUrlString")
+
+            Timber.d("JwxtService: 目标 URL: $url")
+
+            val headers = Headers.Builder()
+                .add("Host", url.host)
+                .add("Connection", "keep-alive")
+                .add("Upgrade-Insecure-Requests", "1")
+                .add("User-Agent", ApiConstants.USER_AGENT)
+                .add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+                .add("Sec-Fetch-Site", "same-origin")
+                .add("Sec-Fetch-Mode", "navigate")
+                .add("Sec-Fetch-Dest", "document")
+                .add("Referer", "$JWXT_ECJTU_DOMAIN/")
+                .add("Accept-Language", "zh-CN,zh;q=0.9")
+                .build()
+
+            val request = Request.Builder()
+                .url(url)
+                .headers(headers)
+                .get()
+                .build()
+
+            Timber.d("JwxtService: 正在向 $url 发送 GET 请求 (尝试 $attempt)")
+            val response = client.newCall(request).execute()
+
+            response.use {
+                if (!it.isSuccessful && it.code != 302) {
+                    Timber.e("JwxtService: 获取素质拓展页面失败: HTTP ${it.code}")
+                    throw IOException("获取素质拓展页面失败: HTTP ${it.code}")
+                }
+
+                val htmlBody = it.body?.string()
+                val isLoginPage = htmlBody?.contains(JWXT_LOGIN_PAGE_IDENTIFIER) == true ||
+                        (it.code == 302 && it.header("Location")?.contains("login", ignoreCase = true) == true)
+
+                if (isLoginPage) {
+                    Timber.w("JwxtService: 获取素质拓展页面: 检测到登录页 (HTTP ${it.code})，会话可能已过期。尝试次数 $attempt/$maxLoginAttempts")
+                    if (attempt >= maxLoginAttempts) {
+                        Timber.e("JwxtService: 获取素质拓展页面: 已达到最大登录尝试次数 ($maxLoginAttempts)，失败。")
+                        return@withContext ServiceResult.Error("登录已过期，自动重新登录失败")
+                    }
+
+                    var loginSuccess = false
+                    reLoginMutex.withLock {
+                        Timber.i("JwxtService: 获取锁 (getExtracurricularHtml)，检测到登录页，执行强制重新登录...")
+                        try {
+                            if (checkSession()) {
+                                Timber.i("JwxtService: 会话在等待锁期间已恢复。")
+                                loginSuccess = true
+                            } else {
+                                logout(clearStoredCredentials = false)
+                                val reLoginResult = login(forceRefresh = true)
+                                if (reLoginResult is LoginResult.Success && checkSession()) {
+                                    Timber.i("JwxtService: 自动重新登录成功并验证有效。")
+                                    loginSuccess = true
+                                } else {
+                                    Timber.e("JwxtService: 自动重新登录失败或会话无效: ${(reLoginResult as? LoginResult.Failure)?.error ?: "会话验证失败"}")
+                                    loginSuccess = false
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Timber.e(e, "JwxtService: 在强制重新登录过程中发生异常 (getExtracurricularHtml)")
+                            loginSuccess = false
+                        }
+                    }
+
+                    if (loginSuccess) {
+                        Timber.d("JwxtService: 重新登录或会话恢复成功，将重试获取素质拓展页面。")
+                        kotlinx.coroutines.delay(200)
+                        return@withContext getSecondCreditHtml(attempt + 1)
+                    } else {
+                        return@withContext ServiceResult.Error("登录已过期，且自动重新登录失败")
+                    }
+                }
+
+                if (htmlBody.isNullOrBlank()) {
+                    Timber.e("JwxtService: 获取素质拓展页面成功 (HTTP ${it.code})，但响应体为空。")
+                    return@withContext ServiceResult.Error("获取素质拓展页面成功，但响应内容为空")
+                }
+
+                Timber.i("JwxtService: 成功获取素质拓展页面 HTML。")
+                return@withContext ServiceResult.Success(htmlBody)
+            }
+
+        } catch (e: IOException) {
+            Timber.w(e, "JwxtService: 获取素质拓展页面时发生 IO 错误 (尝试 $attempt): ${e.message}")
+            return@withContext ServiceResult.Error("网络请求失败: ${e.message}", e)
+        } catch (e: Exception) {
+            Timber.e(e, "JwxtService: 获取素质拓展页面时发生未知错误 (尝试 $attempt): ${e.message}")
+            return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
+        }
+    }
 
 }

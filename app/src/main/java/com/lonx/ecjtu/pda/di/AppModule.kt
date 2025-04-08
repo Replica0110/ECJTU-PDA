@@ -6,16 +6,17 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache
-import com.lonx.ecjtu.pda.service.JwxtService
-import com.lonx.ecjtu.pda.utils.LocationStatusMonitor
 import com.lonx.ecjtu.pda.network.MyOkHttpClient
+import com.lonx.ecjtu.pda.network.WifiStatusMonitor
+import com.lonx.ecjtu.pda.service.JwxtService
+import com.lonx.ecjtu.pda.service.StuInfoService
+import com.lonx.ecjtu.pda.service.StuScoreService
+import com.lonx.ecjtu.pda.service.StuSecondCreditService
+import com.lonx.ecjtu.pda.utils.LocationStatusMonitor
 import com.lonx.ecjtu.pda.utils.PersistentCookieJar
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import com.lonx.ecjtu.pda.utils.SharedPrefsCookiePersistor
-import com.lonx.ecjtu.pda.network.WifiStatusMonitor
-import com.lonx.ecjtu.pda.service.StuScoreService
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
-import com.lonx.ecjtu.pda.viewmodel.JwxtViewModel
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
@@ -44,7 +45,7 @@ val appModule = module {
     }
     // 2. 同时将其作为 CookieJar 接口提供 (别名)
     //    这样，需要 CookieJar 接口的地方也能获取到它
-    single<CookieJar> { get<PersistentCookieJar>() } // 使用 get<Type>() 来引用上面定义的具体类型
+    single<CookieJar> { get<PersistentCookieJar>() }
 
 
     single(named("defaultTimeout")) { 30L }
@@ -52,20 +53,30 @@ val appModule = module {
     // --- 网络请求客户端 ---
     single<OkHttpClient> {
         MyOkHttpClient(
-            cookieJar = get(), // Koin 会首先查找 CookieJar，找到上面的别名定义
+            cookieJar = get(),
             timeout = get(named("defaultTimeout"))
         ).createClient()
     }
 
     single<JwxtService> {
         JwxtService(
-            prefes = get(),
+            prefs = get(),
             cookieJar = get(),
             client = get()
         )
     }
     single<StuScoreService> {
         StuScoreService(
+            service = get()
+        )
+    }
+    single<StuInfoService> {
+        StuInfoService(
+            service = get()
+        )
+    }
+    single<StuSecondCreditService> {
+        StuSecondCreditService(
             service = get()
         )
     }
@@ -80,7 +91,6 @@ val appModule = module {
         prefs = get(), wifiStatusMonitor = get(), locationStatusMonitor = get(),
         applicationContext = androidContext()
     ) }
-    viewModel { JwxtViewModel(jwxtService = get(),stuScoreService = get(), prefs = get()) }
     viewModel { SplashViewModel(service = get(), prefs = get()) }
     viewModel { LoginViewModel(service = get(), prefs = get()) }
     viewModel { StuInfoViewModel(service = get(),prefs = get()) }

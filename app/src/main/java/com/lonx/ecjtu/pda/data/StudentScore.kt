@@ -1,102 +1,106 @@
 package com.lonx.ecjtu.pda.data
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
 /**
- * Represents credit requirements (required, completed, owed).
  * 用于表示学分要求（应完成、已完成、欠学分）。
  */
+@Parcelize
 data class RequirementCredits(
     @SerializedName("required")
-    val required: Double = 0.0, // 应完成学分 (Required credits)
+    val required: Double = 0.0,
 
     @SerializedName("completed")
-    val completed: Double = 0.0, // 已完成学分 (Completed credits)
+    val completed: Double = 0.0,
 
     @SerializedName("owed")
-    val owed: Double = 0.0      // 欠学分 (Owed credits)
-)
+    val owed: Double = 0.0
+) : Parcelable
 
 /**
- * Holds the summary data parsed from the top table on the scores page.
  * 包含从成绩页面顶部表格解析出的摘要数据。
  */
+@Parcelize
 data class ScoreSummary(
     @SerializedName("academic_warning_required")
-    val academicWarningRequired: Double? = null, // 学业预警情况 - 应完成 (Academic warning - Required) - Nullable as it might not always be present or numeric
+    val academicWarningRequired: Double? = null,
 
     @SerializedName("academic_warning_completed")
-    val academicWarningCompleted: Double? = null, // 学业预警情况 - 已完成 (Academic warning - Completed) - Nullable
+    val academicWarningCompleted: Double? = null,
 
     @SerializedName("gpa_required")
-    val gpaRequired: Double? = null,          // 学位平均学分绩点要求 - 应获得 (Degree GPA requirement - Required) - Nullable
+    val gpaRequired: Double? = null,
 
     @SerializedName("gpa_achieved")
-    val gpaAchieved: Double? = null,          // 学位平均学分绩点要求 - 已获得 (Degree GPA requirement - Achieved) - Nullable
+    val gpaAchieved: Double? = null,
 
     @SerializedName("public_elective")
-    val publicElective: RequirementCredits = RequirementCredits(), // 公共任选课学分 (Public elective credits)
+    val publicElective: RequirementCredits = RequirementCredits(),
 
     @SerializedName("mgmt_law_elective")
-    val mgmtLawElective: RequirementCredits = RequirementCredits(), // 经管法学类公共任选课学分 (Management/Law elective credits)
+    val mgmtLawElective: RequirementCredits = RequirementCredits(),
 
     @SerializedName("humanities_art_elective")
-    val humanitiesArtElective: RequirementCredits = RequirementCredits(), // 人文艺术类公共任选课学分 (Humanities/Art elective credits)
+    val humanitiesArtElective: RequirementCredits = RequirementCredits(),
 
     @SerializedName("science_tech_elective")
-    val scienceTechElective: RequirementCredits = RequirementCredits(), // 科学技术类公共任选课学分 (Science/Technology elective credits)
+    val scienceTechElective: RequirementCredits = RequirementCredits(),
 
     @SerializedName("health_elective")
-    val healthElective: RequirementCredits = RequirementCredits(), // 身心健康类公共任选课学分 (Health elective credits)
+    val healthElective: RequirementCredits = RequirementCredits(),
 
     @SerializedName("discipline_elective")
-    val disciplineElective: RequirementCredits = RequirementCredits(), // 学科任选课学分 (Discipline elective credits)
+    val disciplineElective: RequirementCredits = RequirementCredits(),
 
     @SerializedName("major_elective")
-    val majorElective: RequirementCredits = RequirementCredits() // 专业任选课学分 (Major elective credits)
-)
+    val majorElective: RequirementCredits = RequirementCredits()
+) : Parcelable
 
 /**
- * Represents a single course score entry from the detailed list.
  * 代表详细列表中的单个课程成绩条目。
  */
+@Parcelize
 data class CourseScore(
     @SerializedName("term")
-    val term: String = "",                 // 学期 (e.g., "2024.1")
+    val term: String = "",
 
     @SerializedName("course_id")
-    val courseId: String? = null,          // 课程代码 (e.g., "1500190180") - Nullable if parsing fails
+    val courseId: String? = null,
 
     @SerializedName("course_name")
-    val courseName: String = "",           // 课程名称 (e.g., "专业创新创业实践")
+    val courseName: String = "",
 
     @SerializedName("requirement_type")
-    val requirementType: String = "",      // 课程要求 (e.g., "必修课")
+    val requirementType: String = "",
 
     @SerializedName("assessment_method")
-    val assessmentMethod: String = "",     // 考核方式 (e.g., "考查")
+    val assessmentMethod: String = "",
 
     @SerializedName("credits")
-    val credits: Double = 0.0,             // 课程学分 (e.g., 2.0)
+    val credits: Double = 0.0,
 
     @SerializedName("score")
-    val score: String? = null,             // 考试成绩 (e.g., "及格", "95", null if empty) - String type to accommodate non-numeric grades
+    val score: String? = null,
 
     @SerializedName("retake_score")
-    val retakeScore: String? = null,       // 重考成绩 (Nullable)
+    val retakeScore: String? = null,
 
     @SerializedName("resit_score")
-    val resitScore: String? = null         // 重修成绩 (Nullable)
-)
+    val resitScore: String? = null
+) : Parcelable
+
 
 /**
  * Container for the overall score data, including summary and detailed course scores.
  * 包含整体成绩数据的容器，包括摘要信息和详细课程成绩列表。
  */
-data class StudentScoreData(
+@Parcelize
+data class StudentScores(
     @SerializedName("summary")
-    val summary: ScoreSummary = ScoreSummary(), // The summary section parsed from the top table
+    val summary: ScoreSummary = ScoreSummary(),
 
     @SerializedName("detailed_scores")
-    val detailedScores: List<CourseScore> = emptyList() // List of individual course scores
-)
+    val detailedScores: List<CourseScore> = emptyList()
+) : Parcelable
