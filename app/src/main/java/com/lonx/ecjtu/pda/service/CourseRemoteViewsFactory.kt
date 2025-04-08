@@ -6,10 +6,10 @@ import android.os.Bundle // Needed for putting extras neatly
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken // Keep this if needed for complex types
-import com.lonx.ecjtu.pda.R // Make sure R is imported correctly
-import com.lonx.ecjtu.pda.data.CourseData // Assuming CourseData contains CourseInfo
-// Import Timber or Log
+import com.google.gson.reflect.TypeToken
+import com.lonx.ecjtu.pda.R
+import com.lonx.ecjtu.pda.data.CourseInfo
+import com.lonx.ecjtu.pda.data.DayCourses
 import timber.log.Timber
 
 const val EXTRA_COURSE_NAME = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_NAME"
@@ -19,7 +19,7 @@ const val EXTRA_COURSE_LOCATION = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_LOCATI
 class CourseRemoteViewsFactory(private val context: Context, private val intent: Intent?) :
     RemoteViewsService.RemoteViewsFactory {
 
-    private var courseList: List<CourseData.CourseInfo> = emptyList()
+    private var courseList: List<CourseInfo> = emptyList()
 
     override fun onCreate() {
         Timber.tag("RemoteViewsFactory").e("Factory created.")
@@ -29,8 +29,8 @@ class CourseRemoteViewsFactory(private val context: Context, private val intent:
         val json = intent?.getStringExtra("dayCourses")
         if (json != null) {
             try {
-                val type = object : TypeToken<CourseData.DayCourses>() {}.type
-                val deserializedDayCourses: CourseData.DayCourses = Gson().fromJson(json, type)
+                val type = object : TypeToken<DayCourses>() {}.type
+                val deserializedDayCourses: DayCourses = Gson().fromJson(json, type)
 
                 courseList = deserializedDayCourses.courses
 

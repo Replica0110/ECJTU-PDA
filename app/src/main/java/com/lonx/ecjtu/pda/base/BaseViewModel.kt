@@ -4,6 +4,7 @@ import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.flow.StateFlow
 
 interface BaseUiState
+
 interface BaseViewModel {
     val service: BaseService
     val prefs: PreferencesManager

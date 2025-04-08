@@ -7,10 +7,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 
 object JwxtDestinations {
+
+    const val EXAM_INFO_ROUTE = "jwxt_exam_info"
+    const val COURSE_SCHEDULE_ROUTE = "jwxt_my_course"
     const val MENU_ROUTE = "jwxt_menu"
     const val SCORE_ROUTE = "jwxt_score"
     const val SECOND_CREDIT_ROUTE = "jwxt_second_credit"

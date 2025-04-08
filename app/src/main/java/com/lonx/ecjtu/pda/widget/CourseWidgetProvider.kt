@@ -7,13 +7,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.widget.RemoteViews
-import androidx.core.content.ContextCompat.getString
 import com.google.gson.Gson
 import com.lonx.ecjtu.pda.MainActivity
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.CourseData
+import com.lonx.ecjtu.pda.data.DayCourses
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.service.CourseRemoteViewsService
 import com.lonx.ecjtu.pda.service.JwxtService
@@ -102,8 +100,8 @@ class CourseWidgetProvider : AppWidgetProvider() {
                 val tomorrowResult = service.getCourseSchedule(tomorrow)
 
                 // 提前声明两个变量，用于在主线程中更新 widget
-                var todayCourses: CourseData.DayCourses = CourseData.DayCourses("N/A", emptyList())
-                var tomorrowCourses: CourseData.DayCourses = CourseData.DayCourses("N/A", emptyList())
+                var todayCourses = DayCourses("N/A", emptyList())
+                var tomorrowCourses = DayCourses("N/A", emptyList())
 
                 when (todayResult) {
                     is ServiceResult.Success -> todayCourses = todayResult.data
@@ -148,8 +146,8 @@ class CourseWidgetProvider : AppWidgetProvider() {
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int,
-        todayCourses: CourseData.DayCourses,
-        tomorrowCourses: CourseData.DayCourses,
+        todayCourses: DayCourses,
+        tomorrowCourses: DayCourses,
         todayFetchFailed: Boolean,
         tomorrowFetchFailed: Boolean
     ) {

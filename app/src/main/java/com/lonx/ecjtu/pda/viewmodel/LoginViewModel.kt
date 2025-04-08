@@ -2,10 +2,12 @@ package com.lonx.ecjtu.pda.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
+import com.lonx.ecjtu.pda.data.IspOption
 import com.lonx.ecjtu.pda.data.LoginResult
-import com.lonx.ecjtu.pda.data.LoginUiState
 import com.lonx.ecjtu.pda.data.NavigationTarget
+import com.lonx.ecjtu.pda.data.availableIsp
 import com.lonx.ecjtu.pda.service.JwxtService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +17,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+data class LoginUiState(
+    val studentId: String = "",
+    val password: String = "",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val navigationEvent: NavigationTarget? = null,
+    val ispOptions: List<IspOption> = availableIsp,
+    val selectedIspId: Int = 1
+): BaseUiState
 
 class LoginViewModel(
     override val service: JwxtService,
@@ -45,11 +56,11 @@ class LoginViewModel(
 
                 if (result is LoginResult.Success) {
                     Timber.i("ViewModel: Manual login successful, navigating to Main.")
-                    prefs.saveCredentials(
-                        studentId = currentState.studentId,
-                        password = currentState.password,
-                        isp = currentState.selectedIspId
-                    )
+//                    prefs.saveCredentials(
+//                        studentId = currentState.studentId,
+//                        password = currentState.password,
+//                        isp = currentState.selectedIspId
+//                    )
                     Timber.e("保存的信息如下：${prefs.getCredentials()}")
                     _uiState.update { it.copy(isLoading = false, navigationEvent = NavigationTarget.MAIN) }
                 } else {

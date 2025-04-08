@@ -2,10 +2,10 @@ package com.lonx.ecjtu.pda.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.NavigationTarget
-import com.lonx.ecjtu.pda.data.SplashUiState
 import com.lonx.ecjtu.pda.service.JwxtService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.delay
@@ -16,6 +16,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import kotlin.coroutines.cancellation.CancellationException
+
+data class SplashUiState(
+    val isLoading: Boolean = true,
+    val message:String = "",
+    val navigationEvent: NavigationTarget? = null
+): BaseUiState
 
 class SplashViewModel(
     override val service: JwxtService,

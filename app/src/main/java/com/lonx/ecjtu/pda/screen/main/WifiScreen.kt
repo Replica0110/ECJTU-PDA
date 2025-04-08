@@ -51,7 +51,7 @@ import com.lonx.ecjtu.pda.ui.ConfirmAlertDialog
 import com.lonx.ecjtu.pda.ui.InfoAlertDialog
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
-import com.lonx.ecjtu.pda.viewmodel.UiEvent
+import com.lonx.ecjtu.pda.viewmodel.WifiUiEvent
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import timber.log.Timber
@@ -107,32 +107,32 @@ fun WifiScreen(
             Timber.tag("WifiScreen").d("Received UiEvent: $event")
             dialogToShow = null
             when (event) {
-                is UiEvent.NavigateToWifiSettings -> context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-                is UiEvent.NavigateToLocationSettings -> context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                is UiEvent.NavigateToAppSettings -> {
+                is WifiUiEvent.NavigateToWifiSettings -> context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                is WifiUiEvent.NavigateToLocationSettings -> context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                is WifiUiEvent.NavigateToAppSettings -> {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                         data = Uri.fromParts("package", context.packageName, null)
                     }
                     context.startActivity(intent)
                 }
-                is UiEvent.RequestLocationPermission -> {
+                is WifiUiEvent.RequestLocationPermission -> {
                     if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACCESS_FINE_LOCATION)) {
                         wifiViewModel.showPermissionExplain()
                     } else {
                         locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     }
                 }
-                is UiEvent.ShowInfoDialog -> {
+                is WifiUiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                     dialogToShow = DialogType.INFO
                 }
-                is UiEvent.ShowLocationEnablePromptDialog -> {
+                is WifiUiEvent.ShowLocationEnablePromptDialog -> {
                     dialogTitle = "需要开启位置信息"
                     dialogMessage = "应用需要您开启位置信息服务以获取WiFi信息，是否前往设置开启？"
                     dialogToShow = DialogType.LOCATION_PROMPT
                 }
-                is UiEvent.ShowPermissionDeniedAppSettingsPromptDialog -> {
+                is WifiUiEvent.ShowPermissionDeniedAppSettingsPromptDialog -> {
                     dialogTitle = "需要位置权限"
                     dialogMessage = "请在应用设置中手动授予位置权限以获取WiFi信息。"
                     dialogToShow = DialogType.PERMISSION_DENIED

@@ -24,7 +24,7 @@ object ApiConstants {
     const val UPDATE_PASSWORD = "https://$JWXT_ECJTU_DOMAIN/stuMag/UserInfoAction_passwordUpdate.action" //修改密码
     const val COOKIE_CASTGC = "CASTGC"
     const val COOKIE_JSESSIONID = "JSESSIONID"
-
+    const val GET_SECOND_CREDIT = "https://$JWXT_ECJTU_DOMAIN/scoreQuery/secondCreQue_findSecondCredit.action?item=0402"
     const val METHOD_GET_AVATAR = "getAvatar"
     const val METHOD_GET_YKT_NUM = "getYktNum"
 

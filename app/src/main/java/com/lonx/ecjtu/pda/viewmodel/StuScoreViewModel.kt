@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.StudentScoreData
+import com.lonx.ecjtu.pda.data.StudentScores
 import com.lonx.ecjtu.pda.service.StuScoreService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 data class StuScoreUiState(
     val isLoading: Boolean = false,
-    val studentScoreData: StudentScoreData? = null,
+    val studentScoreData: StudentScores? = null,
     val error: String? = null
 ): BaseUiState
 
@@ -27,15 +27,11 @@ class StuScoreViewModel(
     private val _uiState = MutableStateFlow(StuScoreUiState())
     override val uiState: StateFlow<StuScoreUiState> = _uiState.asStateFlow()
 
-    private var lastRequestedItem: String = "0401"
-    fun loadScores(item: String = "0401") {
-        lastRequestedItem = item // Store the requested item
+    fun loadScores() {
         viewModelScope.launch {
-            // Set loading state
             _uiState.update { it.copy(isLoading = true, error = null, studentScoreData = null) }
 
-            // Call the service
-            when (val result = service.getStudentScoresData(item)) {
+            when (val result = service.getStudentScores()) {
                 is ServiceResult.Success -> {
                     _uiState.update {
                         it.copy(
@@ -61,6 +57,6 @@ class StuScoreViewModel(
      * Retries loading the scores using the last requested item code.
      */
     fun retryLoadScores() {
-        loadScores(lastRequestedItem)
+        loadScores()
     }
 }

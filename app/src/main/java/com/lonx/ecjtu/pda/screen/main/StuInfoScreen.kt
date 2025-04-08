@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,16 +22,13 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.ui.StuInfoCard
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.LazyColumn
@@ -54,7 +50,7 @@ fun StuInfoScreen(
 
     LaunchedEffect(Unit) {
         if (uiState.studentInfo == null && !uiState.isLoading && uiState.error == null) {
-            stuInfoViewModel.loadStudentInfo()
+            stuInfoViewModel.loadInfo()
         }
     }
     LaunchedEffect(uiState.isLoading, pullToRefreshState.isRefreshing) {
@@ -83,7 +79,7 @@ fun StuInfoScreen(
             "刷新结束"
         ),
         onRefresh = {
-            stuInfoViewModel.loadStudentInfo()
+            stuInfoViewModel.loadInfo()
         }
     ) {
         LazyColumn(
@@ -136,8 +132,8 @@ fun StuInfoScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = uiState.error!!,
-                                color = MiuixTheme.colorScheme.primary, // Use theme error color
-                                style = MiuixTheme.textStyles.main, // Use appropriate style
+                                color = MiuixTheme.colorScheme.primary,
+                                style = MiuixTheme.textStyles.main,
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(24.dp).width(60.dp))
@@ -152,30 +148,6 @@ fun StuInfoScreen(
                     item{
                         StuInfoCard(uiState.studentInfo!!)
 
-
-                    }
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp)
-                                .padding(bottom = 16.dp + padding.calculateBottomPadding()),
-                        ) {
-                            Button(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = {
-                                    stuInfoViewModel.performLogout()
-                                    topLevelNavController.navigate(AppRoutes.LOGIN) {
-                                        popUpTo(topLevelNavController.graph.findStartDestination().id) {
-                                            inclusive = true
-                                        }
-                                        launchSingleTop = true
-                                    }
-                                },
-                            ) {
-                                Text("退出登录", color = Color(0xFFF44336))
-                            }
-                        }
 
                     }
                 }

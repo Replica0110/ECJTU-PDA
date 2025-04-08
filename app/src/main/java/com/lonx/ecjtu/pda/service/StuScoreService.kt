@@ -5,7 +5,7 @@ import com.lonx.ecjtu.pda.data.CourseScore
 import com.lonx.ecjtu.pda.data.RequirementCredits
 import com.lonx.ecjtu.pda.data.ScoreSummary
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.StudentScoreData
+import com.lonx.ecjtu.pda.data.StudentScores
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -21,18 +21,11 @@ class StuScoreService(
 
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
-    /**
-     * Fetches and parses the student's scores (summary and detailed list).
-     * Delegates the HTML fetching and session management to the injected JwxtService.
-     *
-     * @param [item] The score category item code (e.g., "0401" for current term).
-     * @return [ServiceResult] containing StudentScoreData or an error.
-     */
-    suspend fun getStudentScoresData(item: String = "0401"): ServiceResult<StudentScoreData> = withContext(
+    suspend fun getStudentScores(): ServiceResult<StudentScores> = withContext(
         Dispatchers.IO) {
-        Timber.d("StuScoreService: 开始获取并解析成绩数据 (item: $item)...")
+        Timber.d("StuScoreService: 开始获取并解析成绩数据...")
 
-        when (val htmlResult = service.getStudentScores(item)) {
+        when (val htmlResult = service.getStudentScoresHtml()) {
             is ServiceResult.Success -> {
                 val htmlBody = htmlResult.data
                 if (htmlBody.isBlank()) {
@@ -48,7 +41,7 @@ class StuScoreService(
 
                     val detailedScores = parseDetailedScores(document)
 
-                    val scoreData = StudentScoreData(summary, detailedScores)
+                    val scoreData = StudentScores(summary, detailedScores)
                     Timber.i("StuScoreService: 成绩数据解析成功。摘要类别数: ${summary.javaClass.declaredFields.count { it.type == RequirementCredits::class.java || it.name.startsWith("gpa") || it.name.startsWith("academicWarning") }}, 详细成绩条目数: ${detailedScores.size}")
                     return@withContext ServiceResult.Success(scoreData)
 
@@ -80,7 +73,7 @@ class StuScoreService(
             ?: throw ParseException("无法找到成绩摘要表格的数据行 (td)")
         val cells = dataRow.select("td")
 
-        val offset = calculateSummaryTableOffset(summaryTable) // 🔁 自动计算偏移量
+        val offset = summaryTableOffset(summaryTable)
 
         fun parseDoubleFromCell(index: Int): Double? {
             return cells.getOrNull(offset + index)?.text()?.trim()?.toDoubleOrNull()
@@ -90,7 +83,6 @@ class StuScoreService(
             return cells.getOrNull(offset + index)?.text()?.trim()?.toDoubleOrNull() ?: 0.0
         }
 
-        // ⬇️ 剩下部分保持不变
         try {
             val academicWarningRequired = parseDoubleFromCell(0)
             val academicWarningCompleted = parseDoubleFromCell(1)
@@ -173,7 +165,7 @@ class StuScoreService(
         }
         return detailedScores
     }
-    private fun calculateSummaryTableOffset(table: Element): Int {
+    private fun summaryTableOffset(table: Element): Int {
         val headerRows = table.select("tr").take(3)
         val thTexts = headerRows.flatMap { it.select("th").map { th -> th.text().trim() } }
 

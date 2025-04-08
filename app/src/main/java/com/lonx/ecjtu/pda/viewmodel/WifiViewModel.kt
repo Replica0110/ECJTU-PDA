@@ -4,15 +4,16 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.R
+import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.data.LocationStatus
 import com.lonx.ecjtu.pda.data.WifiStatus
-import com.lonx.ecjtu.pda.data.WifiUiState
 import com.lonx.ecjtu.pda.network.WifiStatusMonitor
 import com.lonx.ecjtu.pda.service.WifiService
 import com.lonx.ecjtu.pda.utils.LocationStatusMonitor
@@ -32,15 +33,24 @@ import kotlinx.coroutines.withContext
 import slimber.log.d
 
 
-sealed class UiEvent {
-    data object NavigateToWifiSettings : UiEvent()
-    data object NavigateToLocationSettings : UiEvent()
-    data object NavigateToAppSettings : UiEvent()
-    data object RequestLocationPermission : UiEvent()
-    data class ShowInfoDialog(val title: String, val message: String) : UiEvent()
-    data object ShowLocationEnablePromptDialog : UiEvent()
-    data object ShowPermissionDeniedAppSettingsPromptDialog : UiEvent()
+sealed class WifiUiEvent {
+    data object NavigateToWifiSettings : WifiUiEvent()
+    data object NavigateToLocationSettings : WifiUiEvent()
+    data object NavigateToAppSettings : WifiUiEvent()
+    data object RequestLocationPermission : WifiUiEvent()
+    data class ShowInfoDialog(val title: String, val message: String) : WifiUiEvent()
+    data object ShowLocationEnablePromptDialog : WifiUiEvent()
+    data object ShowPermissionDeniedAppSettingsPromptDialog : WifiUiEvent()
 }
+data class WifiUiState(
+    @DrawableRes val wifiStatusIconRes: Int = R.drawable.ic_wifi_disabled,
+    val wifiStatusText: String = "WLAN 未启用",
+    val ssid: String = "当前无连接",
+    val isLocationServiceEnabled: Boolean = false,
+    val hasLocationPermission: Boolean = false,
+    val isLoadingIn: Boolean = false,
+    val isLoadingOut: Boolean = false
+): BaseUiState
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 class WifiViewModel(
@@ -55,7 +65,7 @@ class WifiViewModel(
     private val _uiState = MutableStateFlow(WifiUiState())
     override val uiState: StateFlow<WifiUiState> = _uiState.asStateFlow()
 
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    private val _uiEvent = MutableSharedFlow<WifiUiEvent>()
     val uiEvent = _uiEvent.asSharedFlow()
 
     init {
@@ -149,7 +159,7 @@ class WifiViewModel(
 
     fun onOpenWifiSettingsClicked() {
         viewModelScope.launch {
-            _uiEvent.emit(UiEvent.NavigateToWifiSettings)
+            _uiEvent.emit(WifiUiEvent.NavigateToWifiSettings)
         }
     }
 
@@ -157,12 +167,12 @@ class WifiViewModel(
         viewModelScope.launch {
             val locationStatus = locationStatusMonitor.locationStatus.first()
             if (locationStatus == LocationStatus.Disabled) {
-                _uiEvent.emit(UiEvent.ShowLocationEnablePromptDialog)
+                _uiEvent.emit(WifiUiEvent.ShowLocationEnablePromptDialog)
             } else {
                 if (!hasLocationPermission()) {
-                    _uiEvent.emit(UiEvent.RequestLocationPermission)
+                    _uiEvent.emit(WifiUiEvent.RequestLocationPermission)
                 } else {
-                    _uiEvent.emit(UiEvent.ShowInfoDialog("权限状态", "位置权限已授予"))
+                    _uiEvent.emit(WifiUiEvent.ShowInfoDialog("权限状态", "位置权限已授予"))
                     checkPermission(forceUpdate = true)
                 }
             }
@@ -171,7 +181,7 @@ class WifiViewModel(
 
     fun navigateToLocationSettings() {
         viewModelScope.launch {
-            _uiEvent.emit(UiEvent.NavigateToLocationSettings)
+            _uiEvent.emit(WifiUiEvent.NavigateToLocationSettings)
         }
     }
     // --- 当权限请求结果返回时调用 ---
@@ -180,7 +190,7 @@ class WifiViewModel(
 
         if (!granted) {
             viewModelScope.launch {
-                _uiEvent.emit(UiEvent.ShowPermissionDeniedAppSettingsPromptDialog)
+                _uiEvent.emit(WifiUiEvent.ShowPermissionDeniedAppSettingsPromptDialog)
             }
         }
     }
@@ -189,7 +199,7 @@ class WifiViewModel(
     }
     fun showPermissionExplain() {
         viewModelScope.launch {
-            _uiEvent.emit(UiEvent.ShowInfoDialog("需要位置权限", "应用需要位置权限以获取精确的WiFi信息 (SSID)。请授予该权限。"))
+            _uiEvent.emit(WifiUiEvent.ShowInfoDialog("需要位置权限", "应用需要位置权限以获取精确的WiFi信息 (SSID)。请授予该权限。"))
 
         }
     }
@@ -209,14 +219,14 @@ class WifiViewModel(
     }
     fun navigateToAppSettingsForPermission() {
         viewModelScope.launch {
-            _uiEvent.emit(UiEvent.ShowPermissionDeniedAppSettingsPromptDialog)
+            _uiEvent.emit(WifiUiEvent.ShowPermissionDeniedAppSettingsPromptDialog)
         }
     }
 
 
     fun navigateToAppSettings() {
         viewModelScope.launch {
-            _uiEvent.emit(UiEvent.NavigateToAppSettings)
+            _uiEvent.emit(WifiUiEvent.NavigateToAppSettings)
         }
     }
 
@@ -227,7 +237,7 @@ class WifiViewModel(
 
         if (currentState.wifiStatusIconRes != R.drawable.ic_wifi_connected) {
             viewModelScope.launch {
-                _uiEvent.emit(UiEvent.ShowInfoDialog("登录失败", "请先连接校园网"))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog("登录失败", "请先连接校园网"))
             }
             return
         }
@@ -237,7 +247,7 @@ class WifiViewModel(
         val (stuId, stuPwd, isp) = credentials
         if (stuId.isEmpty() || stuPwd.isEmpty()) {
             viewModelScope.launch {
-                _uiEvent.emit(UiEvent.ShowInfoDialog("登录信息", "请先设置学号和密码"))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog("登录信息", "请先设置学号和密码"))
             }
             return
         }
@@ -254,10 +264,10 @@ class WifiViewModel(
                 } else {
                     title = "登录成功"
                 }
-                _uiEvent.emit(UiEvent.ShowInfoDialog(title, result))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog(title, result))
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiEvent.emit(UiEvent.ShowInfoDialog("登录失败", "发生错误: ${e.message}"))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog("登录失败", "发生错误: ${e.message}"))
             } finally {
                 withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isLoadingIn = false) }
@@ -272,7 +282,7 @@ class WifiViewModel(
 
         if (currentState.wifiStatusIconRes != R.drawable.ic_wifi_connected) {
             viewModelScope.launch {
-                _uiEvent.emit(UiEvent.ShowInfoDialog("注销失败", "请先连接校园网"))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog("注销失败", "请先连接校园网"))
             }
             return
         }
@@ -290,10 +300,10 @@ class WifiViewModel(
                 } else {
                     title = "注销成功"
                 }
-                _uiEvent.emit(UiEvent.ShowInfoDialog(title, result))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog(title, result))
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiEvent.emit(UiEvent.ShowInfoDialog("注销失败", "发生错误: ${e.message}"))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog("注销失败", "发生错误: ${e.message}"))
             } finally {
                 withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isLoadingOut = false) }

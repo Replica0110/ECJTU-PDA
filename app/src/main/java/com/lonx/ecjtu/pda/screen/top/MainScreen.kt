@@ -61,11 +61,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.data.AppRoutes
+import com.lonx.ecjtu.pda.screen.jwxt.JwxtDestinations
+import com.lonx.ecjtu.pda.screen.jwxt.JwxtScreen
 import com.lonx.ecjtu.pda.screen.main.HomeScreen
 import com.lonx.ecjtu.pda.screen.main.SettingScreen
 import com.lonx.ecjtu.pda.screen.main.StuInfoScreen
 import com.lonx.ecjtu.pda.screen.main.WifiScreen
-import com.lonx.ecjtu.pda.screen.jwxt.JwxtScreen
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberNavHostAwareScrollBehavior
 import dev.chrisbanes.haze.HazeState
@@ -91,6 +92,7 @@ fun MainScreen(
     val sidebarWidth = 220.dp
     val wideScreenThreshold = 600.dp
 
+    val jwxtNavController = rememberNavController()
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isWideScreen = maxWidth >= wideScreenThreshold
@@ -160,6 +162,7 @@ fun MainScreen(
                         .fillMaxHeight(),
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
+                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -232,6 +235,7 @@ fun MainScreen(
                         .offset { IntOffset(mainContentOffsetX.value.roundToInt(), 0) },
                     internalNavController = internalNavController,
                     topLevelNavController = topLevelNavController,
+                    jwxtNavController = jwxtNavController,
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     navHostAwareScrollBehavior = navHostAwareScrollBehavior,
@@ -368,6 +372,7 @@ fun MainContent(
     modifier: Modifier = Modifier,
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
+    jwxtNavController: NavHostController,
     currentRoute: String?,
     hazeState: HazeState,
     navHostAwareScrollBehavior: UpdatableScrollBehavior,
@@ -379,14 +384,24 @@ fun MainContent(
     topBarHazeStyle: HazeStyle
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val jwxtNavController = rememberNavController()
+    val jwxtNavBackStackEntry by jwxtNavController.currentBackStackEntryAsState()
+    val currentJwxtRoute = jwxtNavBackStackEntry?.destination?.route
     Scaffold(
         containerColor = Color.Transparent,
         modifier = modifier,
         topBar = {
             val currentScreenTitle = when (currentRoute) {
                 AppRoutes.HOME -> "主页"
-                AppRoutes.JWXT -> "教务系统"
+                AppRoutes.JWXT -> {
+                    when (currentJwxtRoute) {
+                        JwxtDestinations.MENU_ROUTE -> "教务系统"
+                        JwxtDestinations.SCORE_ROUTE -> "我的成绩"
+                        JwxtDestinations.COURSE_SCHEDULE_ROUTE -> "我的课表"
+                        JwxtDestinations.EXAM_INFO_ROUTE -> "考试安排"
+                        JwxtDestinations.SECOND_CREDIT_ROUTE -> "素拓学分"
+                        else -> "教务系统"
+                    }
+                }
                 AppRoutes.WIFI -> "校园网"
                 AppRoutes.SETTING -> "设置"
                 AppRoutes.PROFILE -> "个人信息"
