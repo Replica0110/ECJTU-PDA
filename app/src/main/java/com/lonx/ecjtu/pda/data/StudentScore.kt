@@ -97,7 +97,7 @@ data class CourseScore(
  * 包含整体成绩数据的容器，包括摘要信息和详细课程成绩列表。
  */
 @Parcelize
-data class StudentScores(
+data class StudentScoresData(
     @SerializedName("summary")
     val summary: ScoreSummary = ScoreSummary(),
 

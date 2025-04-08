@@ -5,7 +5,7 @@ import com.lonx.ecjtu.pda.data.CourseScore
 import com.lonx.ecjtu.pda.data.RequirementCredits
 import com.lonx.ecjtu.pda.data.ScoreSummary
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.StudentScores
+import com.lonx.ecjtu.pda.data.StudentScoresData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -21,7 +21,7 @@ class StuScoreService(
 
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
-    suspend fun getStudentScores(): ServiceResult<StudentScores> = withContext(
+    suspend fun getStudentScores(): ServiceResult<StudentScoresData> = withContext(
         Dispatchers.IO) {
         Timber.d("StuScoreService: 开始获取并解析成绩数据...")
 
@@ -41,7 +41,7 @@ class StuScoreService(
 
                     val detailedScores = parseDetailedScores(document)
 
-                    val scoreData = StudentScores(summary, detailedScores)
+                    val scoreData = StudentScoresData(summary, detailedScores)
                     Timber.i("StuScoreService: 成绩数据解析成功。摘要类别数: ${summary.javaClass.declaredFields.count { it.type == RequirementCredits::class.java || it.name.startsWith("gpa") || it.name.startsWith("academicWarning") }}, 详细成绩条目数: ${detailedScores.size}")
                     return@withContext ServiceResult.Success(scoreData)
 

@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.ecjtu.pda.data.CourseScore
 import com.lonx.ecjtu.pda.data.RequirementCredits
 import com.lonx.ecjtu.pda.data.ScoreSummary
-import com.lonx.ecjtu.pda.data.StudentScores
+import com.lonx.ecjtu.pda.data.StudentScoresData
 import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
 import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
@@ -137,7 +137,7 @@ fun StuScoreScreen(
     }
 }
 
-fun LazyListScope.scoreContent(data: StudentScores) {
+fun LazyListScope.scoreContent(data: StudentScoresData) {
     val groupedScores = data.detailedScores
         .groupBy { it.term }
         .toSortedMap(compareByDescending { term -> term })
@@ -273,13 +273,13 @@ fun ScoreDetailSection(scores: List<CourseScore>) {
 
         // 当前学期成绩列表
 
-            val scoresInTerm = grouped[terms[selectedIndex]].orEmpty()
-            Column(
-                Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                scoresInTerm.forEach { CourseScoreItem(it) }
-            }
+        val scoresInTerm = grouped[terms[selectedIndex]].orEmpty()
+        Column(
+            Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            scoresInTerm.forEach { CourseScoreItem(it) }
+        }
 
     }
 }

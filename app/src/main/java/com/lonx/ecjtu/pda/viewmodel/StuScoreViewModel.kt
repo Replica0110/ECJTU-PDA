@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.StudentScores
+import com.lonx.ecjtu.pda.data.StudentScoresData
 import com.lonx.ecjtu.pda.service.StuScoreService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 data class StuScoreUiState(
     val isLoading: Boolean = false,
-    val studentScoreData: StudentScores? = null,
+    val studentScoreData: StudentScoresData? = null,
     val error: String? = null
 ): BaseUiState
 

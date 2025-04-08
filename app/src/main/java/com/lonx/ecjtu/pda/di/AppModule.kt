@@ -22,6 +22,7 @@ import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
+import com.lonx.ecjtu.pda.viewmodel.StuSecondCreditViewModel
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
@@ -97,4 +98,5 @@ val appModule = module {
     viewModel { HomeViewModel(service = get(), prefs = get()) }
     viewModel { SettingViewModel(service = get(), prefs = get()) }
     viewModel {StuScoreViewModel(service = get(), prefs = get())}
+    viewModel { StuSecondCreditViewModel(service = get(), prefs = get()) }
 }
