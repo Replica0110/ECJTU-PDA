@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,6 +25,7 @@ import com.lonx.ecjtu.pda.data.MainRoute
 import com.lonx.ecjtu.pda.screen.jwxt.JwxtMenuScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuScoreScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSecondCreditScreen
+import timber.log.Timber
 
 @Composable
 fun JwxtScreen(
@@ -31,6 +33,7 @@ fun JwxtScreen(
     topLevelNavController: NavHostController,
     padding: PaddingValues,
     onTitleChange: (String) -> Unit,
+    onAllowDrawerGestureChange: (Boolean) -> Unit,
     setNavigationIcon: (@Composable () -> Unit) -> Unit,
     onMenuClick: () -> Unit
 ) {
@@ -49,14 +52,16 @@ fun JwxtScreen(
 
     LaunchedEffect(isInJwxtSubPage) {
         if (isInJwxtSubPage) {
+            onAllowDrawerGestureChange(false)
             setNavigationIcon {
-                IconButton(onClick = { jwxtNavController.popBackStack() }) {
+                IconButton(modifier = Modifier.padding(start = 20.dp), onClick = { jwxtNavController.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
                 }
             }
         } else {
+            onAllowDrawerGestureChange(true)
             setNavigationIcon {
-                IconButton(onClick = onMenuClick) {
+                IconButton(modifier = Modifier.padding(start = 20.dp), onClick = onMenuClick) {
                     Icon(Icons.Default.Menu, "打开侧边栏")
                 }
             }

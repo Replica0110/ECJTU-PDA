@@ -52,6 +52,7 @@ import com.lonx.ecjtu.pda.screen.main.SettingScreen
 import com.lonx.ecjtu.pda.screen.main.StuInfoScreen
 import com.lonx.ecjtu.pda.screen.main.WifiScreen
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
@@ -76,26 +77,27 @@ fun MainScreen(
     }
     val context = LocalContext.current
 
+    // 由子屏幕通过回调更新
     var currentTitle by remember { mutableStateOf("花椒PDA") }
+    // 由子屏幕通过回调更新，决定是否允许手势打开抽屉
+    var allowDrawerGestures by remember { mutableStateOf(true) } // 初始为 true
 
-    LaunchedEffect(currentMainRoute) {
-        if (currentMainRoute != MainRoute.Jwxt) {
-            currentTitle = currentMainRoute?.title ?: "花椒PDA"
-        }
-    }
+    // 不再需要在 MainScreen 中根据 currentMainRoute 更新标题，交给子屏幕处理
+    // LaunchedEffect(currentMainRoute) { ... } // 可以移除或简化
+
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
     }
 
-
-
-    val shouldExit = !drawerState.isOpen && currentMainRoute in MainRoute.topLevelRoutesForExit
+    // 修改退出逻辑：只有在允许侧边栏手势（即处于顶级页面）时才响应退出
+    val shouldExit = !drawerState.isOpen && allowDrawerGestures && currentMainRoute in MainRoute.topLevelRoutesForExit
     BackHandler(enabled = shouldExit) {
+        Timber.e("Back pressed on top level, exiting.")
         (context as? Activity)?.finish()
     }
 
     ModalNavigationDrawer(
-        gesturesEnabled = drawerState.isOpen, // 只允许抽屉打开时才允许手势关闭
+        gesturesEnabled = drawerState.isOpen || allowDrawerGestures,
         modifier = Modifier.fillMaxSize(),
         drawerContent = {
             SideBarContent(
@@ -109,7 +111,7 @@ fun MainScreen(
         MainContent(
             internalNavController = internalNavController,
             topLevelNavController = topLevelNavController,
-            isWideScreen = false,
+            onAllowDrawerGestureChange = { allow -> allowDrawerGestures = allow },
             currentScreenTitle = currentTitle,
             onTitleChange = { newTitle -> currentTitle = newTitle },
             onMenuClick = {
@@ -327,9 +329,9 @@ fun MainContent(
     modifier: Modifier = Modifier,
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
-    isWideScreen: Boolean,
     currentScreenTitle: String,
     onTitleChange: (String) -> Unit,
+    onAllowDrawerGestureChange: (Boolean) -> Unit,
     onMenuClick: () -> Unit
 ) {
 
@@ -341,6 +343,11 @@ fun MainContent(
         IconButton(modifier=Modifier.padding(start = 20.dp),onClick = onMenuClick) {
             Icon(imageVector = Icons.Default.Menu, contentDescription = "打开侧边栏")
         }
+    }
+    LaunchedEffect(internalNavController.currentBackStackEntry) {
+        // 当 internalNavController 的路由变化时（切换主模块），尝试重置
+        // 注意：这可能在子模块设置图标后被错误重置，更好的方式是在每个 composable 中明确设置
+        // currentTopAppBarNavigationIcon = menuIconComposable // 暂时注释掉，让子 Composable 控制
     }
 
     Scaffold(
@@ -362,7 +369,9 @@ fun MainContent(
             ) {
                 composable(MainRoute.Home.route) {
                     LaunchedEffect(Unit) {
+                        onTitleChange(MainRoute.Home.title)
                         currentTopAppBarNavigationIcon = menuIconComposable
+                        onAllowDrawerGestureChange(true)
                     }
                     HomeScreen(
                         internalNavController = internalNavController,
@@ -373,20 +382,23 @@ fun MainContent(
 
                 composable(MainRoute.Jwxt.route) {
                     JwxtScreen(
-                        internalNavController = internalNavController,
+                        internalNavController = internalNavController, // 可能不需要？除非要跳出 Jwxt
                         topLevelNavController = topLevelNavController,
                         padding = innerPadding,
-                        onTitleChange = onTitleChange,
-                        setNavigationIcon = { iconComposable ->
+                        onTitleChange = onTitleChange, // 传递回调
+                        setNavigationIcon = { iconComposable -> // 传递回调
                             currentTopAppBarNavigationIcon = iconComposable
                         },
-                        onMenuClick = onMenuClick
+                        onAllowDrawerGestureChange = onAllowDrawerGestureChange, // 传递回调
+                        onMenuClick = onMenuClick // 传递回调，用于 JwxtMenuScreen 设置菜单按钮
                     )
                 }
 
                 composable(MainRoute.Wifi.route) {
                     LaunchedEffect(Unit) {
+                        onTitleChange(MainRoute.Wifi.title)
                         currentTopAppBarNavigationIcon = menuIconComposable
+                        onAllowDrawerGestureChange(true)
                     }
                     WifiScreen(
                         internalNavController = internalNavController,
@@ -395,13 +407,17 @@ fun MainContent(
                 }
                 composable(MainRoute.Settings.route) {
                     LaunchedEffect(Unit) {
+                        onTitleChange(MainRoute.Settings.title)
                         currentTopAppBarNavigationIcon = menuIconComposable
+                        onAllowDrawerGestureChange(true)
                     }
                     SettingScreen(padding = innerPadding)
                 }
                 composable(MainRoute.Profile.route) {
                     LaunchedEffect(Unit) {
+                        onTitleChange(MainRoute.Profile.title)
                         currentTopAppBarNavigationIcon = menuIconComposable
+                        onAllowDrawerGestureChange(true)
                     }
                     StuInfoScreen(
                         internalNavController = internalNavController,
