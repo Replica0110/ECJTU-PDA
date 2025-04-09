@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,8 +42,6 @@ import com.lonx.ecjtu.pda.data.CourseScore
 import com.lonx.ecjtu.pda.data.RequirementCredits
 import com.lonx.ecjtu.pda.data.ScoreSummary
 import com.lonx.ecjtu.pda.data.StudentScoresData
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
-import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button

@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.data.NavigationTarget
+import com.lonx.ecjtu.pda.data.TopLevelRoute
 import com.lonx.ecjtu.pda.ui.CustomDropdownMenu
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -65,8 +65,8 @@ fun LoginScreen(
     LaunchedEffect(uiState.navigationEvent) {
         if (uiState.navigationEvent == NavigationTarget.MAIN) {
             onLoginSuccess()
-            navController.navigate(AppRoutes.MAIN) {
-                popUpTo(AppRoutes.LOGIN) { inclusive = true }
+            navController.navigate(TopLevelRoute.Main.route) {
+                popUpTo(TopLevelRoute.Login.route) { inclusive = true }
                 launchSingleTop = true
             }
             loginViewModel.onNavigationHandled()

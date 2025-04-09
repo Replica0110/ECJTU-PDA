@@ -18,14 +18,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.ui.StuInfoCard
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
-import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button

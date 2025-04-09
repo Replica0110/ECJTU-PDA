@@ -1,5 +1,6 @@
 package com.lonx.ecjtu.pda.screen.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -37,8 +37,6 @@ import com.lonx.ecjtu.pda.screen.AccountConfigDialog
 import com.lonx.ecjtu.pda.screen.ChangePasswordDialog
 import com.lonx.ecjtu.pda.ui.InfoAlertDialog
 import com.lonx.ecjtu.pda.ui.InputAlertDialog
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
-import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.SettingUiEvent
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -173,6 +171,7 @@ fun SettingScreen(
         }
     }
     Scaffold(
+        modifier = Modifier.background(MiuixTheme.colorScheme.background),
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { snackbarData ->
                 Snackbar(

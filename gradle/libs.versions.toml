@@ -1,4 +1,5 @@
 [versions]
+accompanistSystemuicontroller = "0.36.0"
 agp = "8.8.2"
 gson = "2.12.1"
 haze = "1.6.0-SNAPSHOT"
@@ -23,6 +24,7 @@ foundationAndroid = "1.7.2"
 preferenceKtx = "1.2.1"
 
 [libraries]
+accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }

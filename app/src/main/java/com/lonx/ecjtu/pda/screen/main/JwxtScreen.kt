@@ -1,4 +1,4 @@
-package com.lonx.ecjtu.pda.screen.jwxt
+package com.lonx.ecjtu.pda.screen.main
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,22 +14,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
+import com.lonx.ecjtu.pda.data.JwxtRoute
+import com.lonx.ecjtu.pda.data.MainRoute
+import com.lonx.ecjtu.pda.screen.jwxt.JwxtMenuScreen
+import com.lonx.ecjtu.pda.screen.jwxt.StuScoreScreen
+import com.lonx.ecjtu.pda.screen.jwxt.StuSecondCreditScreen
 
-object JwxtDestinations {
-
-    const val EXAM_INFO_ROUTE = "jwxt_exam_info"
-    const val COURSE_SCHEDULE_ROUTE = "jwxt_my_course"
-    const val MENU_ROUTE = "jwxt_menu"
-    const val SCORE_ROUTE = "jwxt_score"
-    const val SECOND_CREDIT_ROUTE = "jwxt_second_credit"
-}
 @Composable
 fun JwxtScreen(
     internalNavController: NavHostController,
@@ -41,55 +36,48 @@ fun JwxtScreen(
 ) {
     val jwxtNavController = rememberNavController()
     val jwxtBackStackEntry by jwxtNavController.currentBackStackEntryAsState()
-    val currentJwxtRoute = jwxtBackStackEntry?.destination?.route
+    val currentJwxtRouteString = jwxtBackStackEntry?.destination?.route
 
-    val currentJwxtScreenTitle = remember(currentJwxtRoute) {
-        when (currentJwxtRoute) {
-            JwxtDestinations.MENU_ROUTE -> "教务系统"
-            JwxtDestinations.SCORE_ROUTE -> "我的成绩"
-            JwxtDestinations.COURSE_SCHEDULE_ROUTE -> "我的课表"
-            JwxtDestinations.EXAM_INFO_ROUTE -> "考试安排"
-            JwxtDestinations.SECOND_CREDIT_ROUTE -> "素拓学分"
-            else -> "教务系统"
-        }
+    val currentJwxtRoute = remember(currentJwxtRouteString) {
+        JwxtRoute.find(currentJwxtRouteString)
     }
-    LaunchedEffect(currentJwxtScreenTitle) {
-        onTitleChange(currentJwxtScreenTitle)
+
+    LaunchedEffect(currentJwxtRoute) {
+        onTitleChange(currentJwxtRoute?.title ?: MainRoute.Jwxt.title)
     }
-    val isInJwxtSubPage = jwxtNavController.previousBackStackEntry != null
+    val isInJwxtSubPage = currentJwxtRoute != JwxtRoute.Menu
 
     LaunchedEffect(isInJwxtSubPage) {
         if (isInJwxtSubPage) {
             setNavigationIcon {
-                IconButton(modifier = Modifier.padding(start = 20.dp), onClick = { jwxtNavController.popBackStack() }) {
+                IconButton(onClick = { jwxtNavController.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
                 }
             }
         } else {
             setNavigationIcon {
-                IconButton(modifier = Modifier.padding(start = 20.dp), onClick = onMenuClick) {
+                IconButton(onClick = onMenuClick) {
                     Icon(Icons.Default.Menu, "打开侧边栏")
                 }
             }
         }
     }
-
     BackHandler(enabled = isInJwxtSubPage) {
         jwxtNavController.popBackStack()
     }
 
     NavHost(
         navController = jwxtNavController,
-        startDestination = JwxtDestinations.MENU_ROUTE,
+        startDestination = JwxtRoute.Menu.route,
         modifier = Modifier.padding(padding).fillMaxSize(),
     ) {
-        composable(JwxtDestinations.MENU_ROUTE) {
+        composable(JwxtRoute.Menu.route) {
             JwxtMenuScreen(jwxtNavController = jwxtNavController)
         }
-        composable(JwxtDestinations.SCORE_ROUTE) {
+        composable(JwxtRoute.Score.route) {
             StuScoreScreen(onBack = { jwxtNavController.popBackStack() })
         }
-        composable(JwxtDestinations.SECOND_CREDIT_ROUTE) {
+        composable(JwxtRoute.SecondCredit.route) {
             StuSecondCreditScreen(onBack = { jwxtNavController.popBackStack() })
         }
     }

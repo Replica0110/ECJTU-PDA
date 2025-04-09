@@ -63,6 +63,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.accompanist.systemuicontroller)
     implementation(libs.haze)
     implementation(libs.miuix)
     implementation(libs.koin.androidx.compose)

@@ -8,10 +8,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.lonx.ecjtu.pda.data.AppRoutes
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.lonx.ecjtu.pda.data.TopLevelRoute
 import com.lonx.ecjtu.pda.screen.top.LoginScreen
 import com.lonx.ecjtu.pda.screen.top.MainScreen
 import com.lonx.ecjtu.pda.screen.top.SplashScreen
@@ -29,29 +31,40 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         parseIntent(intent)
         setContent {
-            MiuixTheme(colors = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+            MiuixTheme {
+                val systemUiController = rememberSystemUiController()
+
+                val statusBarColor = MiuixTheme.colorScheme.background
+
+                DisposableEffect(systemUiController, statusBarColor) {
+                    systemUiController.setStatusBarColor(
+                        color = statusBarColor
+                    )
+
+                    onDispose { }
+                }
                 val topLevelNavController = rememberNavController()
                 NavHost(
                     navController = topLevelNavController,
-                    startDestination = AppRoutes.SPLASH
+                    startDestination = TopLevelRoute.Splash.route
                 ) {
-                    composable(AppRoutes.SPLASH) {
+                    composable(TopLevelRoute.Splash.route) {
                         SplashScreen(navController = topLevelNavController)
                     }
 
-                    composable(AppRoutes.LOGIN) {
+                    composable(TopLevelRoute.Login.route) {
                         LoginScreen(
                             navController = topLevelNavController,
                             onLoginSuccess = {
-                                topLevelNavController.navigate(AppRoutes.MAIN) {
-                                    popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                                topLevelNavController.navigate(TopLevelRoute.Main.route) {
+                                    popUpTo(TopLevelRoute.Login.route) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             }
                         )
                     }
 
-                    composable(AppRoutes.MAIN) {
+                    composable(TopLevelRoute.Main.route) {
                         val mainInternalNavController = rememberNavController()
                         MainScreen(
                             topLevelNavController = topLevelNavController,

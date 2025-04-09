@@ -8,17 +8,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
-import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.LazyColumn
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
@@ -37,7 +33,7 @@ fun HomeScreen(
 //    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
 //        scrollBehavior = scrollBehavior
 //    )
-    Scaffold {
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize(),
@@ -57,5 +53,5 @@ fun HomeScreen(
                 }
             }
         }
-    }
+
 }

@@ -16,11 +16,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.data.AppRoutes
 import com.lonx.ecjtu.pda.data.NavigationTarget
+import com.lonx.ecjtu.pda.data.TopLevelRoute
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
 import org.koin.androidx.compose.koinViewModel
-import timber.log.Timber
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -31,29 +30,19 @@ fun SplashScreen(navController: NavHostController, viewModel: SplashViewModel = 
         val event = uiState.navigationEvent
 
         if (event != null) {
-            Timber.tag("SplashScreen").d("LaunchedEffect processing navigationEvent: $event")
             when (event) {
                 NavigationTarget.LOGIN -> {
-                    Timber.tag("SplashScreen").d("Navigating to LOGIN...")
-                    navController.navigate(AppRoutes.LOGIN) {
-                        popUpTo(AppRoutes.SPLASH) { inclusive = true }
+                    navController.navigate(TopLevelRoute.Login.route) {
+                        popUpTo(TopLevelRoute.Splash.route) { inclusive = true }
                     }
-                    Timber.tag("SplashScreen").d("Navigation to LOGIN initiated.")
                 }
                 NavigationTarget.MAIN -> {
-                    Timber.tag("SplashScreen").d("Navigating to MAIN...")
-                    navController.navigate(AppRoutes.MAIN) {
-                        popUpTo(AppRoutes.SPLASH) { inclusive = true }
+                    navController.navigate(TopLevelRoute.Main.route) {
+                        popUpTo(TopLevelRoute.Splash.route) { inclusive = true }
                     }
-                    Timber.tag("SplashScreen").d("Navigation to MAIN initiated.")
                 }
             }
-
             viewModel.onNavigationComplete()
-            Timber.tag("SplashScreen").d("Navigation event $event processed and reset.")
-
-        } else {
-            Timber.tag("SplashScreen").d("LaunchedEffect observed null navigationEvent.")
         }
     }
 

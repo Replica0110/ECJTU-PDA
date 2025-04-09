@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.buildAnnotatedString
@@ -49,8 +48,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.ui.ConfirmAlertDialog
 import com.lonx.ecjtu.pda.ui.InfoAlertDialog
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
-import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.WifiUiEvent
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -181,8 +178,6 @@ fun WifiScreen(
         }
     }
 
-    Scaffold(
-    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize(),
@@ -289,7 +284,7 @@ fun WifiScreen(
             }
 
         }
-    }
+
 }
 private enum class DialogType {
     INFO,

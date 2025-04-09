@@ -4,11 +4,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
-import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
+import com.lonx.ecjtu.pda.data.JwxtRoute
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -36,14 +34,14 @@ fun JwxtMenuScreen(
                     title = "我的成绩",
                     summary = "查询绩点及各科分数",
                     onClick = {
-                        jwxtNavController.navigate(JwxtDestinations.SCORE_ROUTE)
+                        jwxtNavController.navigate(JwxtRoute.Score.route)
                     }
                 )
                 SuperArrow(
                     title = "素质拓展学分",
                     summary = "查询素质拓展学分",
                     onClick = {
-                        jwxtNavController.navigate(JwxtDestinations.SECOND_CREDIT_ROUTE)
+                        jwxtNavController.navigate(JwxtRoute.SecondCredit.route)
                     }
                 )
             }
