@@ -186,7 +186,7 @@ fun WifiScreen(
             item {
                 Card(
                     modifier = Modifier
-                        .padding(16.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
@@ -237,11 +237,10 @@ fun WifiScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Column(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Button(
                         onClick = {

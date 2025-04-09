@@ -28,7 +28,7 @@ fun HomeScreen(
 
     homeViewModel: HomeViewModel = koinViewModel()
 ) {
-    val uiState = homeViewModel.uiState.collectAsStateWithLifecycle()
+//    val uiState = homeViewModel.uiState.collectAsStateWithLifecycle()
 
 //    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
 //        scrollBehavior = scrollBehavior

@@ -30,6 +30,7 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.LazyColumn
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -157,17 +158,10 @@ private fun CreditSectionCard(
     credits: Map<String, Double>,
     modifier: Modifier = Modifier
 ) {
+    SmallTitle(title)
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium, // Title style for the card
-                modifier = Modifier.padding(bottom = 10.dp)
-            )
             if (credits.isEmpty()) {
                 Text(
                     "无该项记录",
@@ -176,22 +170,19 @@ private fun CreditSectionCard(
                 )
             } else {
                 // Display credits in a structured way
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(12.dp)) {
                     credits.entries.sortedBy { it.key }.forEach { (category, value) ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            Modifier.padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
                                 text = category,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                Modifier.weight(2f), textAlign = TextAlign.Start
                             )
                             Text(
                                 text = value.toString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
+                                Modifier.weight(1f), textAlign = TextAlign.End
                             )
                         }
                         Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -199,5 +190,5 @@ private fun CreditSectionCard(
                 }
             }
         }
-    }
+
 }

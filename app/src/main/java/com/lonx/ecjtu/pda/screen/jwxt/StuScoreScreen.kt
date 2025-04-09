@@ -176,7 +176,7 @@ fun ScoreSummaryCard(summary: ScoreSummary) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -228,7 +228,7 @@ fun ScoreDetailSection(scores: List<CourseScore>) {
     val terms = grouped.keys.toList()
     var selectedIndex by remember { mutableIntStateOf(0) }
 
-    Card (Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)) {
+    Card (Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         // Tab 切换学期
         ScrollableTabRow(
             selectedTabIndex = selectedIndex,

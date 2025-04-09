@@ -193,7 +193,7 @@ fun SettingScreen(
                 SmallTitle("账号")
                 Card(
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(16.dp)
                 ) {
                     SuperArrow(
                         leftAction = {
@@ -260,7 +260,7 @@ fun SettingScreen(
             }
             item {
                 SmallTitle("教程")
-                Card(modifier = Modifier.padding(12.dp)) {
+                Card(modifier = Modifier.padding(16.dp)) {
                     SuperArrow(
                         leftAction = {
                             Box(
