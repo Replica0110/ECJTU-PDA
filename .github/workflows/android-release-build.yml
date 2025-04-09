@@ -35,7 +35,8 @@ jobs:
 
       # 4. 配置签名文件
       - name: Decode Keystore
-        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}
+        # 确保这里的路径是以 /release.keystore 结尾！
+        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/release.keystore
         env:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
 
