@@ -20,13 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lonx.ecjtu.pda.utils.UpdatableScrollBehavior
-import com.lonx.ecjtu.pda.utils.rememberAppBarNestedScrollConnection
 import com.lonx.ecjtu.pda.viewmodel.StuSecondCreditViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
@@ -39,12 +36,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun StuSecondCreditScreen(
     onBack: () -> Unit,
-    scrollBehavior: UpdatableScrollBehavior,
+//    scrollBehavior: UpdatableScrollBehavior,
     viewModel: StuSecondCreditViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
+//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
 
     LaunchedEffect(Unit) {
         if (uiState.secondCreditData == null && !uiState.isLoading) {
@@ -58,8 +55,7 @@ fun StuSecondCreditScreen(
     }
     LazyColumn(
         modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(nestedScrollConnection),
+            .fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {

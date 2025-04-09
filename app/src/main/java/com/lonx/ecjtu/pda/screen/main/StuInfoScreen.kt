@@ -42,7 +42,7 @@ fun StuInfoScreen(
     internalNavController: NavHostController,
     topLevelNavController : NavHostController,
     padding: PaddingValues,
-    scrollBehavior: UpdatableScrollBehavior,
+//    scrollBehavior: UpdatableScrollBehavior,
     stuInfoViewModel: StuInfoViewModel = koinViewModel()
 ) {
     val uiState by stuInfoViewModel.uiState.collectAsStateWithLifecycle()
@@ -62,10 +62,10 @@ fun StuInfoScreen(
         }
     }
 
-    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
-        scrollBehavior = scrollBehavior,
-        pullToRefreshState = pullToRefreshState
-    )
+//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
+//        scrollBehavior = scrollBehavior,
+//        pullToRefreshState = pullToRefreshState
+//    )
 
     PullToRefresh(
         modifier = Modifier
@@ -84,8 +84,7 @@ fun StuInfoScreen(
     ) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection),
+                .fillMaxSize(),
             contentPadding = PaddingValues(bottom = padding.calculateBottomPadding())
 
         ) {

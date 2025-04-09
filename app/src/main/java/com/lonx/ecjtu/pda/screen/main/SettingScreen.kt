@@ -55,7 +55,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun SettingScreen(
     padding: PaddingValues,
-    scrollBehavior: UpdatableScrollBehavior,
+//    scrollBehavior: UpdatableScrollBehavior,
     settingViewModel: SettingViewModel = koinViewModel()
 ) {
     val uiState by settingViewModel.uiState.collectAsState()
@@ -66,7 +66,7 @@ fun SettingScreen(
     var showWeiXinIdDialog by rememberSaveable { mutableStateOf(false) }
     var showWeiXinIdTutorialDialog by rememberSaveable { mutableStateOf(false) }
     // 标题栏滚动
-    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
+//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
 
     // snackBar通知
     val snackbarHostState = remember { SnackbarHostState() }
@@ -186,8 +186,7 @@ fun SettingScreen(
     ) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection),
+                .fillMaxSize(),
             contentPadding = padding
         ) {
 

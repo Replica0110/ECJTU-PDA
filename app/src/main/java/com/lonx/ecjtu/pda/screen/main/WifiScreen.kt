@@ -68,7 +68,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun WifiScreen(
     internalNavController: NavHostController,
     padding: PaddingValues,
-    scrollBehavior: UpdatableScrollBehavior,
+//    scrollBehavior: UpdatableScrollBehavior,
     wifiViewModel: WifiViewModel = koinViewModel()
 ) {
     val uiState by wifiViewModel.uiState.collectAsStateWithLifecycle()
@@ -80,9 +80,9 @@ fun WifiScreen(
     var dialogMessage by remember { mutableStateOf("") }
 
 
-    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
-        scrollBehavior = scrollBehavior
-    )
+//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
+//        scrollBehavior = scrollBehavior
+//    )
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -185,8 +185,7 @@ fun WifiScreen(
     ) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection),
+                .fillMaxSize(),
             contentPadding = padding
         ) {
             item {

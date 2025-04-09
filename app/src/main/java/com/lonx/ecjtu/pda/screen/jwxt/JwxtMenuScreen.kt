@@ -17,15 +17,15 @@ import top.yukonga.miuix.kmp.extra.SuperArrow
 @Composable
 fun JwxtMenuScreen(
     jwxtNavController: NavHostController,
-    scrollBehavior: UpdatableScrollBehavior,
+//    scrollBehavior: UpdatableScrollBehavior,
 ) {
 
-     val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
+//     val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(nestedScrollConnection)
+//            .nestedScroll(nestedScrollConnection)
     ) {
         item {
             SmallTitle("成绩查询")

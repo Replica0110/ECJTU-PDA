@@ -27,21 +27,21 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun HomeScreen(
     internalNavController: NavHostController,
     topLevelNavController: NavHostController,
-    scrollBehavior : UpdatableScrollBehavior,
+//    scrollBehavior : UpdatableScrollBehavior,
     padding:PaddingValues,
 
     homeViewModel: HomeViewModel = koinViewModel()
 ) {
     val uiState = homeViewModel.uiState.collectAsStateWithLifecycle()
 
-    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
-        scrollBehavior = scrollBehavior
-    )
+//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
+//        scrollBehavior = scrollBehavior
+//    )
     Scaffold {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection),
+                .fillMaxSize(),
+//                .nestedScroll(nestedScrollConnection),
             contentPadding = padding
         ) {
             item {

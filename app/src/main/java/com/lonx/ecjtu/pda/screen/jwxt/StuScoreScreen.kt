@@ -59,7 +59,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun StuScoreScreen(
     onBack: () -> Unit,
-    scrollBehavior: UpdatableScrollBehavior,
+//    scrollBehavior: UpdatableScrollBehavior,
     viewModel: StuScoreViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -70,12 +70,11 @@ fun StuScoreScreen(
         }
     }
 
-    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
+//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
 
     LazyColumn(
         modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(nestedScrollConnection),
+            .fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
