@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.data.IspOption
-import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.NavigationTarget
+import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.availableIsp
 import com.lonx.ecjtu.pda.service.JwxtService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
@@ -34,12 +34,14 @@ class LoginViewModel(
 
     private val _uiState = MutableStateFlow(LoginUiState())
     override val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
     fun onStudentIdChange(id: String) { _uiState.update { it.copy(studentId = id) } }
     fun onPasswordChange(pass: String) { _uiState.update { it.copy(password = pass) } }
     fun onIspSelected(ispId: Int) { _uiState.update { it.copy(selectedIspId = ispId) } }
 
     fun attemptLogin() {
         val currentState = _uiState.value
+        // 可以在这里添加 ISP 选择验证（如果需要）
         if (currentState.studentId.isBlank() || currentState.password.isBlank()) {
             _uiState.update { it.copy(error = "请输入账号和密码") }
             return
@@ -49,36 +51,35 @@ class LoginViewModel(
             _uiState.update { it.copy(isLoading = true, error = null, navigationEvent = null) }
             try {
                 val result = service.loginManually(
-                    studentId = currentState.studentId,
+                    studentId = currentState.studentId.trim(),
                     studentPass = currentState.password,
                     ispOption = currentState.selectedIspId
                 )
 
-                if (result is LoginResult.Success) {
-                    Timber.i("ViewModel: Manual login successful, navigating to Main.")
-//                    prefs.saveCredentials(
-//                        studentId = currentState.studentId,
-//                        password = currentState.password,
-//                        isp = currentState.selectedIspId
-//                    )
-                    Timber.e("保存的信息如下：${prefs.getCredentials()}")
-                    _uiState.update { it.copy(isLoading = false, navigationEvent = NavigationTarget.MAIN) }
-                } else {
-                    val errorMsg = (result as LoginResult.Failure).error
-                    Timber.w("ViewModel: Manual login failed: $errorMsg")
-                    _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                when (result) {
+                    is ServiceResult.Success<Unit> -> {
+                        Timber.i("登录成功，准备导航到主界面")
+
+                        _uiState.update { it.copy(isLoading = false, navigationEvent = NavigationTarget.MAIN) }
+                    }
+                    is ServiceResult.Error -> {
+                        Timber.w("登录失败: ${result.message}")
+                        _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    }
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Login attempt failed with unexpected exception")
+                Timber.e(e, "登录尝试因意外异常失败")
                 _uiState.update { it.copy(isLoading = false, error = "发生意外错误: ${e.message}") }
             }
         }
     }
 
+    /** 处理导航事件，防止重复导航 */
     fun onNavigationHandled() {
         _uiState.update { it.copy(navigationEvent = null) }
     }
 
+    /** 处理错误消息显示完成事件，清除错误状态 */
     fun onErrorMessageShown() {
         _uiState.update { it.copy(error = null) }
     }

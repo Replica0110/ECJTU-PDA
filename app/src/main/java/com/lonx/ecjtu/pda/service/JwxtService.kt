@@ -644,44 +644,51 @@ class JwxtService(
 
         // 执行调用，不自动跟踪重定向，以便检查初始响应
         // 我们需要在隐式重定向前检查即时响应中的 Cookie (特别是 CASTGC)
-        val tempClient = client.newBuilder().followRedirects(false).build() // 关键! 创建一个不自动重定向的临时客户端
+        val tempClient = client.newBuilder().followRedirects(false).build() // 创建一个不自动重定向的临时客户端
         val loginResponse = tempClient.newCall(request).execute()
 
-        loginResponse.use { // 使用 use 块确保响应体最终被关闭
-            Timber.d("登录 POST 响应代码: ${it.code}")
-            // 记录 Set-Cookie 响应头以进行调试
-            it.headers("Set-Cookie").forEach { cookie -> Timber.v("Set-Cookie: $cookie") }
+        loginResponse.use { response ->
+            Timber.d("登录 POST 响应代码: ${response.code}")
+            response.headers("Set-Cookie").forEach { cookie -> Timber.v("Set-Cookie: $cookie") }
 
-            val hasCastgcInHeader = it.headers("Set-Cookie").any { c -> c.contains(COOKIE_CASTGC) }
-            // 为了更可靠，在请求后重新从 CookieJar 加载对应 URL 的 Cookie
-            val hasCastgcInJar = cookieJar.loadForRequest(ECJTU_LOGIN_URL.toHttpUrl())
-                .any { c -> c.name == COOKIE_CASTGC && c.value.isNotBlank() }
+            val hasCastgcInHeader = response.headers("Set-Cookie").any { c -> c.contains(COOKIE_CASTGC) }
+            val cookiesFromJar = cookieJar.loadForRequest(ECJTU_LOGIN_URL.toHttpUrl())
+            val hasCastgcInJar = cookiesFromJar.any { c -> c.name == COOKIE_CASTGC && c.value.isNotBlank() }
 
             if (!hasCastgcInHeader && !hasCastgcInJar) {
-                // 没有 CASTGC 意味着登录失败，很可能是凭据错误。
-                Timber.e("登录失败：在响应头或 Cookie Jar 中未找到 CASTGC Cookie。")
-                // 如果可能，尝试从响应体中解析错误消息 (可能是 HTML 中的某个元素)
-                val errorMsg = try {
-                    // 示例：尝试查找 class="error" 下的 span 文本
-                    it.body?.string()?.let { html -> Jsoup.parse(html).select(".error span").text() }
-                } catch (_: Exception) { null } // 解析失败则忽略
-                // 抛出包含具体错误消息（如果找到）或通用错误消息的异常
-                throw IOException(errorMsg ?: "账号或密码错误") // 使用具体消息
-            }
+                // 没有 CASTGC 意味着登录失败，很可能是凭据错误
+                var specificErrorMsg: String? = null
+                try {
+                    val bodyString = response.body?.string()
+                    if (!bodyString.isNullOrEmpty()) {
+                        Timber.v("尝试从响应体解析错误信息...")
+                        specificErrorMsg = Jsoup.parse(bodyString)
+                            .select("div.mistake_notice")
+                            .first()
+                            ?.text()
+                            ?.trim()
 
-            // 如果存在 CASTGC，检查响应代码。通常期望是 302。
-            if (!it.isRedirect && it.code != 200) { // 理想情况下，成功时应为重定向 (302) 或有时是 200 OK
-                Timber.w("登录 POST 返回 ${it.code} 但找到了 CASTGC。继续处理，但这不符合典型 CAS 流程。")
-                // 某些 CAS 设置可能在成功时返回 200 OK。如果后续重定向能处理它，也许没问题。
-                // 如果稍后重定向失败，这可能是原因。
-            } else if (it.isRedirect) {
-                Timber.d("登录 POST 成功，收到重定向响应 (HTTP ${it.code})，且找到 CASTGC。")
+                        if (!specificErrorMsg.isNullOrBlank()) {
+                            Timber.d("从 'div.mistake_notice' 解析到错误信息: '$specificErrorMsg'")
+                        } else {
+                            Timber.d("'div.mistake_notice' 未找到或为空。检查是否有其他错误格式。")
+                        }
+
+                    } else {
+                        Timber.d("CASTGC missing and response body was null or empty.")
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "解析登录错误响应体时出错。")
+                }
+            }
+            if (!response.isRedirect && response.code != 200) {
+                Timber.w("登录 POST 返回 ${response.code} 但找到了 CASTGC。继续处理，但这可能不是标准流程。")
+            } else if (response.isRedirect) {
+                Timber.d("登录 POST 成功，收到重定向响应 (HTTP ${response.code})，且找到 CASTGC。")
             } else { // code is 200
                 Timber.d("登录 POST 成功，收到 200 OK 响应，且找到 CASTGC。")
             }
 
-            // 如果代码执行到这里，意味着找到了 CASTGC，认为登录 POST 基本成功
-            // Success 不需要返回值，只需不抛出异常。
         }
     }
 
@@ -864,13 +871,13 @@ class JwxtService(
      * @param [studentId] 学号
      * @param [studentPass] 密码
      * @param [ispOption] 运营商对应id
-     * @return [LoginResult] ([LoginResult.Success] 或 [LoginResult.Failure])。
+     * @return [ServiceResult]
      */
-    suspend fun loginManually(studentId: String, studentPass: String,ispOption: Int): LoginResult = withContext(Dispatchers.IO) {
+    suspend fun loginManually(studentId: String, studentPass: String,ispOption: Int): ServiceResult<Unit> = withContext(Dispatchers.IO) {
         // 1. 基本输入验证
         if (studentId.isBlank() || studentPass.isBlank()) {
             Timber.w("尝试使用空白凭据进行手动登录!")
-            return@withContext LoginResult.Failure("账号或密码不能为空")
+            return@withContext ServiceResult.Error("账号或密码不能为空", null)
         }
 
         Timber.d("尝试为用户 $studentId 手动登录")
@@ -879,12 +886,12 @@ class JwxtService(
         Timber.i("手动登录尝试前清除 Cookie。")
         cookieJar.clear() // 清除所有 Cookie
 
-        // 3. 加密密码 (复用 getEncryptedPassword)
+        // 3. 加密密码
         val encPassword = when (val encPasswordResult = getEncryptedPassword(studentPass)) {
             is ServiceResult.Success -> encPasswordResult.data
             is ServiceResult.Error -> {
                 Timber.e("手动登录在密码加密过程中失败: ${encPasswordResult.message}")
-                return@withContext LoginResult.Failure("密码加密失败: ${encPasswordResult.message}")
+                return@withContext ServiceResult.Error("密码加密失败: ${encPasswordResult.message}")
             }
         }
 
@@ -894,53 +901,64 @@ class JwxtService(
             .add("Host", ApiConstants.CAS_ECJTU_DOMAIN)
             .build()
 
-        // 4. 获取 LT 值 (复用 getLoginLtValue)
+        // 4. 获取 LT 值
         val ltValue = when (val ltValueResult = getLoginLtValue(headers)) {
             is ServiceResult.Success -> ltValueResult.data
             is ServiceResult.Error -> {
                 Timber.e("手动登录在获取 LT 值过程中失败: ${ltValueResult.message}")
-                return@withContext LoginResult.Failure("无法获取登录令牌: ${ltValueResult.message}")
+                return@withContext ServiceResult.Error("无法获取登录令牌: ${ltValueResult.message}")
             }
         }
 
-        // 5. 执行登录 POST 请求 (复用 loginWithCredentials)
-        val loginResponseResult = loginWithCredentials(studentId, encPassword, ltValue, headers)
-        when (loginResponseResult) {
+        // 5. 执行登录 POST 请求
+        when (val loginResponseResult = loginWithCredentials(studentId, encPassword, ltValue, headers)) {
             is ServiceResult.Success -> {
-                // 再次检查 CASTGC 是否确实已设置
-                if (!hasLogin(0)) {
-                    Timber.e("手动登录失败：看似成功的请求后未找到 CASTGC Cookie。请检查凭据。")
-                    return@withContext LoginResult.Failure("账号或密码错误")
+                // 检查 CASTGC 是否确实已设置
+                if (!hasLogin(0)) { // Type 0 for CASTGC
+                    Timber.e("手动登录失败：未找到 CASTGC Cookie，请检查凭据。")
+                    // 返回更具体的错误可能更好，但取决于 loginWithCredentials 是否能区分
+                    return@withContext ServiceResult.Error("账号或密码错误")
                 }
                 Timber.d("初始手动登录 POST 成功 (找到 CASTGC)，继续进行重定向。")
             }
             is ServiceResult.Error -> {
                 Timber.e("手动登录在凭据提交过程中失败: ${loginResponseResult.message}")
-                return@withContext LoginResult.Failure(loginResponseResult.message) // 传递具体错误
+                // 传递来自 loginWithCredentials 的具体错误消息
+                return@withContext ServiceResult.Error(loginResponseResult.message)
             }
         }
 
-        // 6. 处理重定向 (复用 handleRedirection)
-        val redirectResult = handleRedirection(headers)
-        if (redirectResult is ServiceResult.Error) {
-            Timber.e("手动登录部分失败：重定向错误: ${redirectResult.message}")
-            // 如果重定向失败，则不保存凭据，并返回失败
-            return@withContext LoginResult.Failure("登录重定向失败: ${redirectResult.message}")
+        // 6. 处理重定向
+        when (val redirectResult = handleRedirection(headers)) {
+            is ServiceResult.Success -> {
+                Timber.d("重定向处理成功。")
+            }
+            is ServiceResult.Error -> {
+                Timber.e("手动登录部分失败：重定向错误: ${redirectResult.message}")
+                // 如果重定向失败，则不保存凭据，并返回失败
+                return@withContext ServiceResult.Error("登录重定向失败: ${redirectResult.message}")
+            }
         }
 
-        // 7. 最终检查 (JWXT 会话)
-        if (!hasLogin(1)) {
+        // 7. 最终检查 (JWXT 会话 - JSESSIONID)
+        if (!hasLogin(1)) { // Type 1 for JSESSIONID (assuming)
             Timber.w("手动登录完成，但 JWXT 会话 Cookie (JSESSIONID) 可能缺失。")
-            // 对于手动登录，通常目标是完全访问权限，因此将此视为失败
-            return@withContext LoginResult.Failure("无法建立教务系统会话")
+            return@withContext ServiceResult.Error("无法建立教务系统会话")
         }
 
         // --- 重要：完全成功后保存凭据 ---
-        Timber.i("用户 $studentId 手动登录成功。正在保存凭据。")
-        prefs.saveCredentials(studentId, studentPass, ispOption)
+        Timber.i("用户 $studentId 手动登录成功。正在保存凭据 (ISP: $ispOption)。")
+        try {
+            prefs.saveCredentials(studentId, studentPass, ispOption)
+        } catch (e: Exception) {
+            Timber.e(e, "保存凭据时发生错误！")
+
+            return@withContext ServiceResult.Error("登录成功但无法保存凭据: ${e.message}")
+        }
 
         Timber.i("用户 $studentId 的手动登录过程成功完成")
-        return@withContext LoginResult.Success("登录成功")
+        return@withContext ServiceResult.Success(Unit)
+
     }
 
 
@@ -1009,7 +1027,7 @@ class JwxtService(
      * 获取指定日期的课程表信息，返回包含日期和课程列表的 DayCourses 对象。
      *
      * @param [dateQuery] 查询日期，格式为 "YYYY-MM-DD"。如果为 null 或空，则获取当天的课表。
-     * @return [ServiceResult] 包含 [CourseData.DayCourses] 或错误信息。
+     * @return [ServiceResult] 包含 [DayCourses] 或错误信息。
      */
     suspend fun getCourseSchedule(dateQuery: String? = null): ServiceResult<DayCourses> = withContext(Dispatchers.IO) {
         Timber.e("开始获取课程表信息... 查询日期: ${dateQuery ?: "未指定"}")
