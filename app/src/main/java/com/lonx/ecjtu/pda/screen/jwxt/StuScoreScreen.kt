@@ -297,7 +297,7 @@ fun CreditTable(summary: ScoreSummary) {
                 )
             }
         }
-        Divider()
+        HorizontalDivider()
 
         // 行数据
         listOf(

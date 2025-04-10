@@ -83,9 +83,23 @@ android {
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    signingConfigs {
+        val keystore = rootProject.file("signing.properties")
 
+        create("release") {
+            val prop = Properties().apply {
+                keystore.inputStream().use(this::load)
+            }
+
+            storeFile = rootProject.file("release.keystore")
+            storePassword = prop.getProperty("keystore.password")!!
+            keyAlias = prop.getProperty("key.alias")!!
+            keyPassword = prop.getProperty("key.password")!!
+        }
+
+    }
     buildTypes {
-        release {
+        named("release") {
             isMinifyEnabled = false
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs["debug"]
             proguardFiles(
@@ -93,27 +107,13 @@ android {
                 "proguard-rules.pro"
             )
         }
-        debug {
+        named("debug") {
             val detailedVersion = getGitOutput("git describe --tags --dirty") ?: getVersionNameFromGit()
             versionNameSuffix = ".${getVersionCodeFromGit()}-${detailedVersion.replaceFirst(getVersionNameFromGit(), "").trimStart('-')}.debug"
             applicationIdSuffix = ".debug"
         }
     }
-    signingConfigs {
-        val keystore = rootProject.file("signing.properties")
-        if (keystore.exists()) {
-            create("release") {
-                val prop = Properties().apply {
-                    keystore.inputStream().use(this::load)
-                }
 
-                storeFile = rootProject.file("release.keystore")
-                storePassword = prop.getProperty("keystore.password")!!
-                keyAlias = prop.getProperty("key.alias")!!
-                keyPassword = prop.getProperty("key.password")!!
-            }
-        }
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
