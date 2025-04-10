@@ -25,7 +25,6 @@ import com.lonx.ecjtu.pda.data.MainRoute
 import com.lonx.ecjtu.pda.screen.jwxt.JwxtMenuScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuScoreScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSecondCreditScreen
-import timber.log.Timber
 
 @Composable
 fun JwxtScreen(

@@ -46,8 +46,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.data.MainRoute
-import com.lonx.ecjtu.pda.screen.main.JwxtScreen
 import com.lonx.ecjtu.pda.screen.main.HomeScreen
+import com.lonx.ecjtu.pda.screen.main.JwxtScreen
 import com.lonx.ecjtu.pda.screen.main.SettingScreen
 import com.lonx.ecjtu.pda.screen.main.StuInfoScreen
 import com.lonx.ecjtu.pda.screen.main.WifiScreen
