@@ -34,11 +34,10 @@ data class SettingUiState(
     val error: String? = null
 ): BaseUiState
 
-
 class SettingViewModel(
-    override val service: JwxtService,
+    override val service: JwxtService, // 使用具体的 JwxtService 类型
     override val prefs: PreferencesManager
-) : ViewModel() , BaseViewModel {
+) : ViewModel(), BaseViewModel { // 确保实现了 BaseViewModel
 
     private val _uiState = MutableStateFlow(SettingUiState())
     override val uiState: StateFlow<SettingUiState> = _uiState.asStateFlow()
@@ -55,60 +54,69 @@ class SettingViewModel(
             _uiState.update { currentState ->
                 val credentials = prefs.getCredentials()
                 val savedId = credentials.first
-                val savedPassword =  credentials.second
+                val savedPassword = credentials.second
                 val savedIspId = credentials.third
-                val savedWeiXinId = prefs.getWeiXinId()
+                val savedWeiXinId = prefs.getWeiXinId() // 假设 prefs 有这个方法
                 val selectedIsp = availableIsp.find { it.id == savedIspId } ?: currentState.ispSelected
                 currentState.copy(
                     studentId = savedId,
-                    password = savedPassword,
+                    password = savedPassword, // 再次注意安全风险
                     ispSelected = selectedIsp,
                     weiXinId = savedWeiXinId
                 )
             }
         }
     }
+
     /**账号密码及运营商配置*/
     fun updateConfig(studentId: String, password: String, selectedIsp: IspOption) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                 prefs.saveCredentials(studentId, password, selectedIsp.id)
-                Timber.e("Saving: ID=$studentId, Pass=***, ISP=${selectedIsp.name}")
+                prefs.saveCredentials(studentId, password, selectedIsp.id)
+                Timber.i("保存配置: ID=$studentId, Pass=***, ISP=${selectedIsp.name}")
 
                 _uiState.update {
                     it.copy(
                         studentId = studentId,
-                        password = password,
+                        password = password, // 更新UI状态中的密码
                         ispSelected = selectedIsp,
                         isLoading = false
                     )
                 }
+                // 可以发一个成功提示
+                _uiEvent.emit(SettingUiEvent.ShowSnackbar("账号信息保存成功", true))
             } catch (e: Exception) {
+                Timber.e(e, "保存配置失败")
                 _uiState.update { it.copy(isLoading = false, error = "保存失败: ${e.message}") }
+                // 发送失败提示
+                _uiEvent.emit(SettingUiEvent.ShowSnackbar("账号信息保存失败: ${e.message}", false))
             }
         }
     }
+
     /**修改智慧交大密码*/
     fun updatePassword(oldPassword: String, newPassword: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) } // Start loading
+            _uiState.update { it.copy(isLoading = true, error = null) } // 开始加载
             var operationSuccessful = false
             var feedbackMessage = ""
 
             try {
+                // 调用更新后的 service 方法
                 when (val result = service.updatePassword(oldPassword, newPassword)) {
                     is ServiceResult.Success -> {
-                        Timber.i("Password update successful: ${result.data}")
-                        feedbackMessage = result.data
+                        Timber.i("密码更新成功 (Service层)")
+                        feedbackMessage = "密码修改成功"
                         operationSuccessful = true
                     }
                     is ServiceResult.Error -> {
-                        Timber.w("Password update failed: ${result.message}")
+                        Timber.w("密码更新失败: ${result.message}")
                         feedbackMessage = result.message
                     }
                 }
             } catch (e: Exception) {
+                Timber.e(e, "调用更新密码服务时发生异常")
                 feedbackMessage = "更新密码时发生错误: ${e.message ?: "未知错误"}"
             } finally {
                 if (feedbackMessage.isNotBlank()) {
@@ -119,13 +127,14 @@ class SettingViewModel(
                     try {
                         val currentState = _uiState.value
                         prefs.saveCredentials(currentState.studentId, newPassword, currentState.ispSelected.id)
+                        Timber.i("新密码已成功保存到本地")
 
                         _uiState.update { it.copy(password = newPassword, isLoading = false) }
 
                         _uiEvent.emit(SettingUiEvent.CloseDialog)
 
                     } catch (saveError: Exception) {
-                        Timber.e(saveError, "Failed to save new password locally after successful server update!")
+                        Timber.e(saveError, "服务器密码更新成功，但本地保存失败！")
                         _uiEvent.emit(SettingUiEvent.ShowSnackbar("密码已在服务器更新，但本地保存失败。", false))
                         _uiState.update { it.copy(isLoading = false) }
                     }
@@ -135,17 +144,18 @@ class SettingViewModel(
             }
         }
     }
+
+    /**更新微信ID*/
     fun updateWeiXinId(weiXinId: String){
         viewModelScope.launch{
             try {
                 prefs.setWeiXinId(weiXinId)
                 _uiState.update { it.copy(weiXinId = weiXinId) }
-                _uiEvent.emit(SettingUiEvent.ShowSnackbar("保存成功", true))
+                _uiEvent.emit(SettingUiEvent.ShowSnackbar("微信ID保存成功", true))
             } catch (e: Exception) {
-                Timber.e(e, "保存weixinid失败")
-                _uiEvent.emit(SettingUiEvent.ShowSnackbar("保存失败", false))
+                Timber.e(e, "保存 weixinid 失败")
+                _uiEvent.emit(SettingUiEvent.ShowSnackbar("微信ID保存失败: ${e.message}", false))
             }
         }
-
     }
 }

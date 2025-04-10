@@ -41,7 +41,6 @@ class LoginViewModel(
 
     fun attemptLogin() {
         val currentState = _uiState.value
-        // 可以在这里添加 ISP 选择验证（如果需要）
         if (currentState.studentId.isBlank() || currentState.password.isBlank()) {
             _uiState.update { it.copy(error = "请输入账号和密码") }
             return
@@ -57,7 +56,7 @@ class LoginViewModel(
                 )
 
                 when (result) {
-                    is ServiceResult.Success<Unit> -> {
+                    is ServiceResult.Success -> {
                         Timber.i("登录成功，准备导航到主界面")
 
                         _uiState.update { it.copy(isLoading = false, navigationEvent = NavigationTarget.MAIN) }
