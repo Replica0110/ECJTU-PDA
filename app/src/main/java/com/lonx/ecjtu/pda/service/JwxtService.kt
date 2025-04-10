@@ -77,7 +77,78 @@ class JwxtService(
             else -> false // 其他类型无效
         }
     }
+    /**
+     * 执行完整的 CAS 登录和重定向序列。
+     * @param studentId 学号
+     * @param plainPassword 明文密码
+     * @return ServiceResult<Unit> 成功或失败
+     */
+    private suspend fun performCasLoginSequence(studentId: String, plainPassword: String): ServiceResult<Unit> {
+        Timber.d("执行用户 $studentId 的 CAS 登录序列...")
 
+        // 1. 加密密码
+        val encPassword = when (val encPasswordResult = getEncryptedPassword(plainPassword)) {
+            is ServiceResult.Success -> encPasswordResult.data
+            is ServiceResult.Error -> {
+                Timber.e("CAS 登录序列在密码加密时失败: ${encPasswordResult.message}")
+                // 直接返回错误，不继续执行
+                return ServiceResult.Error("密码加密失败: ${encPasswordResult.message}")
+            }
+        }
+
+        // 2. 构建通用 CAS 请求头
+        val headers = Headers.Builder()
+            .add("User-Agent", ApiConstants.USER_AGENT)
+            .add("Host", ApiConstants.CAS_ECJTU_DOMAIN)
+            .build()
+
+        // 3. 获取 LT 值
+        val ltValue = when (val ltValueResult = getLoginLtValue(headers)) {
+            is ServiceResult.Success -> ltValueResult.data
+            is ServiceResult.Error -> {
+                Timber.e("CAS 登录序列在获取 LT 值时失败: ${ltValueResult.message}")
+                return ServiceResult.Error("无法获取登录令牌: ${ltValueResult.message}")
+            }
+        }
+
+        // 4. 执行登录 POST 请求
+        when (val loginResponseResult = loginWithCredentials(studentId, encPassword, ltValue, headers)) {
+            is ServiceResult.Success -> {
+                // 检查 CASTGC 是否确实已设置 (loginWithCredentials 内部可能已经检查过，这里是双重保险)
+                if (!hasLogin(0)) { // Type 0 for CASTGC
+                    Timber.e("CAS 登录序列失败：提交凭据后未找到 CASTGC Cookie。")
+                    // 假设是凭据错误
+                    return ServiceResult.Error("账号或密码错误")
+                }
+                Timber.d("CAS 登录序列：初始登录 POST 成功 (找到 CASTGC)。")
+            }
+            is ServiceResult.Error -> {
+                Timber.e("CAS 登录序列在凭据提交时失败: ${loginResponseResult.message}")
+                // 传递来自 loginWithCredentials 的具体错误消息
+                return ServiceResult.Error(loginResponseResult.message)
+            }
+        }
+
+        // 5. 处理重定向
+        when (val redirectResult = handleRedirection(headers)) {
+            is ServiceResult.Success -> {
+                Timber.d("CAS 登录序列：重定向处理成功。")
+            }
+            is ServiceResult.Error -> {
+                Timber.e("CAS 登录序列在重定向时失败: ${redirectResult.message}")
+                return ServiceResult.Error("登录重定向失败: ${redirectResult.message}")
+            }
+        }
+
+        // 6. 最终检查 (JWXT 会话 - JSESSIONID)
+        if (!hasLogin(1)) { // Type 1 for JSESSIONID
+            Timber.w("CAS 登录序列完成，但 JWXT 会话 Cookie (JSESSIONID) 可能缺失。")
+            return ServiceResult.Error("无法建立教务系统会话")
+        }
+
+        Timber.i("用户 $studentId 的 CAS 登录序列成功完成。")
+        return ServiceResult.Success(Unit)
+    }
     /**
      * 尝试使用存储在 PreferencesManager 中的凭据进行登录。
      * 处理密码加密、获取 LT 值和重定向。
@@ -121,55 +192,17 @@ class JwxtService(
                 cookieJar.clear()
             }
 
-            val encPassword = when (val encPasswordResult = getEncryptedPassword(studentPassword)) {
-                is ServiceResult.Success -> encPasswordResult.data
-                is ServiceResult.Error -> {
-                    Timber.e("密码加密过程中登录失败: ${encPasswordResult.message}")
-                    return@withContext ServiceResult.Error("密码加密失败: ${encPasswordResult.message}")
-                }
+            // 调用提取的核心登录序列函数
+            val sequenceResult = performCasLoginSequence(studentId, studentPassword)
+
+            // 根据序列结果返回
+            return@withContext if (sequenceResult is ServiceResult.Success) {
+                Timber.i("用户 $studentId 的自动登录过程成功完成 (通过调用序列)")
+                ServiceResult.Success(Unit)
+            } else {
+                Timber.e("用户 $studentId 的自动登录过程失败 (通过调用序列): ${(sequenceResult as ServiceResult.Error).message}")
+                sequenceResult // 返回序列中的错误
             }
-
-            val headers = Headers.Builder()
-                .add("User-Agent", ApiConstants.USER_AGENT)
-                .add("Host", ApiConstants.CAS_ECJTU_DOMAIN)
-                .build()
-
-            val ltValue = when (val ltValueResult = getLoginLtValue(headers)) {
-                is ServiceResult.Success -> ltValueResult.data
-                is ServiceResult.Error -> {
-                    Timber.e("获取 LT 值过程中登录失败: ${ltValueResult.message}")
-                    return@withContext ServiceResult.Error("无法获取登录令牌: ${ltValueResult.message}")
-                }
-            }
-
-            val loginResponseResult = loginWithCredentials(studentId, encPassword, ltValue, headers)
-            when (loginResponseResult) {
-                is ServiceResult.Success -> {
-                    if (!hasLogin(0)) {
-                        Timber.e("登录失败：未找到 CASTGC Cookie。可能是账号或密码错误。")
-                        return@withContext ServiceResult.Error("账号或密码错误")
-                    }
-                    Timber.d("初始登录 POST 成功 (找到 CASTGC)，继续进行重定向。")
-                }
-                is ServiceResult.Error -> {
-                    Timber.e("凭据提交过程中登录失败: ${loginResponseResult.message}")
-                    return@withContext ServiceResult.Error(loginResponseResult.message)
-                }
-            }
-
-            val redirectResult = handleRedirection(headers)
-            if (redirectResult is ServiceResult.Error) {
-                Timber.e("登录部分失败：重定向错误: ${redirectResult.message}")
-                return@withContext ServiceResult.Error("登录重定向失败: ${redirectResult.message}")
-            }
-
-            if (!hasLogin(1)) {
-                Timber.w("登录和重定向成功，但 JWXT 会话 Cookie (JSESSIONID) 缺失。")
-                return@withContext ServiceResult.Error("无法建立教务系统会话")
-            }
-
-            Timber.i("用户 $studentId 的登录过程成功完成")
-            return@withContext ServiceResult.Success(Unit)
         }
     }
 
@@ -379,12 +412,10 @@ class JwxtService(
             delay(100)
         }
 
-        // 2. (可选，但有时需要) 访问一次 DCP 基础 URL 以确保相关 Cookie (如 _WEU) 已设置
         val dcpCookieResult = safeServiceCall {
             Timber.d("正在访问 DCP URL 以确保 Cookie: ${ApiConstants.DCP_URL}")
             val request = Request.Builder().url(ApiConstants.DCP_URL).get().build()
             client.newCall(request).execute().close() // 发出请求并立即关闭响应体
-            Unit // 返回 Unit 表示成功
         }
         if (dcpCookieResult is ServiceResult.Error) {
             // 记录警告，但可能仍然尝试继续，因为有时这不是必需的
@@ -397,7 +428,7 @@ class JwxtService(
                 result.data.let { yktNum ->
                     Timber.i("获取一卡通余额成功: $yktNum")
                     ServiceResult.Success(yktNum)
-                } ?: ServiceResult.Error("获取一卡通余额失败: 响应数据为空")
+                }
             }
             is ServiceResult.Error -> { // DCP 调用本身失败
                 Timber.e("从 DCP 调用获取一卡通余额失败: ${result.message}")
@@ -406,7 +437,7 @@ class JwxtService(
         }
     }
 
-    // --- 私有辅助函数 ---
+
 
     /** 使用 CAS 端点加密密码。 */
     private suspend fun getEncryptedPassword(plainPassword: String): ServiceResult<String> = safeServiceCall {
@@ -714,138 +745,34 @@ class JwxtService(
             Timber.w("尝试使用空白凭据进行手动登录!")
             return@withContext ServiceResult.Error("账号或密码不能为空", null)
         }
-
         Timber.d("尝试为用户 $studentId 手动登录")
 
         // 2. 强制清除之前的会话 Cookie
         Timber.i("手动登录尝试前清除 Cookie。")
-        cookieJar.clear() // 清除所有 Cookie
+        cookieJar.clear()
 
-        // 3. 加密密码
-        val encPassword = when (val encPasswordResult = getEncryptedPassword(studentPass)) {
-            is ServiceResult.Success -> encPasswordResult.data
-            is ServiceResult.Error -> {
-                Timber.e("手动登录在密码加密过程中失败: ${encPasswordResult.message}")
-                return@withContext ServiceResult.Error("密码加密失败: ${encPasswordResult.message}")
-            }
+        // 3. 调用核心登录序列函数
+        val sequenceResult = performCasLoginSequence(studentId, studentPass)
+
+        // 4. 检查序列结果
+        if (sequenceResult is ServiceResult.Error) {
+            Timber.e("用户 $studentId 手动登录失败 (在核心序列中): ${sequenceResult.message}")
+            return@withContext sequenceResult // 返回序列错误
         }
 
-        // CAS 的通用请求头
-        val headers = Headers.Builder()
-            .add("User-Agent", ApiConstants.USER_AGENT)
-            .add("Host", ApiConstants.CAS_ECJTU_DOMAIN)
-            .build()
-
-        // 4. 获取 LT 值
-        val ltValue = when (val ltValueResult = getLoginLtValue(headers)) {
-            is ServiceResult.Success -> ltValueResult.data
-            is ServiceResult.Error -> {
-                Timber.e("手动登录在获取 LT 值过程中失败: ${ltValueResult.message}")
-                return@withContext ServiceResult.Error("无法获取登录令牌: ${ltValueResult.message}")
-            }
-        }
-
-        // 5. 执行登录 POST 请求
-        when (val loginResponseResult = loginWithCredentials(studentId, encPassword, ltValue, headers)) {
-            is ServiceResult.Success -> {
-                // 检查 CASTGC 是否确实已设置
-                if (!hasLogin(0)) { // Type 0 for CASTGC
-                    Timber.e("手动登录失败：未找到 CASTGC Cookie，请检查凭据。")
-                    // 返回更具体的错误可能更好，但取决于 loginWithCredentials 是否能区分
-                    return@withContext ServiceResult.Error("账号或密码错误")
-                }
-                Timber.d("初始手动登录 POST 成功 (找到 CASTGC)，继续进行重定向。")
-            }
-            is ServiceResult.Error -> {
-                Timber.e("手动登录在凭据提交过程中失败: ${loginResponseResult.message}")
-                // 传递来自 loginWithCredentials 的具体错误消息
-                return@withContext ServiceResult.Error(loginResponseResult.message)
-            }
-        }
-
-        // 6. 处理重定向
-        when (val redirectResult = handleRedirection(headers)) {
-            is ServiceResult.Success -> {
-                Timber.d("重定向处理成功。")
-            }
-            is ServiceResult.Error -> {
-                Timber.e("手动登录部分失败：重定向错误: ${redirectResult.message}")
-                // 如果重定向失败，则不保存凭据，并返回失败
-                return@withContext ServiceResult.Error("登录重定向失败: ${redirectResult.message}")
-            }
-        }
-
-        // 7. 最终检查 (JWXT 会话 - JSESSIONID)
-        if (!hasLogin(1)) { // Type 1 for JSESSIONID (assuming)
-            Timber.w("手动登录完成，但 JWXT 会话 Cookie (JSESSIONID) 可能缺失。")
-            return@withContext ServiceResult.Error("无法建立教务系统会话")
-        }
-
-        // --- 重要：完全成功后保存凭据 ---
-        Timber.i("用户 $studentId 手动登录成功。正在保存凭据 (ISP: $ispOption)。")
+        Timber.i("用户 $studentId 手动登录成功 (核心序列完成)。正在保存凭据 (ISP: $ispOption)。")
         try {
             prefs.saveCredentials(studentId, studentPass, ispOption)
         } catch (e: Exception) {
-            Timber.e(e, "保存凭据时发生错误！")
-
+            Timber.e(e, "保存凭据时发生错误")
             return@withContext ServiceResult.Error("登录成功但无法保存凭据: ${e.message}")
         }
 
-        Timber.i("用户 $studentId 的手动登录过程成功完成")
+        Timber.i("用户 $studentId 的手动登录过程成功完成 (凭据已保存)")
         return@withContext ServiceResult.Success(Unit)
 
     }
 
-
-
-    /**
-     * 获取指定日期的课程表信息，返回包含日期和课程列表的 DayCourses 对象。
-     *
-     * @param [dateQuery] 查询日期，格式为 "YYYY-MM-DD"。如果为 null 或空，则获取当天的课表。
-     * @return [ServiceResult] 包含 [DayCourses] 或错误信息。
-     */
-    suspend fun getCourseScheduleHtml(dateQuery: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
-        Timber.d("获取课程表 HTML，查询日期: ${dateQuery ?: "未指定"}")
-
-        val weiXinId = prefs.getWeiXinId()
-        if (weiXinId.isBlank()) {
-            return@withContext ServiceResult.Error("配置错误：缺少 weiXinID")
-        }
-
-        try {
-            val urlBuilder = ApiConstants.COURSE_SCHEDULE_URL.toHttpUrlOrNull()?.newBuilder()
-                ?: return@withContext ServiceResult.Error("内部错误：课程表 URL 配置无效")
-
-            urlBuilder.addQueryParameter("weiXinID", weiXinId)
-            if (!dateQuery.isNullOrBlank()) {
-                urlBuilder.addQueryParameter("date", dateQuery)
-            }
-
-            val request = Request.Builder()
-                .url(urlBuilder.build())
-                .get()
-                .build()
-
-            val response = client.newCall(request).execute()
-
-            response.use {
-                if (!it.isSuccessful) {
-                    return@withContext ServiceResult.Error("获取课程表失败：HTTP ${it.code}")
-                }
-
-                val html = it.body?.string()
-                if (html.isNullOrBlank()) {
-                    return@withContext ServiceResult.Error("响应体为空")
-                }
-
-                return@withContext ServiceResult.Success(html)
-            }
-        } catch (e: IOException) {
-            return@withContext ServiceResult.Error("网络错误：${e.message}", e)
-        } catch (e: Exception) {
-            return@withContext ServiceResult.Error("未知错误：${e.message}", e)
-        }
-    }
 
     /** 用于更安全的 Gson JSON 解析的辅助扩展函数*/
     private fun JsonObject.getStringOrNull(key: String): String? {
@@ -948,8 +875,6 @@ class JwxtService(
         }
     }
 
-
-
     /**
      * 获取学生成绩页面的 HTML，返回日历页面的html。
      * @param [attempt] 当前尝试次数 (用于内部重试逻辑).
@@ -998,5 +923,54 @@ class JwxtService(
             referer = "$JWXT_ECJTU_DOMAIN/index.action",
             retry = ::getStudentInfoHtml
         )
+    }
+
+    /**
+     * 获取指定日期的课程表信息，返回包含日期和课程列表的 DayCourses 对象。
+     *
+     * @param [dateQuery] 查询日期，格式为 "YYYY-MM-DD"。如果为 null 或空，则获取当天的课表。
+     * @return [ServiceResult] 包含 [DayCourses] 或错误信息。
+     */
+    suspend fun getCourseScheduleHtml(dateQuery: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
+        Timber.d("获取课程表 HTML，查询日期: ${dateQuery ?: "未指定"}")
+
+        val weiXinId = prefs.getWeiXinId()
+        if (weiXinId.isBlank()) {
+            return@withContext ServiceResult.Error("配置错误：缺少 weiXinID")
+        }
+
+        return@withContext safeServiceCall {
+            val urlBuilder = ApiConstants.COURSE_SCHEDULE_URL.toHttpUrlOrNull()?.newBuilder()
+                ?: throw IllegalArgumentException("内部错误：课程表 URL 配置无效")
+
+            urlBuilder.addQueryParameter("weiXinID", weiXinId)
+            if (!dateQuery.isNullOrBlank()) {
+                urlBuilder.addQueryParameter("date", dateQuery)
+            }
+            val finalUrl = urlBuilder.build()
+
+            val request = Request.Builder()
+                .url(finalUrl)
+                .get()
+                .build()
+
+            Timber.d("正在向 $finalUrl 发送 GET 请求获取课程表")
+            val response = client.newCall(request).execute()
+
+            response.use {
+                if (!it.isSuccessful) {
+                    // 抛出 IOException 会被 safeServiceCall 捕获并处理
+                    throw IOException("获取课程表失败：HTTP ${it.code}")
+                }
+
+                val html = it.body?.string()
+                if (html.isNullOrBlank()) {
+                    // 可以认为空响应也是一种错误
+                    throw IOException("响应体为空")
+                }
+
+                html
+            }
+        }
     }
 }
