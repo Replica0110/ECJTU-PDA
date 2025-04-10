@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
-import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.NavigationTarget
+import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.service.JwxtService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.delay
@@ -72,17 +72,15 @@ class SplashViewModel(
                         Timber.tag("SplashVM").d("会话无效或过期，尝试自动登录...")
                         _uiState.update { it.copy(message = "正在尝试自动登录...") }
 
-                        val loginResult = service.login()
-
-                        when (loginResult) {
-                            is LoginResult.Success -> {
+                        when (val loginResult = service.login()) {
+                            is ServiceResult.Success -> {
                                 Timber.tag("SplashVM").d("自动登录成功")
                                 finalMessage = "自动登录成功，正在进入..."
                                 finalNavigationTarget = NavigationTarget.MAIN
                                 shouldBeLoading = false
                             }
-                            is LoginResult.Failure -> {
-                                Timber.tag("SplashVM").d("自动登录失败: ${loginResult.error}")
+                            is ServiceResult.Error -> {
+                                Timber.tag("SplashVM").d("自动登录失败: ${loginResult.message}")
                                 finalMessage = "自动登录失败，请重新登录"
                                 finalNavigationTarget = NavigationTarget.LOGIN
                                 shouldBeLoading = false

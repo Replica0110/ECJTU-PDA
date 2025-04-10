@@ -14,7 +14,6 @@ import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.CourseInfo
 import com.lonx.ecjtu.pda.data.DayCourses
-import com.lonx.ecjtu.pda.data.LoginResult
 import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
 import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
 import com.lonx.ecjtu.pda.data.ServiceResult
@@ -79,111 +78,106 @@ class JwxtService(
         }
     }
 
+
+
+
     /**
-     * 尝试使用存储在 PreferencesManager 中的凭据进行登录。
-     * 处理密码加密、获取 LT 值和重定向。
-     * @param [forceRefresh] 是否强制刷新登录，即使已经登录。
-     * @return [LoginResult] 登录结果。
+     * Attempts to log in using stored credentials if necessary.
+     * Checks existing session validity before attempting a full login.
+     *
+     * @param forceRefresh If true, clears existing cookies and forces a full login attempt.
+     * @return [ServiceResult<Unit>] indicating success or failure of establishing a valid session.
      */
-    suspend fun login(forceRefresh: Boolean = false): LoginResult = withContext(Dispatchers.IO) {
+    suspend fun login(forceRefresh: Boolean = false): ServiceResult<Unit> = withContext(Dispatchers.IO) {
         val studentId = prefs.getString(STUDENT_ID, "")
         val studentPassword = prefs.getString(PASSWORD, "")
         val sessionTimeOut = checkSession()
         // 检查凭据是否存在
         if (studentId.isBlank() || studentPassword.isBlank()) {
-            Timber.e("登录失败：账号为${studentId}，密码为${studentPassword}。")
-            Timber.e("登录失败：PreferencesManager 中缺少凭据。")
-            return@withContext LoginResult.Failure("请先设置学号和密码")
+            Timber.w("自动登录失败：PreferencesManager 中缺少凭据。")
+            return@withContext ServiceResult.Error("请先使用学号和密码登录一次")
         }
 
-        Timber.d("尝试为用户 $studentId 登录。强制刷新：$forceRefresh")
+        Timber.d("尝试为用户 $studentId 自动登录。强制刷新：$forceRefresh, 会话超时：$sessionTimeOut")
 
-        // 检查是否需要登录
-        if (!forceRefresh && hasLogin(1) && !sessionTimeOut) { // 检查完整登录状态 (包括 JWXT 会话)
-            Timber.d("用户已拥有 CAS 和 JWXT 会话 Cookie。跳过登录步骤。")
-            return@withContext LoginResult.Success("已登录")
-        } else if (!forceRefresh && hasLogin(0)) { // 仅有 CAS 登录，可能需要重定向到 JWXT
-            Timber.d("用户拥有 CAS Cookie (CASTGC)，但可能需要为 JWXT 进行重定向。")
-            // 仅在需要时进行重定向，否则可能会使 CASTGC 失效
-            val redirectResult = handleRedirectionIfNeeded() // 尝试处理重定向
-            return@withContext if (redirectResult is ServiceResult.Success) {
-                if (hasLogin(1)) { // 重定向后检查是否获取了 JWXT 会话
-                    LoginResult.Success("会话已刷新")
-                } else {
-                    Timber.w("重定向尝试完成，但 JWXT 会话仍然缺失。")
-                    LoginResult.Failure("无法建立教务系统会话")
-                }
-            } else {
-                // 重定向失败
-                LoginResult.Failure("登录重定向失败: ${(redirectResult as ServiceResult.Error).message}")
-            }
-        } else {
-            // 需要执行完整的登录操作 (强制刷新或未登录)
-            Timber.d("需要执行完整的登录操作 (刷新或未登录)。")
-            if (forceRefresh) {
-                Timber.i("为刷新清除 Cookie。")
-                // cookieJar.clearSession() // 如果可用且合适，请使用 clearSession (通常清除会话相关的 Cookie)
-                cookieJar.clear() // 清除所有 Cookie
-            }
+        if (!forceRefresh && !sessionTimeOut && hasLogin(1)) {
+            Timber.i("用户 $studentId 已拥有有效的 CAS 和 JWXT 会话。跳过登录。")
+            return@withContext ServiceResult.Success(Unit)
+        }
 
-            // 1. 加密密码
-            val encPassword = when (val encPasswordResult = getEncryptedPassword(studentPassword)) {
-                is ServiceResult.Success -> encPasswordResult.data
-                is ServiceResult.Error -> {
-                    Timber.e("密码加密过程中登录失败: ${encPasswordResult.message}")
-                    return@withContext LoginResult.Failure("密码加密失败: ${encPasswordResult.message}")
-                }
-            }
-
-            // CAS 的通用请求头
-            val headers = Headers.Builder()
-                .add("User-Agent", ApiConstants.USER_AGENT)
-                .add("Host", ApiConstants.CAS_ECJTU_DOMAIN) // CAS 服务器域名
-                .build()
-
-            // 2. 获取 LT 值 (Login Ticket)
-            val ltValue = when (val ltValueResult = getLoginLtValue(headers)) {
-                is ServiceResult.Success -> ltValueResult.data
-                is ServiceResult.Error -> {
-                    Timber.e("获取 LT 值过程中登录失败: ${ltValueResult.message}")
-                    return@withContext LoginResult.Failure("无法获取登录令牌: ${ltValueResult.message}")
-                }
-            }
-
-            // 3. 执行登录 POST 请求
-            val loginResponseResult = loginWithCredentials(studentId, encPassword, ltValue, headers)
-            when (loginResponseResult) {
+        if (!forceRefresh && !sessionTimeOut && hasLogin(0) && !hasLogin(1)) {
+            Timber.i("用户 $studentId 拥有 CAS Cookie，但缺少 JWXT 会话。尝试处理重定向...")
+            return@withContext when (val redirectResult = handleRedirectionIfNeeded()) {
                 is ServiceResult.Success -> {
-                    if (!hasLogin(0)) {
-                        Timber.e("登录失败：未找到 CASTGC Cookie。可能是账号或密码错误。")
-                        return@withContext LoginResult.Failure("账号或密码错误")
+                    if (hasLogin(1)) {
+                        Timber.i("通过重定向成功刷新/建立了 JWXT 会话。")
+                        ServiceResult.Success(Unit)
+                    } else {
+                        Timber.e("重定向尝试完成，但 JWXT 会话仍然缺失。可能 CASTGC 已失效或重定向失败。")
+                        ServiceResult.Error("无法通过重定向建立教务系统会话")
                     }
-                    Timber.d("初始登录 POST 成功 (找到 CASTGC)，继续进行重定向。")
                 }
                 is ServiceResult.Error -> {
-                    Timber.e("凭据提交过程中登录失败: ${loginResponseResult.message}")
-                    return@withContext LoginResult.Failure(loginResponseResult.message) // 传递具体错误
+                    Timber.e("尝试重定向以刷新会话失败: ${redirectResult.message}")
+                    ServiceResult.Error("登录重定向失败: ${redirectResult.message}")
                 }
             }
-
-            // 4. 处理重定向 (为目标服务如 JWXT 建立必要的会话 Cookie)
-            val redirectResult = handleRedirection(headers) // 成功 POST 后强制重定向
-            if (redirectResult is ServiceResult.Error) {
-                Timber.e("登录部分失败：重定向错误: ${redirectResult.message}")
-                // 重定向失败通常意味着无法访问目标服务（JWXT）
-                return@withContext LoginResult.Failure("登录重定向失败: ${redirectResult.message}")
-            }
-
-            // 5. 最终检查 (确保 JWXT 会话已建立)
-            if (!hasLogin(1)) {
-                Timber.w("登录和重定向成功，但 JWXT 会话 Cookie (JSESSIONID) 缺失。")
-                // 这可能表示重定向流程有问题或目标服务未正确设置会话
-                return@withContext LoginResult.Failure("无法建立教务系统会话")
-            }
-
-            Timber.i("用户 $studentId 的登录过程成功完成")
-            return@withContext LoginResult.Success("登录成功")
         }
+
+        if (forceRefresh) {
+            Timber.i("强制刷新：清除现有 Cookie。")
+            cookieJar.clear()
+        }
+
+        val encPassword = when (val encPasswordResult = getEncryptedPassword(studentPassword)) {
+            is ServiceResult.Success -> encPasswordResult.data
+            is ServiceResult.Error -> {
+                Timber.e("密码加密过程中登录失败: ${encPasswordResult.message}")
+                return@withContext ServiceResult.Error("密码加密失败: ${encPasswordResult.message}")
+            }
+        }
+
+        val headers = Headers.Builder()
+            .add("User-Agent", ApiConstants.USER_AGENT)
+            .add("Host", ApiConstants.CAS_ECJTU_DOMAIN)
+            .build()
+
+        val ltValue = when (val ltValueResult = getLoginLtValue(headers)) {
+            is ServiceResult.Success -> ltValueResult.data
+            is ServiceResult.Error -> {
+                Timber.e("获取 LT 值过程中登录失败: ${ltValueResult.message}")
+                return@withContext ServiceResult.Error("无法获取登录令牌: ${ltValueResult.message}")
+            }
+        }
+
+        val loginPostResult = loginWithCredentials(studentId, encPassword, ltValue, headers)
+        when (loginPostResult) {
+            is ServiceResult.Success -> {
+                if (!hasLogin(0)) {
+                    Timber.e("登录 POST 调用成功返回，但在 Cookie Jar 中未找到 CASTGC！")
+                    return@withContext ServiceResult.Error("登录失败：服务返回成功但未设置凭据")
+                }
+                Timber.d("初始登录 POST 成功 (找到 CASTGC)，继续进行重定向。")
+            }
+            is ServiceResult.Error -> {
+                Timber.e("凭据提交过程中登录失败: ${loginPostResult.message}")
+                return@withContext ServiceResult.Error(loginPostResult.message)
+            }
+        }
+
+
+        val redirectResult = handleRedirection(headers)
+        if (redirectResult is ServiceResult.Error) {
+            Timber.e("登录成功 POST 后重定向失败: ${redirectResult.message}")
+            return@withContext ServiceResult.Error("登录重定向失败: ${redirectResult.message}")
+        }
+
+        if (!hasLogin(1)) {
+            Timber.e("登录和重定向看似成功，但最终检查未找到 JWXT 会话 Cookie!")
+            return@withContext ServiceResult.Error("无法建立教务系统会话，请稍后重试或检查服务状态")
+        }
+        Timber.i("用户 $studentId 的完整登录过程成功完成。")
+        return@withContext ServiceResult.Success(Unit)
     }
 
     /**
@@ -278,9 +272,9 @@ class JwxtService(
         if (!hasLogin(1) && attempt == 1) {
             Timber.d("JwxtService: 获取学生信息页面: 用户未登录或 JWXT 会话无效，尝试登录...")
             val loginResult = login()
-            if (loginResult is LoginResult.Failure) {
-                Timber.e("JwxtService: 获取学生信息页面失败：需要登录，但登录失败: ${loginResult.error}")
-                return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
+            if (loginResult is ServiceResult.Error) {
+                Timber.e("JwxtService: 获取学生信息页面失败：需要登录，但登录失败: ${loginResult}")
+                return@withContext ServiceResult.Error("请先登录: ${loginResult}")
             }
             kotlinx.coroutines.delay(100)
             if (!hasLogin(1)) {
@@ -346,11 +340,11 @@ class JwxtService(
                             } else {
                                 logout(clearStoredCredentials = false)
                                 val reLoginResult = login(forceRefresh = true)
-                                if (reLoginResult is LoginResult.Success && checkSession()) {
+                                if (reLoginResult is ServiceResult.Success && checkSession()) {
                                     Timber.i("JwxtService: 自动重新登录成功并验证有效。")
                                     loginSuccess = true
                                 } else {
-                                    Timber.e("JwxtService: 自动重新登录失败或会话无效: ${(reLoginResult as? LoginResult.Failure)?.error ?: "会话验证失败"}")
+                                    Timber.e("JwxtService: 自动重新登录失败或会话无效: ${(reLoginResult as? ServiceResult.Error) ?: "会话验证失败"}")
                                     loginSuccess = false
                                 }
                             }
@@ -406,9 +400,9 @@ class JwxtService(
         if (!checkSession()) {
             Timber.d("JWXT 会话无效或无法验证，尝试登录...")
             val loginResult = login()
-            if (loginResult is LoginResult.Failure) {
-                Timber.e("修改密码失败：需要登录，但登录失败: ${loginResult.error}")
-                return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
+            if (loginResult is ServiceResult.Error) {
+                Timber.e("修改密码失败：需要登录，但登录失败: ${loginResult}")
+                return@withContext ServiceResult.Error("请先登录: ${loginResult}")
             }
             kotlinx.coroutines.delay(100)
             if (!checkSession()) {
@@ -505,8 +499,8 @@ class JwxtService(
         // 1. 确保 CAS 登录 (访问 DCP 通常需要 CAS 认证)
         if (!hasLogin(0)) { // 检查 CASTGC
             val loginResult = login() // 尝试登录
-            if (loginResult is LoginResult.Failure) {
-                return@withContext ServiceResult.Error("需要登录: ${loginResult.error}")
+            if (loginResult is ServiceResult.Error) {
+                return@withContext ServiceResult.Error("需要登录: ${loginResult}")
             }
             // 短暂延迟可能有助于确保 Cookie 传播
             kotlinx.coroutines.delay(100)
@@ -1180,9 +1174,9 @@ class JwxtService(
         if (!hasLogin(1) && attempt == 1) {
             Timber.d("获取成绩页面: 用户未登录或 JWXT 会话无效，尝试登录...")
             val loginResult = login()
-            if (loginResult is LoginResult.Failure) {
-                Timber.e("获取成绩页面失败：需要登录，但登录失败: ${loginResult.error}")
-                return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
+            if (loginResult is ServiceResult.Error) {
+                Timber.e("获取成绩页面失败：需要登录，但登录失败: ${loginResult}")
+                return@withContext ServiceResult.Error("请先登录: ${loginResult}")
             }
             kotlinx.coroutines.delay(100) // 短暂延迟，让 Cookie 生效
             if (!hasLogin(1)) {
@@ -1266,11 +1260,11 @@ class JwxtService(
                             } else {
                                 logout(clearStoredCredentials = false) // 清理旧 Cookie，保留凭据
                                 val reLoginResult = login(forceRefresh = true) // 强制刷新登录
-                                if (reLoginResult is LoginResult.Success && checkSession()) { // 再次验证
+                                if (reLoginResult is ServiceResult.Success && checkSession()) { // 再次验证
                                     Timber.i("自动重新登录成功并验证有效。")
                                     loginSuccess = true
                                 } else {
-                                    Timber.e("自动重新登录失败或会话无效: ${(reLoginResult as? LoginResult.Failure)?.error ?: "会话验证失败"}")
+                                    Timber.e("自动重新登录失败或会话无效: ${(reLoginResult as? ServiceResult.Error) ?: "会话验证失败"}")
                                     loginSuccess = false
                                 }
                             }
@@ -1331,9 +1325,9 @@ class JwxtService(
         if (!hasLogin(1) && attempt == 1) {
             Timber.d("JwxtService: 获取素质拓展学分页面: 用户未登录或 JWXT 会话无效，尝试登录...")
             val loginResult = login()
-            if (loginResult is LoginResult.Failure) {
-                Timber.e("JwxtService: 获取素质拓展页面失败：需要登录，但登录失败: ${loginResult.error}")
-                return@withContext ServiceResult.Error("请先登录: ${loginResult.error}")
+            if (loginResult is ServiceResult.Error) {
+                Timber.e("JwxtService: 获取素质拓展页面失败：需要登录，但登录失败: $loginResult")
+                return@withContext ServiceResult.Error("请先登录: $loginResult")
             }
             kotlinx.coroutines.delay(100)
             if (!hasLogin(1)) {
@@ -1401,11 +1395,11 @@ class JwxtService(
                             } else {
                                 logout(clearStoredCredentials = false)
                                 val reLoginResult = login(forceRefresh = true)
-                                if (reLoginResult is LoginResult.Success && checkSession()) {
+                                if (reLoginResult is ServiceResult.Success && checkSession()) {
                                     Timber.i("JwxtService: 自动重新登录成功并验证有效。")
                                     loginSuccess = true
                                 } else {
-                                    Timber.e("JwxtService: 自动重新登录失败或会话无效: ${(reLoginResult as? LoginResult.Failure)?.error ?: "会话验证失败"}")
+                                    Timber.e("JwxtService: 自动重新登录失败或会话无效: ${(reLoginResult as? ServiceResult.Error) ?: "会话验证失败"}")
                                     loginSuccess = false
                                 }
                             }
