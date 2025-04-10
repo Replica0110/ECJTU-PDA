@@ -120,7 +120,7 @@ fun SettingScreen(
         initialValue = uiState.weiXinId,
         dismissButtonText = "取消",
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.NumberPassword,
+            keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Done
         )
     )
