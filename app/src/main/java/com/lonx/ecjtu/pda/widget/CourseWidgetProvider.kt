@@ -15,6 +15,7 @@ import com.lonx.ecjtu.pda.data.DayCourses
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.service.CourseRemoteViewsService
 import com.lonx.ecjtu.pda.service.JwxtService
+import com.lonx.ecjtu.pda.service.StuCourseService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,7 +31,7 @@ import java.util.Locale
 const val ACTION_MANUAL_REFRESH = "com.lonx.ecjtu.widget.MANUAL_REFRESH"
 
 class CourseWidgetProvider : AppWidgetProvider() {
-    private lateinit var service: JwxtService
+    private lateinit var service: StuCourseService
     private var lastUpdateTime = 0L
     private fun resolveDependencies() {
         if (!::service.isInitialized) {

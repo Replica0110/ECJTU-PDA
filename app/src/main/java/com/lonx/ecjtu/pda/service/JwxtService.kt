@@ -12,7 +12,6 @@ import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
-import com.lonx.ecjtu.pda.data.CourseInfo
 import com.lonx.ecjtu.pda.data.DayCourses
 import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
 import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
@@ -31,7 +30,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import okio.IOException
 import org.jsoup.Jsoup
 import timber.log.Timber
@@ -515,23 +513,10 @@ class JwxtService(
         // 3. 发出 DCP 调用以获取一卡通余额
         when (val result = makeDcpCall(ApiConstants.METHOD_GET_YKT_NUM)) { // 调用封装好的 DCP 请求方法
             is ServiceResult.Success -> {
-                try {
-                    // 假设响应是类似 {"map": {"balance": "12.34"}, ...} 的 JSON
-                    val json = gson.fromJson(result.data, JsonObject::class.java)
-                    // 安全地获取 balance 字符串
-                    val balance = json.getAsJsonObject("map")?.getStringOrNull("balance")
-                    // 验证余额格式是否为数字（可能带两位小数）
-                    if (balance != null && balance.matches(Regex("""\d+(\.\d{1,2})?"""))) {
-                        Timber.d("一卡通余额已获取: $balance")
-                        ServiceResult.Success(balance) // 返回成功和余额字符串
-                    } else {
-                        Timber.e("从 JSON map 解析一卡通余额失败或格式无效: ${result.data}")
-                        ServiceResult.Error("解析余额数据失败: 格式不符")
-                    }
-                } catch (e: Exception) { // 处理 JSON 解析或其他异常
-                    Timber.e(e, "解析一卡通余额 JSON 失败: ${result.data}")
-                    ServiceResult.Error("解析余额数据失败", e)
-                }
+                result.data.let { yktNum ->
+                    Timber.i("获取一卡通余额成功: $yktNum")
+                    ServiceResult.Success(yktNum)
+                } ?: ServiceResult.Error("获取一卡通余额失败: 响应数据为空")
             }
             is ServiceResult.Error -> { // DCP 调用本身失败
                 Timber.e("从 DCP 调用获取一卡通余额失败: ${result.message}")
@@ -687,60 +672,42 @@ class JwxtService(
     private suspend fun handleRedirection(headers: Headers): ServiceResult<Unit> = safeServiceCall {
         Timber.d("正在处理登录后重定向...")
 
-        // 步骤 1：访问 JWXT 登录 URL，该 URL 应使用已存在的 CASTGC Cookie 通过 CAS 进行认证并重定向
         Timber.d("正在访问 JWXT 登录 URL: $JWXT_LOGIN_URL")
         val jwxtLoginRequest = Request.Builder()
             .url(JWXT_LOGIN_URL)
-            // 使用原始请求头 (User-Agent)，Cookie 将由客户端的 CookieJar 自动添加
-            // 清理此域名不需要的请求头 (如 Host, Referer, Content-Type)
             .headers(headers.newBuilder()
                 .removeAll("Host")
                 .removeAll("Referer")
                 .removeAll("Content-Type")
                 .build())
-            .addHeader("Host", JWXT_LOGIN_URL.toHttpUrl().host) // 设置正确的主机为 JWXT 域名
+            .addHeader("Host", JWXT_LOGIN_URL.toHttpUrl().host)
             .get()
             .build()
 
         // 使用 *跟踪重定向* 的主客户端执行请求
         client.newCall(jwxtLoginRequest).execute().use { response ->
-            // 我们期望它会跟踪一系列重定向（CAS -> JWXT）并最终到达 JWXT 的某个页面，
-            // 在此过程中设置 JWXT 所需的会话 Cookie (如 JSESSIONID)。
             Timber.d("JWXT 登录 URL 访问响应代码 (重定向后最终代码): ${response.code}")
-            // 记录最终响应设置的 Cookie
             response.headers("Set-Cookie").forEach { cookie -> Timber.v("JWXT Set-Cookie: $cookie") }
             if (!response.isSuccessful) {
-                // 如果最终页面不是 200 OK，可能出了问题。
                 Timber.w("JWXT 登录重定向步骤的最终响应不成功 (HTTP ${response.code})。会话可能未完全建立。")
-                // 根据流程，如果在重定向期间设置了必要的 Cookie，这可能仍然可以接受。
-                // 但如果最终失败，可以考虑抛出异常：
-                // throw IOException("通过 CAS 建立 JWXT 会话失败: 最终 HTTP ${response.code}")
             } else {
                 Timber.d("JWXT 登录重定向步骤成功完成 (HTTP ${response.code})。")
             }
-            // 确保响应体关闭
         }
-        // 短暂延迟可能有助于 Cookie 处理
         kotlinx.coroutines.delay(50)
 
-        // 步骤 2：(可选，但有时是必要的) 显式访问带有 service 参数指向 JWXT 的 CAS URL。
-        // 旧代码包含此步骤，它确保 CAS 为 JWXT 服务生成并验证了一个 Service Ticket (ST)，
-        // 这对于确保 JWXT 正确建立会话可能至关重要。
         Timber.d("正在访问指向 JWXT 的显式 CAS 服务 URL: ${ApiConstants.ECJTU2JWXT_URL}")
         val finalRedirectRequest = Request.Builder()
-            .url(ApiConstants.ECJTU2JWXT_URL) // 形如 https://cas.example.com/login?service=https://jwxt.example.com/login
-            .headers(headers) // 使用 CAS 的通用请求头 (Host, User-Agent)
+            .url(ApiConstants.ECJTU2JWXT_URL)
+            .headers(headers)
             .get()
             .build()
 
-        // 同样使用跟踪重定向的主客户端
         client.newCall(finalRedirectRequest).execute().use { response ->
             Timber.d("显式 CAS->JWXT 重定向响应代码 (重定向后最终代码): ${response.code}")
             response.headers("Set-Cookie").forEach { cookie -> Timber.v("CAS->JWXT Set-Cookie: $cookie") }
             if (!response.isSuccessful) {
                 Timber.w("最终 CAS->JWXT 重定向步骤的最终响应不成功 (HTTP ${response.code})。")
-                // 如果上一步没有完全成功，这一步的失败可能更关键。
-                // throw IOException("最终 CAS->JWXT 重定向步骤失败: 最终 HTTP ${response.code}")
             } else {
                 Timber.d("最终 CAS->JWXT 重定向步骤成功完成 (HTTP ${response.code})。")
             }
@@ -748,7 +715,6 @@ class JwxtService(
         }
 
         Timber.d("重定向处理完成。")
-        // 如果没有抛出异常则表示成功
     }
 
     /**
@@ -776,9 +742,9 @@ class JwxtService(
 
     /** 辅助函数，用于向具有通用结构的 DCP 端点发出 POST 请求。 */
     private suspend fun makeDcpCall(
-        method: String,                  // DCP 方法名 (例如 "getYktNum")
-        params: Map<String, Any>? = null, // 方法参数 (如果需要)
-        currentRetries: Int = 0          // 当前重试次数 (由 safeServiceCall 管理)
+        method: String,
+        params: Map<String, Any>? = null,
+        currentRetries: Int = 0
     ): ServiceResult<String> = safeServiceCall(currentRetries) { // 将重试次数传递给 safeApiCall
         Timber.d("正在进行 DCP 调用: method=$method, params=$params")
         // 构建符合 DCP 预期的 JSON 请求负载结构
@@ -962,54 +928,6 @@ class JwxtService(
         }
     }
 
-    // 用于 HTML 或数据映射期间解析错误的自定义异常
-    class ParseException(message: String): IOException(message)
-
-
-    /** 通用 GET 请求辅助函数 (请谨慎使用，注意认证状态)。 */
-    suspend fun getRaw(url: String, params: Map<String, String>? = null, headers: Headers? = null): Response {
-        Timber.d("通用 GET: $url")
-        // 如果调用 *requiresLogin*，考虑在此处添加检查，并在 !hasLogin(X) 时失败
-        // 例如: if (requiresLogin && !hasLogin(1)) { throw IOException("GET $url 需要登录") }
-
-        // 验证并构建 URL
-        val httpUrl = url.toHttpUrlOrNull() ?: throw IllegalArgumentException("无效 URL: $url")
-        val urlBuilder = httpUrl.newBuilder()
-        // 添加查询参数
-        params?.forEach { (key, value) -> urlBuilder.addQueryParameter(key, value) }
-
-        val requestBuilder = Request.Builder().url(urlBuilder.build())
-        // 如果提供了 headers，则使用它们替换默认的 (OkHttp 默认会添加一些)
-        headers?.let { requestBuilder.headers(it) }
-
-        // 在 IO 线程执行网络请求
-        return withContext(Dispatchers.IO) {
-            client.newCall(requestBuilder.build()).execute()
-        }
-    }
-
-    /** 通用 POST 请求辅助函数 (谨慎使用，注意认证状态)。 */
-    suspend fun postRaw(url: String, formData: Map<String, String>? = null, headers: Headers? = null): Response {
-        Timber.d("通用 POST: $url")
-        // 考虑添加登录检查
-        // if (requiresLogin && !hasLogin(1)) { throw IOException("POST $url 需要登录") }
-
-        // 构建表单体
-        val bodyBuilder = FormBody.Builder()
-        formData?.forEach { (key, value) -> bodyBuilder.add(key, value) }
-
-        // 构建请求
-        val requestBuilder = Request.Builder()
-            .url(url.toHttpUrlOrNull() ?: throw IllegalArgumentException("无效 URL: $url"))
-            .post(bodyBuilder.build())
-        // 如果提供了 headers，则使用它们
-        headers?.let { requestBuilder.headers(it) }
-
-        // 在 IO 线程执行
-        return withContext(Dispatchers.IO) {
-            client.newCall(requestBuilder.build()).execute()
-        }
-    }
 
     /**
      * 获取指定日期的课程表信息，返回包含日期和课程列表的 DayCourses 对象。
@@ -1017,12 +935,11 @@ class JwxtService(
      * @param [dateQuery] 查询日期，格式为 "YYYY-MM-DD"。如果为 null 或空，则获取当天的课表。
      * @return [ServiceResult] 包含 [DayCourses] 或错误信息。
      */
-    suspend fun getCourseSchedule(dateQuery: String? = null): ServiceResult<DayCourses> = withContext(Dispatchers.IO) {
-        Timber.e("开始获取课程表信息... 查询日期: ${dateQuery ?: "未指定"}")
+    suspend fun getCourseScheduleHtml(dateQuery: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
+        Timber.d("获取课程表 HTML，查询日期: ${dateQuery ?: "未指定"}")
 
         val weiXinId = prefs.getWeiXinId()
         if (weiXinId.isBlank()) {
-            Timber.e("警告：无法从持久化存储中获取 weiXinID。将尝试不带此参数请求课表。")
             return@withContext ServiceResult.Error("配置错误：缺少 weiXinID")
         }
 
@@ -1030,136 +947,41 @@ class JwxtService(
             val urlBuilder = ApiConstants.COURSE_SCHEDULE_URL.toHttpUrlOrNull()?.newBuilder()
                 ?: return@withContext ServiceResult.Error("内部错误：课程表 URL 配置无效")
 
-            if (weiXinId.isNotBlank()) {
-                urlBuilder.addQueryParameter("weiXinID", weiXinId)
-            }
+            urlBuilder.addQueryParameter("weiXinID", weiXinId)
             if (!dateQuery.isNullOrBlank()) {
                 urlBuilder.addQueryParameter("date", dateQuery)
             }
-            val targetUrl = urlBuilder.build()
-
 
             val request = Request.Builder()
-                .url(targetUrl)
+                .url(urlBuilder.build())
                 .get()
                 .build()
 
-            Timber.d("正在向 $targetUrl 发送 GET 请求获取课程表")
-
             val response = client.newCall(request).execute()
 
-            response.use { it ->
+            response.use {
                 if (!it.isSuccessful) {
-                    Timber.e("获取课程表页面失败: HTTP ${it.code}")
-                    throw IOException("获取课程表页面失败: HTTP ${it.code}")
+                    return@withContext ServiceResult.Error("获取课程表失败：HTTP ${it.code}")
                 }
 
-                val htmlBody = it.body?.string()
-                if (htmlBody.isNullOrBlank()) {
-                    Timber.e("获取课程表页面成功，但响应体为空。")
-                    throw ParseException("课程表页面响应体为空")
+                val html = it.body?.string()
+                if (html.isNullOrBlank()) {
+                    return@withContext ServiceResult.Error("响应体为空")
                 }
 
-                Timber.d("获取课程表页面成功，开始解析 HTML...")
-                val document = Jsoup.parse(htmlBody)
-
-                val extractedDate = document.selectFirst("div.center")?.text()?.trim()
-                val scheduleDate = if (extractedDate.isNullOrBlank()) {
-                    Timber.e("无法从 'div.center' 解析日期，将使用默认值。")
-                    "日期未知"
-                } else {
-                    extractedDate
-                }
-                Timber.e("解析得到的日期: $scheduleDate")
-
-                val courseListElement = document.selectFirst("div.calendar ul.rl_info")
-
-                if (courseListElement == null) {
-                    Timber.e("无法在 HTML 中找到课程列表容器 (div.calendar ul.rl_info)。页面结构可能已更改。返回带日期的空课表。")
-                    return@withContext ServiceResult.Success(DayCourses(scheduleDate, emptyList()))
-                }
-
-                val hasImagePlaceholder = courseListElement.selectFirst("li > p > img") != null
-                if (hasImagePlaceholder) {
-                    Timber.e("检测到图片占位符，表示当天无课。返回带日期的空课表。")
-                    return@withContext ServiceResult.Success(DayCourses(scheduleDate, emptyList()))
-                }
-
-                val courses = mutableListOf<CourseInfo>()
-                val listItems = courseListElement.select("li")
-
-                if (listItems.isEmpty()) {
-                    Timber.i("课程列表容器存在，但未找到 'li' 元素（且非图片占位符），表示当天无课。返回带日期的空课表。")
-                    return@withContext ServiceResult.Success(DayCourses(scheduleDate, emptyList()))
-                }
-
-                Timber.e("找到 ${listItems.size} 个课程条目，开始解析...")
-                for (item in listItems) {
-                    try {
-                        val pElement = item.selectFirst("p")
-                        if (pElement == null) {
-                            Timber.w("跳过一个 'li' 条目，因为它不包含 'p' 标签。")
-                            continue
-                        }
-                        val contentNodes = pElement.childNodes()
-                        val textParts = mutableListOf<String>()
-                        contentNodes.forEach { node ->
-                            if (node is org.jsoup.nodes.TextNode) {
-                                val text = node.text().trim()
-                                if (text.isNotEmpty()) {
-                                    textParts.add(text)
-                                }
-                            }
-                        }
-
-                        val courseName = textParts.getOrNull(0) ?: "N/A"
-
-                        val rawTimeInfo = textParts.getOrNull(1) ?: ""
-                        val timeParts = rawTimeInfo.substringAfter("时间：", "").trim().split(' ', limit = 2)
-                        val courseWeek = if (timeParts.isNotEmpty()) timeParts[0].trim().takeIf { it.isNotEmpty() } ?: "N/A" else "N/A"
-                        val courseTime = if (timeParts.size > 1) timeParts[1].trim().takeIf { it.isNotEmpty() } ?: "N/A" else "N/A"
-
-
-                        val courseLocation = textParts.getOrNull(2)?.substringAfter("地点：", "")?.trim()?.takeIf { it.isNotEmpty() } ?: "N/A"
-
-                        val courseTeacher = textParts.getOrNull(3)?.substringAfter("教师：", "")?.trim()?.takeIf { it.isNotEmpty() } ?: "N/A"
-
-
-                        if (courseName != "N/A") {
-                            courses.add(
-                                CourseInfo(
-                                    courseName = courseName,
-                                    courseTime = "节次：${courseTime}",
-                                    courseWeek = "上课周：${courseWeek}",
-                                    courseLocation = "地点：${courseLocation}",
-                                    courseTeacher = "教师：${courseTeacher}"
-                                )
-                            )
-                        } else {
-                            Timber.e("跳过一个条目，因为未能解析出有效的课程名称: ${pElement.text()}")
-                        }
-
-                    } catch (e: Exception) {
-                        Timber.e(e, "解析单个课程条目时出错: ${item.html()}")
-                        continue
-                    }
-                }
-
-                Timber.i("课程表解析成功，日期: $scheduleDate, 课程数: ${courses.size}")
-                return@withContext ServiceResult.Success(DayCourses(scheduleDate, courses))
-
+                return@withContext ServiceResult.Success(html)
             }
         } catch (e: IOException) {
-            Timber.e(e, "获取课程表时发生网络或IO错误: ${e.message}")
-            return@withContext ServiceResult.Error("网络请求失败: ${e.message}", e)
-        } catch (e: ParseException) {
-            Timber.e(e, "解析课程表HTML时出错: ${e.message}")
-            return@withContext ServiceResult.Error("数据解析失败: ${e.message}", e)
+            return@withContext ServiceResult.Error("网络错误：${e.message}", e)
         } catch (e: Exception) {
-            Timber.e(e, "获取课程表时发生未知错误: ${e.message}")
-            return@withContext ServiceResult.Error("发生未知错误: ${e.message}", e)
+            return@withContext ServiceResult.Error("未知错误：${e.message}", e)
         }
     }
+    /**
+     * 获取学生成绩页面的 HTML，返回日历页面的html。
+     * @param [attempt] 当前尝试次数，默认为 1。
+     * @return [ServiceResult] 包含 HTML 或错误信息。
+     * */
     suspend fun getStudentScoresHtml(attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
         Timber.d("开始获取成绩页面 HTML... (尝试次数: $attempt)")
 
@@ -1310,7 +1132,7 @@ class JwxtService(
      * Handles session checking and automatic re-login attempts internally.
      *
      * @param attempt 当前尝试次数 (用于内部重试逻辑).
-     * @return ServiceResult 包含成功获取的 HTML 字符串或错误信息.
+     * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
      */
     suspend fun getSecondCreditHtml(attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
         val targetUrlString = ApiConstants.GET_SECOND_CREDIT

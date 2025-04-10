@@ -9,6 +9,7 @@ import com.franmontiel.persistentcookiejar.cache.SetCookieCache
 import com.lonx.ecjtu.pda.network.MyOkHttpClient
 import com.lonx.ecjtu.pda.network.WifiStatusMonitor
 import com.lonx.ecjtu.pda.service.JwxtService
+import com.lonx.ecjtu.pda.service.StuCourseService
 import com.lonx.ecjtu.pda.service.StuInfoService
 import com.lonx.ecjtu.pda.service.StuScoreService
 import com.lonx.ecjtu.pda.service.StuSecondCreditService
@@ -78,6 +79,11 @@ val appModule = module {
     }
     single<StuSecondCreditService> {
         StuSecondCreditService(
+            service = get()
+        )
+    }
+    single<StuCourseService> {
+        StuCourseService(
             service = get()
         )
     }
