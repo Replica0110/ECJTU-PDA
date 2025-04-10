@@ -141,6 +141,7 @@ fun SettingScreen(
     }
     // 教程对话框
     InfoAlertDialog(
+        showButton = false,
         showDialog = showWeiXinIdTutorialDialog,
         onDismissRequest = {
             showWeiXinIdTutorialDialog = false

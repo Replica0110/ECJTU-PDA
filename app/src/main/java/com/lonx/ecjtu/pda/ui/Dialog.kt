@@ -69,6 +69,7 @@ fun AlertDialogContainer(
     dismissButtonText: String = "取消",
     onDismissAction: (() -> Unit)? = null,
     isLoading: Boolean = false,
+    showButtons: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     if (showDialog) {
@@ -77,7 +78,9 @@ fun AlertDialogContainer(
             properties = properties
         ) {
             Card(
-                modifier = modifier.padding(16.dp).widthIn(min = minWidth, max = maxWidth),
+                modifier = modifier
+                    .padding(16.dp)
+                    .widthIn(min = minWidth, max = maxWidth)
             ) {
                 Column(
                     modifier = Modifier
@@ -96,36 +99,40 @@ fun AlertDialogContainer(
                     }
 
                     this.content()
-                    Spacer(modifier = Modifier.height(20.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(36.dp))
-                        } else {
-                            if (onDismissAction != null) {
-                                TextButton(
-                                    text = dismissButtonText,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = {
-                                        onDismissAction() },
-                                    enabled = !isLoading
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            if (onDismissAction != null){
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            if (onConfirm != null) {
-                                TextButton(
-                                    text = confirmButtonText,
-                                    onClick = { onConfirm() },
-                                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                                    modifier = Modifier.weight(1f),
-                                    enabled = !isLoading
-                                )
+                    if (showButtons) {
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                            } else {
+                                if (onDismissAction != null) {
+                                    TextButton(
+                                        text = dismissButtonText,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            onDismissAction()
+                                        },
+                                        enabled = !isLoading
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                if (onDismissAction != null) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                if (onConfirm != null) {
+                                    TextButton(
+                                        text = confirmButtonText,
+                                        onClick = { onConfirm() },
+                                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                                        modifier = Modifier.weight(1f),
+                                        enabled = !isLoading
+                                    )
+                                }
                             }
                         }
                     }
@@ -134,6 +141,8 @@ fun AlertDialogContainer(
         }
     }
 }
+
+
 @Composable
 fun InfoAlertDialog(
     showDialog: Boolean,
@@ -142,7 +151,8 @@ fun InfoAlertDialog(
     modifier: Modifier = Modifier,
     message: AnnotatedString,
     confirmButtonText: String = "确认",
-    messageStyle: TextStyle = MiuixTheme.textStyles.main
+    messageStyle: TextStyle = MiuixTheme.textStyles.main,
+    showButton: Boolean = true
 ) {
     AlertDialogContainer(
         modifier = modifier,
@@ -150,16 +160,19 @@ fun InfoAlertDialog(
         onDismissRequest = onDismissRequest,
         title = title,
         confirmButtonText = confirmButtonText,
-        onConfirm = { onDismissRequest() },
-        onDismissAction = null
-    ) {
-        Text(
-            text = message,
-            style = messageStyle,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-    }
+        onConfirm = if (showButton) { { onDismissRequest() } } else null,
+        onDismissAction = null,
+        showButtons = showButton,
+        content = {
+            Text(
+                text = message,
+                style = messageStyle,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+    )
 }
+
 @Composable
 fun ConfirmAlertDialog(
     showDialog: Boolean,
