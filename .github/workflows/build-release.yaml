@@ -1,0 +1,69 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  BuildRelease:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Signing properties
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          touch signing.properties
+          echo keystore.password="$SIGNING_STORE_PASSWORD" > signing.properties
+          echo key.alias="$SIGNING_KEY_ALIAS" >> signing.properties
+          echo key.password="$SIGNING_KEY_PASSWORD" >> signing.properties
+          
+          echo "cat signing.properties"
+          cat signing.properties
+
+      - name: Release Build
+        if: success()
+        run: ./gradlew --no-daemon assembleRelease
+
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        if: ${{ success() }}
+
+        with:
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            app/build/outputs/apk/release/ECJTU-PDA-${{ github.ref_name }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
