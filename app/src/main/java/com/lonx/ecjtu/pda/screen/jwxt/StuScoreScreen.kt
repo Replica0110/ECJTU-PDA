@@ -3,6 +3,7 @@ package com.lonx.ecjtu.pda.screen.jwxt
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -190,13 +191,12 @@ fun ScoreSummaryCard(summary: ScoreSummary) {
             }
 
             summary.academicWarningRequired?.let { req ->
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    HorizontalDivider()
-                    Text("学业预警", fontWeight = FontWeight.Bold)
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                        Text("要求: $req")
-                        Text("已获得: ${summary.academicWarningCompleted ?: "N/A"}")
-                    }
+                HorizontalDivider()
+                Text("学业预警", fontWeight = FontWeight.Bold)
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                    Text("要求: $req")
+                    Text("已获得: ${summary.academicWarningCompleted ?: "N/A"}")
+
                 }
             }
 
@@ -205,7 +205,7 @@ fun ScoreSummaryCard(summary: ScoreSummary) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { expanded.value = !expanded.value },
+                    .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { expanded.value = !expanded.value },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

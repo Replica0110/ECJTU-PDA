@@ -234,7 +234,7 @@ class StuScheduleService(
                     if (blockLines.isNotEmpty()) {
                         val lastLine = blockLines.last()
                         // Try to parse weeks and sections from the last line
-                        val weekSecRegex = Regex("""^(.*?)\s*([\d\-]+(?:\s*\([单双]\))?)\s+([\d,]+)$""")
+                        val weekSecRegex = Regex("""^(.*?)\s*([\d,\-\s()单双]+)\s+([\d,]+)$""")
                         val weekSecMatch = weekSecRegex.find(lastLine)
 
                         if (weekSecMatch != null) {
