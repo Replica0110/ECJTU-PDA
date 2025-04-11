@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -174,7 +175,7 @@ fun LazyListScope.scoreContent(data: StudentScoresData) {
 
 @Composable
 fun ScoreSummaryCard(summary: ScoreSummary) {
-    val expanded = remember { mutableStateOf(false) }
+    val expanded = rememberSaveable { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -228,7 +229,7 @@ fun ScoreSummaryCard(summary: ScoreSummary) {
 fun ScoreDetailSection(scores: List<CourseScore>) {
     val grouped = scores.groupBy { it.term }.toSortedMap(compareByDescending { it })
     val terms = grouped.keys.toList()
-    var selectedIndex by remember { mutableIntStateOf(0) }
+    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
     Card (Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         // Tab 切换学期

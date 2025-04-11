@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -145,7 +146,7 @@ fun StuSchedulesScreen(
 fun StuSchedulesContent(schedules: List<FullScheduleResult>) {
     val grouped = schedules.groupBy { it.termValue }.toSortedMap(compareByDescending { it })
     val terms = grouped.keys.toList()
-    var selectedIndex by remember { mutableIntStateOf(0) }
+    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
     Card(
         modifier = Modifier
@@ -207,12 +208,12 @@ const val TIME_SLOT_WIDTH = 35
 @Composable
 fun ScheduleGrid(schedule: FullScheduleResult) {
     val dayColumnWidth = 60.dp
-    val coursesMap = remember(schedule.courses) {
+    val coursesMap = rememberSaveable(schedule.courses) {
         schedule.courses.groupBy { Pair(it.day, it.timeSlot) }
     }
     val horizontalScrollState = rememberScrollState()
 
-    var selectedCourse by remember { mutableStateOf<StuCourse?>(null) }
+    var selectedCourse by rememberSaveable { mutableStateOf<StuCourse?>(null) }
 
     if (selectedCourse != null) {
         CourseDetailSheet(course = selectedCourse!!, onDismiss = { selectedCourse = null })
