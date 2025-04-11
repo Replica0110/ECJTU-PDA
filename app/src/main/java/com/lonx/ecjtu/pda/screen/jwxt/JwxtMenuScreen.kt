@@ -51,8 +51,8 @@ fun JwxtMenuScreen(
             Card(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 SuperArrow(
                     title = "我的课表",
-                    summary = "查看本学期课程安排",
-                    onClick = {  }
+                    summary = "查看学期课程安排",
+                    onClick = { jwxtNavController.navigate(JwxtRoute.Schedules.route) }
                 )
                 SuperArrow(
                     title = "班级课表",

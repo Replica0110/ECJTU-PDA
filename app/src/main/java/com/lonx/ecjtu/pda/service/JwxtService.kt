@@ -12,7 +12,6 @@ import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
 import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
 import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
-import com.lonx.ecjtu.pda.data.DayCourses
 import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
 import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
 import com.lonx.ecjtu.pda.data.ServiceResult
@@ -798,19 +797,22 @@ class JwxtService(
         }
         return hasLogin(1)
     }
-    /** 可用于获取教务系统中的各页面 HTML，并返回 ServiceResult 对象，当获取失败时，会尝试自动登录并重试。
+    /**
+     * 可用于获取教务系统中的各页面 HTML，并返回 ServiceResult 对象，当获取失败时，会尝试自动登录并重试。
      *
      * @param [attempt] 当前尝试次数，默认为 1。
      * @param [url] 要获取的页面的 URL。
      * @param [referer] 请求的 Referer 头，默认为教务系统域名。
+     * @param [params] 可选的额外请求参数，默认为 null。
      * @param [buildRequest] 可选的函数，用于构建请求，默认为 null。
      * @param [retry] 可选的函数，用于重试获取 HTML，默认为 null。
      * @return [ServiceResult] 包含获取的 HTML 或错误信息。
-     * */
+     */
     private suspend fun fetchHtml(
         attempt: Int = 1,
         url: HttpUrl,
         referer: String = "$JWXT_ECJTU_DOMAIN/",
+        params: Map<String, String>? = null,
         buildRequest: ((HttpUrl) -> Request)? = null,
         retry: suspend (Int) -> ServiceResult<String>
     ): ServiceResult<String> {
@@ -834,7 +836,15 @@ class JwxtService(
                 .add("Accept-Language", "zh-CN,zh;q=0.9")
                 .build()
 
-            val request = buildRequest?.invoke(url) ?: Request.Builder().url(url).headers(headers).get().build()
+            // 添加自定义参数到 URL
+            val urlWithParams = url.newBuilder().apply {
+                params?.forEach { (key, value) ->
+                    addQueryParameter(key, value)
+                }
+            }.build()
+
+            val request = buildRequest?.invoke(urlWithParams)
+                ?: Request.Builder().url(urlWithParams).headers(headers).get().build()
 
             val response = client.newCall(request).execute()
             response.use {
@@ -874,6 +884,7 @@ class JwxtService(
             return ServiceResult.Error("发生未知错误: ${e.message}", e)
         }
     }
+
 
     /**
      * 获取学生成绩页面的 HTML，返回日历页面的html。
@@ -926,10 +937,10 @@ class JwxtService(
     }
 
     /**
-     * 获取指定日期的课程表信息，返回包含日期和课程列表的 DayCourses 对象。
+     * 获取指定日期的课程表信息，返回包含日期和课程列表的原始 HTML 内容。
      *
      * @param [dateQuery] 查询日期，格式为 "YYYY-MM-DD"。如果为 null 或空，则获取当天的课表。
-     * @return [ServiceResult] 包含 [DayCourses] 或错误信息。
+     * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
      */
     suspend fun getCourseScheduleHtml(dateQuery: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
         Timber.d("获取课程表 HTML，查询日期: ${dateQuery ?: "未指定"}")
@@ -972,5 +983,25 @@ class JwxtService(
                 html
             }
         }
+    }
+
+    /**
+     * 获取各学期的课程表信息，返回包含学期信息和课程表的原始 HTML 内容。
+     * @param [attempt] 当前尝试次数 (用于内部重试逻辑).
+     * @param [term] 指定学期，默认为空，表示获取当前学期的课程表。
+     * 参数示例： "2024.1"，表示获取2024学年第一学期的课程表。
+     * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
+     */
+    suspend fun getScheduleHtml(attempt: Int = 1,term:String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
+        val url = ApiConstants.GET_SCHEDULE.toHttpUrlOrNull()
+            ?: return@withContext ServiceResult.Error("无效的课程表URL配置: ${ApiConstants.GET_SCHEDULE}")
+
+        return@withContext fetchHtml(
+            attempt = attempt,
+            url = url,
+            params = if (term.isNullOrBlank()) null else mapOf("term" to term),
+            referer = "$JWXT_ECJTU_DOMAIN/index.action",
+            retry = ::getScheduleHtml
+        )
     }
 }

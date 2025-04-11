@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.ecjtu.pda.data.CourseScore
 import com.lonx.ecjtu.pda.data.RequirementCredits
 import com.lonx.ecjtu.pda.data.ScoreSummary
@@ -58,10 +59,10 @@ fun StuScoreScreen(
 //    scrollBehavior: UpdatableScrollBehavior,
     viewModel: StuScoreViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        if (uiState.studentScoreData == null && !uiState.isLoading) {
+        if (uiState.scoreData == null && !uiState.isLoading) {
             viewModel.loadScores()
         }
     }
@@ -125,8 +126,8 @@ fun StuScoreScreen(
                 }
             }
 
-            uiState.studentScoreData != null -> {
-                scoreContent(data = uiState.studentScoreData!!)
+            uiState.scoreData != null -> {
+                scoreContent(data = uiState.scoreData!!)
             }
         }
     }

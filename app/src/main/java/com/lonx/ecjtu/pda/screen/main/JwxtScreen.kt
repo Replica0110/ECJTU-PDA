@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.data.JwxtRoute
 import com.lonx.ecjtu.pda.data.MainRoute
 import com.lonx.ecjtu.pda.screen.jwxt.JwxtMenuScreen
+import com.lonx.ecjtu.pda.screen.jwxt.StuSchedulesScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuScoreScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSecondCreditScreen
 
@@ -83,6 +84,9 @@ fun JwxtScreen(
         }
         composable(JwxtRoute.SecondCredit.route) {
             StuSecondCreditScreen(onBack = { jwxtNavController.popBackStack() })
+        }
+        composable(JwxtRoute.Schedules.route) {
+            StuSchedulesScreen(onBack = { jwxtNavController.popBackStack() })
         }
     }
 }

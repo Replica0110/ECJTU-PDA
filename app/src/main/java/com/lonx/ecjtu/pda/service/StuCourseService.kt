@@ -1,8 +1,8 @@
 package com.lonx.ecjtu.pda.service
 
 import com.lonx.ecjtu.pda.base.BaseService
-import com.lonx.ecjtu.pda.data.CourseInfo
-import com.lonx.ecjtu.pda.data.DayCourses
+import com.lonx.ecjtu.pda.data.StuCourse
+import com.lonx.ecjtu.pda.data.StuDayCourses
 import com.lonx.ecjtu.pda.data.ServiceResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,7 +16,7 @@ class StuCourseService(
 
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
-    suspend fun getCourseSchedule(dateQuery: String? = null): ServiceResult<DayCourses> = withContext(Dispatchers.IO) {
+    suspend fun getCourseSchedule(dateQuery: String? = null): ServiceResult<StuDayCourses> = withContext(Dispatchers.IO) {
         when (val htmlResult = service.getCourseScheduleHtml(dateQuery)) {
             is ServiceResult.Success -> {
                 try {
@@ -25,13 +25,13 @@ class StuCourseService(
 
                     val extractedDate = document.selectFirst("div.center")?.text()?.trim() ?: "日期未知"
                     val courseListElement = document.selectFirst("div.calendar ul.rl_info")
-                        ?: return@withContext ServiceResult.Success(DayCourses(extractedDate, emptyList()))
+                        ?: return@withContext ServiceResult.Success(StuDayCourses(extractedDate, emptyList()))
 
                     if (courseListElement.selectFirst("li > p > img") != null) {
-                        return@withContext ServiceResult.Success(DayCourses(extractedDate, emptyList()))
+                        return@withContext ServiceResult.Success(StuDayCourses(extractedDate, emptyList()))
                     }
 
-                    val courses = mutableListOf<CourseInfo>()
+                    val courses = mutableListOf<StuCourse>()
                     val listItems = courseListElement.select("li")
 
                     for (item in listItems) {
@@ -49,17 +49,17 @@ class StuCourseService(
                         val teacher = textParts.getOrNull(3)?.substringAfter("教师：") ?: "N/A"
 
                         courses.add(
-                            CourseInfo(
+                            StuCourse(
                                 courseName = courseName,
-                                courseTime = "节次：$time",
-                                courseWeek = "上课周：$week",
-                                courseLocation = "地点：$location",
-                                courseTeacher = "教师：$teacher"
+                                sectionsRaw = "节次：$time",
+                                weeksRaw = "上课周：$week",
+                                location = "地点：$location",
+                                teacher = "教师：$teacher"
                             )
                         )
                     }
 
-                    return@withContext ServiceResult.Success(DayCourses(extractedDate, courses))
+                    return@withContext ServiceResult.Success(StuDayCourses(extractedDate, courses))
                 } catch (e: Exception) {
                     Timber.e(e, "解析课程表 HTML 时出错")
                     return@withContext ServiceResult.Error("解析失败: ${e.message}", e)

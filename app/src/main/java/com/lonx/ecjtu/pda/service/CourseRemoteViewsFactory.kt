@@ -8,8 +8,8 @@ import android.widget.RemoteViewsService
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.CourseInfo
-import com.lonx.ecjtu.pda.data.DayCourses
+import com.lonx.ecjtu.pda.data.StuCourse
+import com.lonx.ecjtu.pda.data.StuDayCourses
 import timber.log.Timber
 
 const val EXTRA_COURSE_NAME = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_NAME"
@@ -19,7 +19,7 @@ const val EXTRA_COURSE_LOCATION = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_LOCATI
 class CourseRemoteViewsFactory(private val context: Context, private val intent: Intent?) :
     RemoteViewsService.RemoteViewsFactory {
 
-    private var courseList: List<CourseInfo> = emptyList()
+    private var courseList: List<StuCourse> = emptyList()
 
     override fun onCreate() {
         Timber.tag("RemoteViewsFactory").e("Factory created.")
@@ -29,8 +29,8 @@ class CourseRemoteViewsFactory(private val context: Context, private val intent:
         val json = intent?.getStringExtra("dayCourses")
         if (json != null) {
             try {
-                val type = object : TypeToken<DayCourses>() {}.type
-                val deserializedDayCourses: DayCourses = Gson().fromJson(json, type)
+                val type = object : TypeToken<StuDayCourses>() {}.type
+                val deserializedDayCourses: StuDayCourses = Gson().fromJson(json, type)
 
                 courseList = deserializedDayCourses.courses
 
@@ -65,15 +65,15 @@ class CourseRemoteViewsFactory(private val context: Context, private val intent:
 
         val itemView = RemoteViews(context.packageName, R.layout.widget_course_item).apply {
             setTextViewText(R.id.tv_course_name, course.courseName)
-            setTextViewText(R.id.tv_course_time, course.courseTime)
-            setTextViewText(R.id.tv_course_location, course.courseLocation)
+            setTextViewText(R.id.tv_course_time, course.sectionsRaw)
+            setTextViewText(R.id.tv_course_location, course.location)
         }
 
         val fillInIntent = Intent().apply {
             val extras = Bundle()
             extras.putString(EXTRA_COURSE_NAME, course.courseName)
-            extras.putString(EXTRA_COURSE_TIME, course.courseTime)
-            extras.putString(EXTRA_COURSE_LOCATION, course.courseLocation)
+            extras.putString(EXTRA_COURSE_TIME, course.sectionsRaw)
+            extras.putString(EXTRA_COURSE_LOCATION, course.location)
             putExtras(extras)
         }
 

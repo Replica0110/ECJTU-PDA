@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 data class StuScoreUiState(
     val isLoading: Boolean = false,
-    val studentScoreData: StudentScoresData? = null,
+    val scoreData: StudentScoresData? = null,
     val error: String? = null
 ): BaseUiState
 
@@ -29,14 +29,14 @@ class StuScoreViewModel(
 
     fun loadScores() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, studentScoreData = null) }
+            _uiState.update { it.copy(isLoading = true, error = null, scoreData = null) }
 
             when (val result = service.getStudentScores()) {
                 is ServiceResult.Success -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            studentScoreData = result.data,
+                            scoreData = result.data,
                             error = null
                         )
                     }
@@ -45,7 +45,7 @@ class StuScoreViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            studentScoreData = null,
+                            scoreData = null,
                             error = result.message
                         )
                     }
