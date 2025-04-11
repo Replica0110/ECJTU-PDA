@@ -23,6 +23,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -232,21 +234,18 @@ fun ScoreDetailSection(scores: List<CourseScore>) {
         // Tab 切换学期
         ScrollableTabRow(
             selectedTabIndex = selectedIndex,
-            edgePadding = 16.dp,
-            indicator = { tabPositions ->
-                Box(
-                    Modifier
-                        .tabIndicatorOffset(tabPositions[selectedIndex])
-                        .height(3.dp)
-                        .padding(horizontal = 16.dp)
-                        .background(
-                            color = MiuixTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(50)
-                        )
-                )
-            },
+            edgePadding = 0.dp,
             containerColor = MiuixTheme.colorScheme.surface,
-            contentColor = MiuixTheme.colorScheme.primary
+            contentColor = MiuixTheme.colorScheme.primary,
+            indicator = { tabPositions ->
+                if (selectedIndex < tabPositions.size) {
+                    SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
+                        height = 3.dp,
+                        color = MiuixTheme.colorScheme.primary
+                    )
+                }
+            }
         ) {
             terms.forEachIndexed { index, term ->
                 Tab(
@@ -260,7 +259,7 @@ fun ScoreDetailSection(scores: List<CourseScore>) {
                         )
                     },
                     selectedContentColor = MiuixTheme.colorScheme.primary,
-                    unselectedContentColor = MiuixTheme.colorScheme.onSecondaryVariant,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

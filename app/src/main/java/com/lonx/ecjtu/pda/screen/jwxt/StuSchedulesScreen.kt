@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -32,12 +30,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -144,70 +142,59 @@ fun StuSchedulesScreen(
     }
 }
 @Composable
-fun StuSchedulesContent(
-    schedules: List<FullScheduleResult>
-) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+fun StuSchedulesContent(schedules: List<FullScheduleResult>) {
+    val grouped = schedules.groupBy { it.termValue }.toSortedMap(compareByDescending { it })
+    val terms = grouped.keys.toList()
+    var selectedIndex by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(schedules) {
-        if (selectedTabIndex >= schedules.size && schedules.isNotEmpty()) {
-            selectedTabIndex = schedules.size - 1
-        } else if (schedules.isEmpty()) {
-            selectedTabIndex = 0
-        }
-    }
-
-        Column(
-                modifier = Modifier.fillMaxSize(),
-        ) {
-            ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
-                edgePadding = 0.dp,
-                containerColor = MiuixTheme.colorScheme.surface,
-                contentColor = MiuixTheme.colorScheme.primary,
-                indicator = { tabPositions ->
-                    if (selectedTabIndex < tabPositions.size) {
-                        TabRowDefaults.Indicator(
-                            Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                            height = 3.dp,
-                            color = MiuixTheme.colorScheme.primary
-                        )
-                    }
-                }
-            ) {
-                schedules.forEachIndexed { index, schedule ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = {
-                            Text(
-                                text = schedule.termName,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MiuixTheme.textStyles.title1.copy(fontSize = 14.sp)
-                            )
-                        },
-                        selectedContentColor = MiuixTheme.colorScheme.primary,
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // 学期切换 Tab
+        ScrollableTabRow(
+            selectedTabIndex = selectedIndex,
+            edgePadding = 0.dp,
+            containerColor = MiuixTheme.colorScheme.surface,
+            contentColor = MiuixTheme.colorScheme.primary,
+            indicator = { tabPositions ->
+                if (selectedIndex < tabPositions.size) {
+                    SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
+                        height = 3.dp,
+                        color = MiuixTheme.colorScheme.primary
                     )
                 }
             }
-
-            Divider()
-
-            key(selectedTabIndex) {
-                if (schedules.isNotEmpty() && selectedTabIndex < schedules.size) {
-                    ScheduleGrid(schedule = schedules[selectedTabIndex])
-                } else {
-                    Box(Modifier
-                        .fillMaxSize()
-                        .padding(16.dp), contentAlignment = Alignment.Center){
-                        Text("无法显示课表")
-                    }
-                }
+        ) {
+            terms.forEachIndexed { index, term ->
+                Tab(
+                    selected = selectedIndex == index,
+                    onClick = { selectedIndex = index },
+                    text = {
+                        Text(
+                            text = term,
+                            fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
+                        )
+                    },
+                    selectedContentColor = MiuixTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val schedulesInTerm = grouped[terms[selectedIndex]].orEmpty()
+        Column(
+            Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            schedulesInTerm.forEach { ScheduleGrid(it) }
+        }
+    }
 }
 
 
@@ -232,16 +219,16 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
     }
 
     Row(modifier = Modifier.fillMaxSize()) {
-
+        VerticalDivider()
         Column(modifier = Modifier.width(TIME_SLOT_WIDTH.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(40.dp)
                     .background(MiuixTheme.colorScheme.surface) // 背景与表头一致
-                    .border(BorderStroke(0.5.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
+                    .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
             )
-            Divider()
+            HorizontalDivider()
 
             timeSlots.forEach { timeSlot ->
                 val maxCoursesInRow = weekDays.maxOfOrNull { day ->
@@ -255,12 +242,7 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .border(
-                            BorderStroke(
-                                0.5.dp,
-                                MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)
-                            )
-                        )
+                        .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
                         .padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -287,7 +269,7 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                     Modifier
                         .height(40.dp)
                         .background(MiuixTheme.colorScheme.surface)
-                        .border(BorderStroke(0.5.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
+                        .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
                 ) {
                     weekDays.forEach { day ->
                         Box(
@@ -327,7 +309,7 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                                 modifier = Modifier
                                     .width(dayColumnWidth)
                                     .fillMaxHeight()
-                                    .border(BorderStroke(0.5.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
+                                    .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
                                     .padding(2.dp),
                                 contentAlignment = Alignment.TopCenter
                             ) {
@@ -416,8 +398,8 @@ fun CourseDetailSheet(course: StuCourse, onDismiss: () -> Unit) {
                 modifier = Modifier.padding(bottom = 10.dp).fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 text = course.courseName,
-                style = MiuixTheme.textStyles.title2,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                style = MiuixTheme.textStyles.title4,
             )
 
             if (course.teacher != "N/A") {
@@ -466,13 +448,13 @@ fun CourseDetailSheet(course: StuCourse, onDismiss: () -> Unit) {
 
 fun WeekDay.toChineseShortName(): String {
     return when (this) {
-        WeekDay.MONDAY -> "周一"
-        WeekDay.TUESDAY -> "周二"
-        WeekDay.WEDNESDAY -> "周三"
-        WeekDay.THURSDAY -> "周四"
-        WeekDay.FRIDAY -> "周五"
-        WeekDay.SATURDAY -> "周六"
-        WeekDay.SUNDAY -> "周日"
+        WeekDay.MONDAY -> "一"
+        WeekDay.TUESDAY -> "二"
+        WeekDay.WEDNESDAY -> "三"
+        WeekDay.THURSDAY -> "四"
+        WeekDay.FRIDAY -> "五"
+        WeekDay.SATURDAY -> "六"
+        WeekDay.SUNDAY -> "日"
     }
 }
 
