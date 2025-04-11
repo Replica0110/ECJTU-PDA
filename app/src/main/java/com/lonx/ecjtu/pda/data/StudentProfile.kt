@@ -4,13 +4,13 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-data class StuInfo(
+data class StuProfile(
     val key:String = "",
     val value:String = ""
 ): Parcelable
 
 @Parcelize
-data class StuInfoList(
+data class StuProfileList(
     val type:String = "",
-    val stuInfo: StuInfo? = null
+    val stuProfile: StuProfile? = null
 ): Parcelable

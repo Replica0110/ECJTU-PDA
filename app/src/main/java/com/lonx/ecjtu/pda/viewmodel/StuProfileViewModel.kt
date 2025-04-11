@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.service.StuInfoService
+import com.lonx.ecjtu.pda.service.StuProfileService
 import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,12 +15,12 @@ import kotlinx.coroutines.launch
 
 data class StuInfoUiState(
     val isLoading: Boolean = false,
-    val studentInfo: Map<String, Map<String, String>>? = null,
+    val profileData: Map<String, Map<String, String>>? = null,
     val error: String? = null // 用于显示错误消息
 ): BaseUiState
 
 class StuInfoViewModel(
-    override val service: StuInfoService,
+    override val service: StuProfileService,
     override val prefs: PreferencesManager
 ): ViewModel(), BaseViewModel {
     private val _uiState = MutableStateFlow(StuInfoUiState())
@@ -34,12 +34,12 @@ class StuInfoViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) } // 开始加载，清除旧错误
 
-            when (val result = service.getStudentInfo()) {
+            when (val result = service.getStudentProfile()) {
                 is ServiceResult.Success -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            studentInfo = result.data,
+                            profileData = result.data,
                             error = null
                         )
                     }
@@ -48,7 +48,7 @@ class StuInfoViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            studentInfo = null, // 清除可能存在的旧数据
+                            profileData = null, // 清除可能存在的旧数据
                             error = result.message
                         )
                     }

@@ -27,6 +27,7 @@ object ApiConstants {
     const val GET_SECOND_CREDIT = "https://$JWXT_ECJTU_DOMAIN/scoreQuery/secondCreQue_findSecondCredit.action?item=0402"
     const val METHOD_GET_AVATAR = "getAvatar"
     const val METHOD_GET_YKT_NUM = "getYktNum"
+    const val GET_SCHEDULE = "https://$JWXT_ECJTU_DOMAIN/Schedule/Schedule_getUserSchedume.action"
 
     const val JWXT_LOGIN_PAGE_IDENTIFIER = "华东交通大学教务管理系统-登录"
 }

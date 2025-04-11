@@ -49,7 +49,7 @@ import com.lonx.ecjtu.pda.data.MainRoute
 import com.lonx.ecjtu.pda.screen.main.HomeScreen
 import com.lonx.ecjtu.pda.screen.main.JwxtScreen
 import com.lonx.ecjtu.pda.screen.main.SettingScreen
-import com.lonx.ecjtu.pda.screen.main.StuInfoScreen
+import com.lonx.ecjtu.pda.screen.main.StuProfileScreen
 import com.lonx.ecjtu.pda.screen.main.WifiScreen
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -419,7 +419,7 @@ fun MainContent(
                         currentTopAppBarNavigationIcon = menuIconComposable
                         onAllowDrawerGestureChange(true)
                     }
-                    StuInfoScreen(
+                    StuProfileScreen(
                         internalNavController = internalNavController,
                         topLevelNavController = topLevelNavController,
                         padding = innerPadding

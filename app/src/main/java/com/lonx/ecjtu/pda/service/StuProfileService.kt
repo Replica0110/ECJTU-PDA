@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import timber.log.Timber
 
-class StuInfoService(
+class StuProfileService(
     private val service: JwxtService
 ) : BaseService {
 
@@ -21,7 +21,7 @@ class StuInfoService(
     }
 
 
-    suspend fun getStudentInfo(): ServiceResult<Map<String, Map<String, String>>> = withContext(Dispatchers.IO) {
+    suspend fun getStudentProfile(): ServiceResult<Map<String, Map<String, String>>> = withContext(Dispatchers.IO) {
         Timber.d("StuInfoService: 开始获取并解析学生信息 (按类别)...")
 
         when (val htmlResult = service.getStudentInfoHtml()) {
