@@ -158,4 +158,18 @@ class SettingViewModel(
             }
         }
     }
+    /**清空登录信息*/
+    fun logout() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                service.logout(clearStoredCredentials = true)
+                _uiState.value = SettingUiState()
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                Timber.e(e, "退出登录失败")
+                _uiState.update { it.copy( isLoading = false, error = "退出登录失败: ${e.message}")}
+            }
+        }
+    }
 }

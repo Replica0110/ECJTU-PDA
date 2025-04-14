@@ -32,7 +32,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.R
+import com.lonx.ecjtu.pda.data.TopLevelRoute
 import com.lonx.ecjtu.pda.screen.AccountConfigDialog
 import com.lonx.ecjtu.pda.screen.ChangePasswordDialog
 import com.lonx.ecjtu.pda.ui.InfoAlertDialog
@@ -47,12 +50,14 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.icons.useful.Delete
 import top.yukonga.miuix.kmp.icon.icons.useful.Personal
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SettingScreen(
     padding: PaddingValues,
+    topLevelNavController: NavHostController,
 //    scrollBehavior: UpdatableScrollBehavior,
     settingViewModel: SettingViewModel = koinViewModel()
 ) {
@@ -279,6 +284,37 @@ fun SettingScreen(
                         summary = "如何获取WeiXinID？",
                         onClick = {
                             showWeiXinIdTutorialDialog = true
+                        },
+                        holdDownState = false
+                    )
+                }
+            }
+            item {
+                SmallTitle("其他")
+                Card(modifier = Modifier.padding(16.dp)) {
+                    SuperArrow(
+                        leftAction = {
+                            Box(
+                                contentAlignment = Alignment.TopStart,
+                                modifier = Modifier.padding(end = 16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Useful.Delete,
+                                    contentDescription = "退出登录",
+                                    tint = MiuixTheme.colorScheme.onBackground
+                                )
+                            }
+                        },
+                        title = "退出登录",
+                        summary = "退出登录并清空登录信息",
+                        onClick = {
+                            settingViewModel.logout()
+                            topLevelNavController.navigate(TopLevelRoute.Login.route) {
+                                popUpTo(topLevelNavController.graph.findStartDestination().id) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
                         },
                         holdDownState = false
                     )
