@@ -23,8 +23,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+//import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -32,13 +34,12 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.VerticalDivider
+//import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,12 +59,13 @@ import com.lonx.ecjtu.pda.data.StuCourse
 import com.lonx.ecjtu.pda.data.WeekDay
 import com.lonx.ecjtu.pda.viewmodel.StuScheduleViewModel
 import org.koin.androidx.compose.koinViewModel
+import timber.log.Timber
 import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.absoluteValue
 
 @Composable
 fun StuSchedulesScreen(
@@ -73,14 +75,14 @@ fun StuSchedulesScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        if (uiState.SchedulesData== null && !uiState.isLoading){
+        if (uiState.schedulesData == null && !uiState.isLoading){
             viewModel.loadSchedules()
         }
     }
-    LazyColumn(modifier = Modifier
-        .fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         when {
             uiState.isLoading -> {
                 item {
@@ -103,10 +105,10 @@ fun StuSchedulesScreen(
                 }
             }
 
-            uiState.SchedulesData != null -> {
+            uiState.schedulesData != null -> {
                 item{
                     StuSchedulesContent(
-                        schedules = uiState.SchedulesData!!
+                        schedules = uiState.schedulesData!!
                     )
                 }
             }
@@ -148,13 +150,9 @@ fun StuSchedulesContent(schedules: List<FullScheduleResult>) {
     val terms = grouped.keys.toList()
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
+
         // 学期切换 Tab
-        ScrollableTabRow(
+    ScrollableTabRow(
             selectedTabIndex = selectedIndex,
             edgePadding = 0.dp,
             containerColor = MiuixTheme.colorScheme.surface,
@@ -169,29 +167,49 @@ fun StuSchedulesContent(schedules: List<FullScheduleResult>) {
                 }
             }
         ) {
-            terms.forEachIndexed { index, term ->
-                Tab(
-                    selected = selectedIndex == index,
-                    onClick = { selectedIndex = index },
-                    text = {
-                        Text(
-                            text = term,
-                            fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
-                        )
-                    },
-                    selectedContentColor = MiuixTheme.colorScheme.primary,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+                terms.forEachIndexed { index, term ->
+                    Tab(
+                        selected = selectedIndex == index,
+                        onClick = { selectedIndex = index },
+                        text = {
+                            Text(
+                                text = term,
+                                fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
+                            )
+                        },
+                        selectedContentColor = MiuixTheme.colorScheme.primary,
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                }
+
+
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    val schedulesInTerm = grouped[terms[selectedIndex]].orEmpty()
+    if ( schedulesInTerm.all { it.courses.isEmpty() }){
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "本学期课表为空",
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSecondaryVariant
+            )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val schedulesInTerm = grouped[terms[selectedIndex]].orEmpty()
-        Column(
-            Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+    } else {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MiuixTheme.colorScheme.surface)
         ) {
             schedulesInTerm.forEach { ScheduleGrid(it) }
         }
@@ -211,6 +229,29 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
     val coursesMap = rememberSaveable(schedule.courses) {
         schedule.courses.groupBy { Pair(it.day, it.timeSlot) }
     }
+    val uniqueCourseNames = rememberSaveable(schedule.courses) { // 使用 remember 优化性能
+        schedule.courses.map { it.courseName }.distinct()
+    }
+    val courseColorMap = rememberSaveable(uniqueCourseNames) { // 使用 remember 优化性能
+        val colors = listOf( // 基础颜色列表，可以放在函数外部或作为常量
+            Color(0xff1abc9c),
+            Color(0xFFF1C40F),
+            Color(0xFF27AE60),
+            Color(0xFF9B59B6),
+            Color(0xFF34495E),
+            Color(0xFF95A5A6),
+            Color(0xFFFF6B6B),
+            Color(0xFF1BA2FA),
+            Color(0xFFFECA57),
+            Color(0xFF009293),
+            Color(0xF84EAADE),
+            Color(0xFFD35400),
+        )
+        uniqueCourseNames.mapIndexed { index, courseName ->
+            val colorIndex = index % colors.size
+            courseName to colors[colorIndex].copy(alpha = 0.2f)
+        }.toMap()
+    }
     val horizontalScrollState = rememberScrollState()
 
     var selectedCourse by rememberSaveable { mutableStateOf<StuCourse?>(null) }
@@ -219,23 +260,23 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
         CourseDetailSheet(course = selectedCourse!!, onDismiss = { selectedCourse = null })
     }
 
-    Row(modifier = Modifier.fillMaxSize()) {
-        VerticalDivider()
+    Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+//        VerticalDivider()
         Column(modifier = Modifier.width(TIME_SLOT_WIDTH.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(40.dp)
                     .background(MiuixTheme.colorScheme.surface) // 背景与表头一致
-                    .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
+//                    .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
             )
-            HorizontalDivider()
+//            HorizontalDivider()
 
             timeSlots.forEach { timeSlot ->
                 val maxCoursesInRow = weekDays.maxOfOrNull { day ->
                     coursesMap[Pair(day, timeSlot)]?.size ?: 0
                 } ?: 0
-                val rowHeight = (MIN_CELL_HEIGHT + (maxCoursesInRow - 1).coerceAtLeast(0) * 70)
+                val rowHeight = (MIN_CELL_HEIGHT * maxCoursesInRow)
                     .coerceAtLeast(MIN_CELL_HEIGHT)
                     .dp
 
@@ -243,7 +284,7 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(rowHeight)
-                        .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
+//                        .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
                         .padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -254,7 +295,7 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                         )
 
                 }
-                HorizontalDivider()
+//                HorizontalDivider()
             }
         }
 
@@ -270,7 +311,7 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                     Modifier
                         .height(40.dp)
                         .background(MiuixTheme.colorScheme.surface)
-                        .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
+//                        .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
                 ) {
                     weekDays.forEach { day ->
                         Box(
@@ -289,14 +330,14 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                     }
                 }
 
-                HorizontalDivider()
+//                HorizontalDivider()
 
                 // 表格主体
                 timeSlots.forEach { timeSlot ->
                     val maxCoursesInRow = weekDays.maxOfOrNull { day ->
                         coursesMap[Pair(day, timeSlot)]?.size ?: 0
                     } ?: 0
-                    val rowHeight = (MIN_CELL_HEIGHT + (maxCoursesInRow - 1).coerceAtLeast(0) * 70)
+                    val rowHeight = (MIN_CELL_HEIGHT * maxCoursesInRow)
                         .coerceAtLeast(MIN_CELL_HEIGHT)
                         .dp
 
@@ -310,17 +351,24 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                                 modifier = Modifier
                                     .width(dayColumnWidth)
                                     .fillMaxHeight()
-                                    .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
+//                                    .border(BorderStroke(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.5f)))
                                     .padding(2.dp),
                                 contentAlignment = Alignment.TopCenter
                             ) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                                Card(
+                                    shape = RoundedCornerShape(2.dp),
+                                    elevation = CardDefaults.cardElevation(2.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MiuixTheme.colorScheme.background),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(2.dp),
+//                                    verticalArrangement = Arrangement.spacedBy(1.dp)
                                 ) {
                                     coursesInCell.forEach { course ->
-                                        CourseItem(course = course) {
-                                            selectedCourse = course // 设置选中课程
+                                        val color = courseColorMap[course.courseName] ?: Color.Gray.copy(alpha = 0.4f)
+                                        // 将计算好的颜色传递给 CourseItem
+                                        CourseItem(course = course, color = color) {
+                                            selectedCourse = course
                                         }
                                     }
                                 }
@@ -328,7 +376,7 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
                         }
                     }
 
-                    HorizontalDivider()
+//                    HorizontalDivider()
                 }
             }
         }
@@ -337,14 +385,14 @@ fun ScheduleGrid(schedule: FullScheduleResult) {
 
 
 @Composable
-fun CourseItem(course: StuCourse, onClick: () -> Unit) {
-    val backgroundColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.08f)
+fun CourseItem(course: StuCourse,color: Color, onClick: () -> Unit) {
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .height(80.dp)
             .clip(MaterialTheme.shapes.extraSmall)
-            .background(backgroundColor)
+            .background(color)
             .clickable { onClick() } // 加入点击事件
             .padding(horizontal = 3.dp, vertical = 2.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp)
@@ -389,14 +437,16 @@ fun CourseDetailSheet(course: StuCourse, onDismiss: () -> Unit) {
         containerColor = MiuixTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
     ) {
-        Card(
+        Column(
             modifier = Modifier
                 .height(400.dp)
                 .fillMaxWidth()
                 .padding(bottom = 24.dp, top = 8.dp, start = 24.dp, end = 24.dp),
         ) {
             Text(
-                modifier = Modifier.padding(bottom = 10.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(bottom = 10.dp)
+                    .fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 text = course.courseName,
                 fontWeight = FontWeight.Bold,
@@ -404,7 +454,9 @@ fun CourseDetailSheet(course: StuCourse, onDismiss: () -> Unit) {
             )
 
             if (course.teacher != "N/A") {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 15.dp)) {
                     Icon(Icons.Default.Person, contentDescription = "教师", tint = Color(color = 0xFF007251))
                     Spacer(modifier = Modifier.width(18.dp))
                     Text(
@@ -415,7 +467,9 @@ fun CourseDetailSheet(course: StuCourse, onDismiss: () -> Unit) {
             }
 
             if (course.location != "N/A") {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 15.dp)) {
                     Icon(Icons.Default.Place, contentDescription = "地点", tint = Color(color = 0xFF00B800))
                     Spacer(modifier = Modifier.width(18.dp))
                     Text(
@@ -425,7 +479,9 @@ fun CourseDetailSheet(course: StuCourse, onDismiss: () -> Unit) {
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 15.dp)) {
                 Icon(Icons.Default.DateRange, contentDescription = "周次", tint = Color(color = 0xFF3962FF))
                 Spacer(modifier = Modifier.width(18.dp))
                 Text(
@@ -434,7 +490,9 @@ fun CourseDetailSheet(course: StuCourse, onDismiss: () -> Unit) {
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 15.dp)) {
                 Icon(painter = painterResource(id = R.drawable.ic_schedule), contentDescription = "节次", tint = Color(color = 0xFFFF7700))
                 Spacer(modifier = Modifier.width(18.dp))
                 Text(
@@ -459,3 +517,19 @@ fun WeekDay.toChineseShortName(): String {
     }
 }
 
+//fun getColorForCourse(courseName: String): Color {
+//    val colors = listOf(
+//        Color(0xff1abc9c),
+//        Color(0xFFF1C40F),
+//        Color(0xFF27AE60),
+//        Color(0xFF9B59B6),
+//        Color(0xFF34495E),
+//        Color(0xFF95A5A6),
+//        Color(0xFFFF6B6B),
+//        Color(0xFF1BA2FA),
+//        Color(0xFFFECA57),
+//        Color(0xFF009293),
+//    )
+//    val index = (courseName.hashCode().absoluteValue) % colors.size
+//    return colors[index].copy(alpha = 0.4f)
+//}

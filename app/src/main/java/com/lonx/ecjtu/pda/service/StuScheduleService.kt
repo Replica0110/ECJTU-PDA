@@ -48,12 +48,12 @@ class StuScheduleService(
                             allSuccessfullyParsedSchedules.add(initialSchedule)
                         } catch (e: ParseException) {
                             val termValue = initialDoc.selectFirst("select#term option[selected]")?.`val`() ?: "default"
-                            println("Warning: Failed to parse the initial default schedule (Term: $termValue): ${e.message}")
+                            Timber.e("Warning: Failed to parse the initial default schedule (Term: $termValue): ${e.message}")
                             failedTermDetails.add(termValue to "Parsing initial schedule failed: ${e.message}")
 
                         } catch (e: Exception) {
                             val termValue = initialDoc.selectFirst("select#term option[selected]")?.`val`() ?: "default"
-                            println("Warning: Unexpected error parsing the initial default schedule (Term: $termValue): ${e.message}")
+                            Timber.e("Warning: Unexpected error parsing the initial default schedule (Term: $termValue): ${e.message}")
                             failedTermDetails.add(termValue to "Unexpected error parsing initial schedule: ${e.message}")
 
                         }
@@ -74,7 +74,7 @@ class StuScheduleService(
                     continue
                 }
 
-                println("Fetching schedule for term: ${termInfo.value} (${termInfo.name})")
+                Timber.e("Fetching schedule for term: ${termInfo.value} (${termInfo.name})")
 
                 when (val specificHtmlResult = service.getScheduleHtml(term = termInfo.value)) {
                     is ServiceResult.Success -> {
@@ -83,14 +83,14 @@ class StuScheduleService(
                             val scheduleResult = parseScheduleFromDoc(specificDoc, expectedTermValue = termInfo.value)
                             allSuccessfullyParsedSchedules.add(scheduleResult)
                         } catch (e: ParseException) {
-                            println("Error parsing schedule for term ${termInfo.value}: ${e.message}")
+                            Timber.e("Error parsing schedule for term ${termInfo.value}: ${e.message}")
                             failedTermDetails.add(termInfo.value to "Parsing failed: ${e.message}")
-                            println("Unexpected error parsing schedule for term ${termInfo.value}: ${e.stackTraceToString()}")
+                            Timber.e("Unexpected error parsing schedule for term ${termInfo.value}: ${e.stackTraceToString()}")
                             failedTermDetails.add(termInfo.value to "Unexpected parsing error: ${e.message}")
                         }
                     }
                     is ServiceResult.Error -> {
-                        println("Error fetching schedule for term ${termInfo.value}: ${specificHtmlResult.message}")
+                        Timber.e("Error fetching schedule for term ${termInfo.value}: ${specificHtmlResult.message}")
                         failedTermDetails.add(termInfo.value to "Fetching failed: ${specificHtmlResult.message}")
                     }
                 }
@@ -98,7 +98,7 @@ class StuScheduleService(
 
             if (allSuccessfullyParsedSchedules.isNotEmpty()) {
                 if (failedTermDetails.isNotEmpty()) {
-                    println("Warning: Failed to fetch/parse schedules for the following terms: $failedTermDetails")
+                    Timber.e("Warning: Failed to fetch/parse schedules for the following terms: $failedTermDetails")
                 }
                 ServiceResult.Success(allSuccessfullyParsedSchedules.distinctBy { it.termValue })
             } else {
@@ -107,7 +107,7 @@ class StuScheduleService(
             }
 
         } catch (e: Exception) {
-            println("Unexpected error in getAllSchedules: ${e.stackTraceToString()}")
+            Timber.e("Unexpected error in getAllSchedules: ${e.stackTraceToString()}")
             ServiceResult.Error("An unexpected error occurred during getAllSchedules: ${e.message}", e)
         }
     }
@@ -123,7 +123,7 @@ class StuScheduleService(
             ?: throw ParseException("Could not find term select element in document.")
         val options = termSelect.select("option")
         if (options.isEmpty()) {
-            println("Warning: Found term select element, but it contains no options.")
+            Timber.e("Warning: Found term select element, but it contains no options.")
             return emptyList()
         }
         return options.mapNotNull { option ->
@@ -132,7 +132,7 @@ class StuScheduleService(
             if (value.isNotEmpty() && name.isNotEmpty()) {
                 TermInfo(value, name)
             } else {
-                println("Warning: Skipping term option with missing value or name: ${option.outerHtml()}")
+                Timber.e("Warning: Skipping term option with missing value or name: ${option.outerHtml()}")
                 null
             }
         }
@@ -157,7 +157,7 @@ class StuScheduleService(
 
         // Optional validation against expected term
         if (expectedTermValue != null && actualTermValue != expectedTermValue) {
-            println("Warning: Requested schedule for term '$expectedTermValue', but the loaded page shows term '$actualTermValue' selected.")
+            Timber.e("Warning: Requested schedule for term '$expectedTermValue', but the loaded page shows term '$actualTermValue' selected.")
             // Decide if this is an error or just a warning. For now, just a warning.
         }
 
@@ -277,9 +277,7 @@ class StuScheduleService(
 
                         } else {
                             // Failed to parse weeks/sections from the last line - Block structure might be different
-                            println("Warning: Could not parse weeks/sections from last line: '$lastLine' in block starting with '$courseName' at $day $timeSlot for term $actualTermValue. Block lines: $blockLines")
-                            // Decide how to handle this - skip course, add with partial info, try other heuristics?
-                            // For now, we skip adding this course if weeks/sections are unparsable
+                            Timber.e("Warning: Could not parse weeks/sections from last line: '$lastLine' in block starting with '$courseName' at $day $timeSlot for term $actualTermValue. Block lines: $blockLines")
                         }
                     }
                     // Move to the next potential course block within the cell

@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.service.StuProfileService
-import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
+import com.lonx.ecjtu.pda.viewmodel.StuProfileViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -45,14 +45,14 @@ fun StuProfileScreen(
     topLevelNavController : NavHostController,
     padding: PaddingValues,
 //    scrollBehavior: UpdatableScrollBehavior,
-    stuInfoViewModel: StuInfoViewModel = koinViewModel()
+    stuProfileViewModel: StuProfileViewModel = koinViewModel()
 ) {
-    val uiState by stuInfoViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by stuProfileViewModel.uiState.collectAsStateWithLifecycle()
     val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
         if (uiState.profileData == null && !uiState.isLoading && uiState.error == null) {
-            stuInfoViewModel.loadInfo()
+            stuProfileViewModel.loadProfile()
         }
     }
     LaunchedEffect(uiState.isLoading, pullToRefreshState.isRefreshing) {
@@ -81,7 +81,7 @@ fun StuProfileScreen(
             "刷新结束"
         ),
         onRefresh = {
-            stuInfoViewModel.loadInfo()
+            stuProfileViewModel.loadProfile()
         }
     ) {
         LazyColumn(
@@ -138,7 +138,7 @@ fun StuProfileScreen(
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(24.dp).width(60.dp))
-                            Button(onClick = { stuInfoViewModel.retryLoadStudentInfo() }) {
+                            Button(onClick = { stuProfileViewModel.retryLoadProfile() }) {
                                 Text("重试")
                             }
                         }

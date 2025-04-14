@@ -19,20 +19,20 @@ data class StuInfoUiState(
     val error: String? = null // 用于显示错误消息
 ): BaseUiState
 
-class StuInfoViewModel(
+class StuProfileViewModel(
     override val service: StuProfileService,
     override val prefs: PreferencesManager
 ): ViewModel(), BaseViewModel {
     private val _uiState = MutableStateFlow(StuInfoUiState())
     override val uiState: StateFlow<StuInfoUiState> = _uiState.asStateFlow()
-    fun loadInfo() {
+    fun loadProfile() {
         // 防止重复加载，如果已经在加载中则直接返回
         if (_uiState.value.isLoading) {
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) } // 开始加载，清除旧错误
+            _uiState.update { it.copy(isLoading = true, profileData = null, error = null) } // 开始加载，清除旧错误
 
             when (val result = service.getStudentProfile()) {
                 is ServiceResult.Success -> {
@@ -57,10 +57,9 @@ class StuInfoViewModel(
         }
     }
 
-    // 可选：提供一个重试方法
-    fun retryLoadStudentInfo() {
+    fun retryLoadProfile() {
         // 重置状态并重新加载
         _uiState.value = StuInfoUiState()
-        loadInfo()
+        loadProfile()
     }
 }

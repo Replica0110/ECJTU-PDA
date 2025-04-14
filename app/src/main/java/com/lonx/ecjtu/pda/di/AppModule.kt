@@ -10,6 +10,7 @@ import com.lonx.ecjtu.pda.network.MyOkHttpClient
 import com.lonx.ecjtu.pda.network.WifiStatusMonitor
 import com.lonx.ecjtu.pda.service.JwxtService
 import com.lonx.ecjtu.pda.service.StuCourseService
+import com.lonx.ecjtu.pda.service.StuElectiveService
 import com.lonx.ecjtu.pda.service.StuProfileService
 import com.lonx.ecjtu.pda.service.StuScheduleService
 import com.lonx.ecjtu.pda.service.StuScoreService
@@ -22,7 +23,8 @@ import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
-import com.lonx.ecjtu.pda.viewmodel.StuInfoViewModel
+import com.lonx.ecjtu.pda.viewmodel.StuElectiveViewModel
+import com.lonx.ecjtu.pda.viewmodel.StuProfileViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuScheduleViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuSecondCreditViewModel
@@ -33,7 +35,6 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
-import kotlin.math.sin
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 val appModule = module {
@@ -95,6 +96,11 @@ val appModule = module {
             service = get()
         )
     }
+    single<StuElectiveService> {
+        StuElectiveService(
+            service = get()
+        )
+    }
     // --- 系统服务 ---
     single { androidContext().getSystemService(Context.WIFI_SERVICE) as WifiManager }
     single { androidContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
@@ -108,10 +114,11 @@ val appModule = module {
     ) }
     viewModel { SplashViewModel(service = get(), prefs = get()) }
     viewModel { LoginViewModel(service = get(), prefs = get()) }
-    viewModel { StuInfoViewModel(service = get(),prefs = get()) }
+    viewModel { StuProfileViewModel(service = get(),prefs = get()) }
     viewModel { HomeViewModel(service = get(), prefs = get()) }
     viewModel { SettingViewModel(service = get(), prefs = get()) }
     viewModel { StuScoreViewModel(service = get(), prefs = get()) }
     viewModel { StuSecondCreditViewModel(service = get(), prefs = get()) }
     viewModel { StuScheduleViewModel(service = get(), prefs = get()) }
+    viewModel { StuElectiveViewModel(service = get(), prefs = get()) }
 }
