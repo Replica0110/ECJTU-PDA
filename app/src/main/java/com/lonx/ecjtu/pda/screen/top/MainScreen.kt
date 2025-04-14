@@ -77,13 +77,10 @@ fun MainScreen(
     }
     val context = LocalContext.current
 
-    // 由子屏幕通过回调更新
     var currentTitle by remember { mutableStateOf("花椒PDA") }
     // 由子屏幕通过回调更新，决定是否允许手势打开抽屉
     var allowDrawerGestures by remember { mutableStateOf(true) } // 初始为 true
 
-    // 不再需要在 MainScreen 中根据 currentMainRoute 更新标题，交给子屏幕处理
-    // LaunchedEffect(currentMainRoute) { ... } // 可以移除或简化
 
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
@@ -344,11 +341,7 @@ fun MainContent(
             Icon(imageVector = Icons.Default.Menu, contentDescription = "打开侧边栏")
         }
     }
-    LaunchedEffect(internalNavController.currentBackStackEntry) {
-        // 当 internalNavController 的路由变化时（切换主模块），尝试重置
-        // 注意：这可能在子模块设置图标后被错误重置，更好的方式是在每个 composable 中明确设置
-        // currentTopAppBarNavigationIcon = menuIconComposable // 暂时注释掉，让子 Composable 控制
-    }
+
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -411,7 +404,10 @@ fun MainContent(
                         currentTopAppBarNavigationIcon = menuIconComposable
                         onAllowDrawerGestureChange(true)
                     }
-                    SettingScreen(padding = innerPadding)
+                    SettingScreen(
+                        padding = innerPadding,
+                        topLevelNavController = topLevelNavController
+                    )
                 }
                 composable(MainRoute.Profile.route) {
                     LaunchedEffect(Unit) {

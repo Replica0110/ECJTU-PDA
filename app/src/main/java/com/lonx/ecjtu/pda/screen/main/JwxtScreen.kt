@@ -22,7 +22,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lonx.ecjtu.pda.data.JwxtRoute
 import com.lonx.ecjtu.pda.data.MainRoute
-import com.lonx.ecjtu.pda.screen.jwxt.JwxtMenuScreen
+import com.lonx.ecjtu.pda.screen.jwxt.JwxtContainerScreen
+import com.lonx.ecjtu.pda.screen.jwxt.StuElectiveScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSchedulesScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuScoreScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSecondCreditScreen
@@ -74,10 +75,12 @@ fun JwxtScreen(
     NavHost(
         navController = jwxtNavController,
         startDestination = JwxtRoute.Menu.route,
-        modifier = Modifier.padding(padding).fillMaxSize(),
+        modifier = Modifier
+            .padding(padding)
+            .fillMaxSize(),
     ) {
         composable(JwxtRoute.Menu.route) {
-            JwxtMenuScreen(jwxtNavController = jwxtNavController)
+            JwxtContainerScreen(jwxtNavController = jwxtNavController)
         }
         composable(JwxtRoute.Score.route) {
             StuScoreScreen(onBack = { jwxtNavController.popBackStack() })
@@ -88,5 +91,8 @@ fun JwxtScreen(
         composable(JwxtRoute.Schedules.route) {
             StuSchedulesScreen(onBack = { jwxtNavController.popBackStack() })
         }
+        (composable(JwxtRoute.ElectiveCourse.route) {
+            StuElectiveScreen(onBack = { jwxtNavController.popBackStack() })
+        })
     }
 }

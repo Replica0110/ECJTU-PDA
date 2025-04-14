@@ -1004,4 +1004,21 @@ class JwxtService(
             retry = ::getScheduleHtml
         )
     }
+    /**
+     * 获取各学期的课程表信息，返回包含学期信息和课程表的原始 HTML 内容。
+     * @param [attempt] 当前尝试次数 (用于内部重试逻辑).
+     * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
+     * */
+    suspend fun getElectiveCourseHtml(attempt: Int = 1, term: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
+        val url = ApiConstants.GET_ELECTIVE_COURSE_URL.toHttpUrlOrNull()
+            ?: return@withContext ServiceResult.Error("无效的选修课URL配置: ${ApiConstants.GET_ELECTIVE_COURSE_URL}")
+
+        return@withContext fetchHtml(
+            attempt = attempt,
+            url = url,
+            params = if (term.isNullOrBlank()) null else mapOf("term" to term),
+            referer = "$JWXT_ECJTU_DOMAIN/index.action",
+            retry = ::getElectiveCourseHtml
+        )
+    }
 }
