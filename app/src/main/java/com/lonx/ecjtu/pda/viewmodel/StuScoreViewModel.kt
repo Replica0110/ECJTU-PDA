@@ -28,6 +28,10 @@ class StuScoreViewModel(
     override val uiState: StateFlow<StuScoreUiState> = _uiState.asStateFlow()
 
     fun loadScores() {
+
+        if (_uiState.value.isLoading) {
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, scoreData = null) }
 
@@ -57,6 +61,7 @@ class StuScoreViewModel(
      * Retries loading the scores using the last requested item code.
      */
     fun retryLoadScores() {
+        _uiState.value = StuScoreUiState()
         loadScores()
     }
 }

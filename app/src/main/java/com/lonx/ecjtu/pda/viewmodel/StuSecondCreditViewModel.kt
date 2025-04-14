@@ -26,6 +26,10 @@ class StuSecondCreditViewModel(
     private val _uiState =  MutableStateFlow(StuSecondCreditUiState())
     override val uiState = _uiState.asStateFlow()
     fun loadSecondCredit() {
+
+        if (_uiState.value.isLoading) {
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, secondCreditData = null) }
             when (val result = service.getSecondCredit()) {
@@ -39,6 +43,7 @@ class StuSecondCreditViewModel(
         }
     }
     fun retryLoadSecondCredit() {
+        _uiState.value = StuSecondCreditUiState()
         loadSecondCredit()
     }
 }

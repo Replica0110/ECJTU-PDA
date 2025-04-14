@@ -12,9 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class StuCourseUiState(
+data class StuSchedulesUiState(
     val isLoading: Boolean = false,
-    val SchedulesData: List<FullScheduleResult> ? = null,
+    val schedulesData: List<FullScheduleResult> ? = null,
     val error: String? = null // 用于显示错误消息
 ): BaseUiState
 
@@ -22,17 +22,20 @@ class StuScheduleViewModel(
     override val service: StuScheduleService,
     override val prefs: PreferencesManager
 ):ViewModel(), BaseViewModel {
-    private val _uiState = MutableStateFlow(StuCourseUiState())
+    private val _uiState = MutableStateFlow(StuSchedulesUiState())
     override val uiState = _uiState.asStateFlow()
 
     fun loadSchedules() {
+        if (_uiState.value.isLoading) {
+            return
+        }
         viewModelScope.launch{
-            _uiState.value = _uiState.value.copy(isLoading = true , error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, schedulesData = null , error = null)
             when (val result = service.getAllSchedules()) {
                 is ServiceResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        SchedulesData = result.data
+                        schedulesData = result.data
                     )
                 }
 
@@ -46,6 +49,7 @@ class StuScheduleViewModel(
         }
     }
     fun retryLoadSchedules() {
+        _uiState.value = StuSchedulesUiState()
         loadSchedules()
     }
 }
