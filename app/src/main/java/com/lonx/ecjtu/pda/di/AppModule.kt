@@ -126,7 +126,7 @@ val appModule = module {
     viewModel { HomeViewModel(service = get(), prefs = get()) }
     viewModel { SettingViewModel(service = get(), prefs = get()) }
     viewModel { StuScoreViewModel(service = get(), prefs = get()) }
-    viewModel { StuSecondCreditViewModel(service = get(), prefs = get()) }
+    viewModel { StuSecondCreditViewModel(service = get()) }
     viewModel { StuScheduleViewModel(service = get()) }
     viewModel { StuElectiveViewModel(service = get(), prefs = get()) }
     viewModel { StuExperimentViewModel(service = get(), prefs = get()) }

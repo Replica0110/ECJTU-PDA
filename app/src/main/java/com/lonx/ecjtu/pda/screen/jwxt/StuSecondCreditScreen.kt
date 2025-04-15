@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuSecondCreditViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
@@ -36,32 +37,24 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun StuSecondCreditScreen(
     onBack: () -> Unit,
-//    scrollBehavior: UpdatableScrollBehavior,
     viewModel: StuSecondCreditViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
-
+    // 启动时触发加载
     LaunchedEffect(Unit) {
-        if (uiState.secondCreditData == null && !uiState.isLoading) {
-            viewModel.loadSecondCredit()
+        if (uiState is UiState.Empty) {
+            viewModel.load()
         }
     }
-    val sortedYearlyCredits = remember(uiState.secondCreditData?.yearlyCredits) {
-        uiState.secondCreditData?.yearlyCredits?.takeIf { it.isNotEmpty() }
-            ?.sortedByDescending { it.academicYear }
-            ?: emptyList()
-    }
+
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
-        when {
-            uiState.isLoading -> {
+        when (val state = uiState) {
+            is UiState.Loading -> {
                 item {
                     Box(
                         modifier = Modifier
@@ -83,8 +76,13 @@ fun StuSecondCreditScreen(
                 }
             }
 
-            uiState.secondCreditData != null -> {
-                val data = uiState.secondCreditData!!
+            is UiState.Success -> {
+                val data = state.data
+
+                val sortedYearlyCredits = data.yearlyCredits
+                    .takeIf { it.isNotEmpty() }
+                    ?.sortedByDescending { it.academicYear }
+                    ?: emptyList()
 
                 if (data.totalCreditsByCategory.isEmpty() && data.yearlyCredits.isEmpty()) {
                     item {
@@ -98,7 +96,6 @@ fun StuSecondCreditScreen(
                         )
                     }
                 } else {
-                    // Section for Total Credits
                     if (data.totalCreditsByCategory.isNotEmpty()) {
                         item {
                             CreditSectionCard(
@@ -108,8 +105,7 @@ fun StuSecondCreditScreen(
                         }
                     }
 
-                    if (data.yearlyCredits.isNotEmpty()) {
-
+                    if (sortedYearlyCredits.isNotEmpty()) {
                         items(sortedYearlyCredits, key = { it.academicYear }) { yearlyData ->
                             CreditSectionCard(
                                 title = "${yearlyData.academicYear} 学年学分记录",
@@ -120,7 +116,7 @@ fun StuSecondCreditScreen(
                 }
             }
 
-            uiState.error != null -> {
+            is UiState.Error -> {
                 item {
                     Column(
                         modifier = Modifier
@@ -130,27 +126,31 @@ fun StuSecondCreditScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "错误",
-                            style = MiuixTheme.textStyles.paragraph,
-                            color = MiuixTheme.colorScheme.primary
+                            text = "加载错误",
+                            style = MiuixTheme.textStyles.title1,
+                            color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = uiState.error ?: "无法加载素拓学分信息",
+                            text = state.message,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.error
+                            style = MiuixTheme.textStyles.paragraph,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.retryLoadSecondCredit() }) {
+                        Button(onClick = { viewModel.retry() }) {
                             Text("重试")
                         }
                     }
                 }
             }
 
+            UiState.Empty -> {
+            }
         }
     }
 }
+
 @Composable
 private fun CreditSectionCard(
     title: String,
