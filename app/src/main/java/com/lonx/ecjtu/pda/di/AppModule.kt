@@ -25,7 +25,6 @@ import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuElectiveViewModel
-import com.lonx.ecjtu.pda.viewmodel.StuExperimentUiState
 import com.lonx.ecjtu.pda.viewmodel.StuExperimentViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuProfileViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuScheduleViewModel
@@ -122,12 +121,12 @@ val appModule = module {
     ) }
     viewModel { SplashViewModel(service = get(), prefs = get()) }
     viewModel { LoginViewModel(service = get(), prefs = get()) }
-    viewModel { StuProfileViewModel(service = get(),prefs = get()) }
+    viewModel { StuProfileViewModel(service = get()) }
     viewModel { HomeViewModel(service = get(), prefs = get()) }
     viewModel { SettingViewModel(service = get(), prefs = get()) }
-    viewModel { StuScoreViewModel(service = get(), prefs = get()) }
+    viewModel { StuScoreViewModel(service = get()) }
     viewModel { StuSecondCreditViewModel(service = get()) }
     viewModel { StuScheduleViewModel(service = get()) }
-    viewModel { StuElectiveViewModel(service = get(), prefs = get()) }
-    viewModel { StuExperimentViewModel(service = get(), prefs = get()) }
+    viewModel { StuElectiveViewModel(service = get()) }
+    viewModel { StuExperimentViewModel(service = get()) }
 }

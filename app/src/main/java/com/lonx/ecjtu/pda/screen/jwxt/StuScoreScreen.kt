@@ -1,7 +1,6 @@
 package com.lonx.ecjtu.pda.screen.jwxt
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -23,12 +21,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +42,7 @@ import com.lonx.ecjtu.pda.data.CourseScore
 import com.lonx.ecjtu.pda.data.RequirementCredits
 import com.lonx.ecjtu.pda.data.ScoreSummary
 import com.lonx.ecjtu.pda.data.StudentScoresData
+import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
@@ -60,27 +57,23 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun StuScoreScreen(
     onBack: () -> Unit,
-//    scrollBehavior: UpdatableScrollBehavior,
     viewModel: StuScoreViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        if (uiState.scoreData == null && !uiState.isLoading) {
-            viewModel.loadScores()
+        if (uiState !is UiState.Success && uiState !is UiState.Loading && uiState !is UiState.Error) {
+            viewModel.load()
         }
     }
 
-//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(scrollBehavior)
-
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        when {
-            uiState.isLoading -> {
+        when (uiState) {
+            is UiState.Loading -> {
                 item {
                     Box(
                         modifier = Modifier
@@ -102,7 +95,8 @@ fun StuScoreScreen(
                 }
             }
 
-            uiState.error != null -> {
+            is UiState.Error -> {
+                val message = (uiState as UiState.Error).message
                 item {
                     Column(
                         modifier = Modifier
@@ -118,24 +112,28 @@ fun StuScoreScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = uiState.error ?: "无法加载成绩信息",
+                            text = message,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.retryLoadScores() }) {
+                        Button(onClick = { viewModel.retry() }) {
                             Text("重试")
                         }
                     }
                 }
             }
 
-            uiState.scoreData != null -> {
-                scoreContent(data = uiState.scoreData!!)
+            is UiState.Success -> {
+                val data = (uiState as UiState.Success).data
+                scoreContent(data = data)
             }
+
+            else -> {}
         }
     }
 }
+
 
 fun LazyListScope.scoreContent(data: StudentScoresData) {
     val groupedScores = data.detailedScores

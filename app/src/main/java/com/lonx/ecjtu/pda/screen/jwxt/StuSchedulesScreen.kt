@@ -72,7 +72,7 @@ fun StuSchedulesScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        if (uiState is UiState.Empty && uiState !is UiState.Loading) {
+        if (uiState !is UiState.Success && uiState !is UiState.Loading && uiState !is UiState.Error) {
             viewModel.load()
         }
     }
@@ -128,7 +128,7 @@ fun StuSchedulesScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = state.message ?: "无法加载课表信息",
+                            text = state.message,
                             textAlign = TextAlign.Center,
                             style = MiuixTheme.textStyles.paragraph,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

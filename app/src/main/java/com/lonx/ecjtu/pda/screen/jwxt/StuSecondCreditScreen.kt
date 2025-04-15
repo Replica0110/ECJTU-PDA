@@ -43,7 +43,7 @@ fun StuSecondCreditScreen(
 
     // 启动时触发加载
     LaunchedEffect(Unit) {
-        if (uiState is UiState.Empty) {
+        if (uiState !is UiState.Success && uiState !is UiState.Loading && uiState !is UiState.Error) {
             viewModel.load()
         }
     }
@@ -168,7 +168,6 @@ private fun CreditSectionCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                // Display credits in a structured way
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(12.dp)) {
                     credits.entries.sortedBy { it.key }.forEach { (category, value) ->
                         Row(

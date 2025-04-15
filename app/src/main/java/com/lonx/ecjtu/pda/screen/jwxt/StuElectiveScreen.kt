@@ -26,7 +26,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,7 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.ecjtu.pda.service.ElectiveCourseInfo
-import com.lonx.ecjtu.pda.service.StudentElectiveCourses
+import com.lonx.ecjtu.pda.service.SemesterCourses
+import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuElectiveViewModel
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
@@ -55,19 +55,24 @@ fun StuElectiveScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
-    val semesterCourses = uiState.electiveCourses?.allTermsCourses ?: emptyList()
 
-    LaunchedEffect(Unit) {
-        if (uiState.electiveCourses == null && !uiState.isLoading) {
-            viewModel.loadElectiveCourses()
+    val semesterCourses = (uiState as? UiState.Success)?.data?.allTermsCourses
+
+    LaunchedEffect(semesterCourses) {
+        selectedIndex = if (semesterCourses != null) {
+            when {
+                selectedIndex >= semesterCourses.size && semesterCourses.isNotEmpty() -> semesterCourses.size - 1
+                semesterCourses.isEmpty() -> 0
+                selectedIndex < 0 -> 0
+                else -> selectedIndex
+            }
+        } else {
+            0
         }
     }
-
-    LaunchedEffect(semesterCourses.size) {
-        if (selectedIndex >= semesterCourses.size && semesterCourses.isNotEmpty()) {
-            selectedIndex = semesterCourses.size - 1
-        } else if (semesterCourses.isEmpty()) {
-            selectedIndex = 0
+    LaunchedEffect(Unit) {
+        if (uiState !is UiState.Success && uiState !is UiState.Loading && uiState !is UiState.Error) {
+            viewModel.load()
         }
     }
 
@@ -76,8 +81,8 @@ fun StuElectiveScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        when {
-            uiState.isLoading -> {
+        when (val state = uiState) {
+            is UiState.Loading -> {
                 item {
                     Box(
                         modifier = Modifier
@@ -99,7 +104,8 @@ fun StuElectiveScreen(
                 }
             }
 
-            uiState.error != null -> {
+            is UiState.Error -> {
+                val message = (uiState as UiState.Error).message
                 item {
                     Column(
                         modifier = Modifier
@@ -115,85 +121,106 @@ fun StuElectiveScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = uiState.error ?: "无法加载课表信息",
+                            text = message,
                             textAlign = TextAlign.Center,
                             style = MiuixTheme.textStyles.paragraph,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.retryLoadElectiveCourses() }) {
+                        Button(onClick = { viewModel.retry() }) {
                             Text("重试")
                         }
                     }
                 }
             }
 
-            uiState.electiveCourses != null -> {
-                item {
-                    ScrollableTabRow(
-                        selectedTabIndex = selectedIndex,
-                        edgePadding = 0.dp,
-                        containerColor = MiuixTheme.colorScheme.surface,
-                        contentColor = MiuixTheme.colorScheme.primary,
-                        indicator = { tabPositions ->
-                            if (selectedIndex < tabPositions.size) {
-                                SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                                    height = 3.dp,
-                                    color = MiuixTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    ) {
-                        semesterCourses.forEachIndexed { index, semesterCourse ->
-                            Tab(
-                                selected = selectedIndex == index,
-                                onClick = { selectedIndex = index },
-                                text = {
-                                    Text(
-                                        text = semesterCourse.term.value,
-                                        fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
-                                    )
-                                },
-                                selectedContentColor = MiuixTheme.colorScheme.primary,
-                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+            is UiState.Success -> {
+                val currentSemesterCourses = state.data.allTermsCourses
 
-                val selectedSemester = semesterCourses.getOrNull(selectedIndex)
-                if (selectedSemester != null) {
-                    if (selectedSemester.courses.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "本学期无课程",
-                                    style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSecondaryVariant
-                                )
+                if (currentSemesterCourses.isEmpty()) {
+                    // 处理完全没有学期数据的情况
+                    item { NoDataView(message = "暂无任何学期数据") }
+                } else {
+                    item {
+                        SemesterTabs(
+                            semesterCourses = currentSemesterCourses,
+                            selectedIndex = selectedIndex,
+                            onTabSelected = { index -> selectedIndex = index }
+                        )
+                    }
+
+                    val safeSelectedIndex = selectedIndex.coerceIn(0, currentSemesterCourses.size - 1)
+                    val selectedSemester = currentSemesterCourses.getOrNull(safeSelectedIndex)
+
+                    if (selectedSemester != null) {
+                        if (selectedSemester.courses.isEmpty()) {
+                            // 处理当前学期没有课程的情况
+                            item { NoDataView(message = "本学期无课程") }
+                        } else {
+                            items(
+                                items = selectedSemester.courses,
+                                key = { course -> "${course.term}-${course.teachingClassName}-${course.courseName}" }
+                            ) { course ->
+                                ElectiveCourseItem(course = course)
                             }
-                        }
-                    } else {
-                        items(
-                            items = selectedSemester.courses,
-                            key = { course -> "${course.term}-${course.teachingClassName}-${course.courseName}" }
-                        ) { course ->
-                            ElectiveCourseItem(course = course)
                         }
                     }
                 }
             }
+
+            else -> {}
         }
     }
 }
 
+/**
+ * 负责显示学期切换 Tabs 的可组合项
+ */
+@Composable
+fun SemesterTabs(
+    semesterCourses: List<SemesterCourses>,
+    selectedIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // 确保 selectedIndex 在 ScrollableTabRow 的有效范围内
+    // 注意：ScrollableTabRow 的 selectedTabIndex 本身不做越界检查，但 indicator 需要
+    val safeTabIndex = selectedIndex.coerceIn(0, semesterCourses.size - 1)
+
+    ScrollableTabRow(
+        selectedTabIndex = safeTabIndex, // 使用安全索引
+        modifier = modifier,
+        edgePadding = 0.dp,
+        containerColor = MiuixTheme.colorScheme.surface, // 替换为你实际的主题颜色
+        contentColor = MiuixTheme.colorScheme.primary, // 替换为你实际的主题颜色
+        indicator = { tabPositions ->
+            // 再次检查，确保索引在 tabPositions 列表内，防止异步或边界情况导致崩溃
+            if (safeTabIndex >= 0 && safeTabIndex < tabPositions.size) {
+                SecondaryIndicator( // 假设这是你自定义的 Indicator
+                    Modifier.tabIndicatorOffset(tabPositions[safeTabIndex]),
+                    height = 3.dp,
+                    color = MiuixTheme.colorScheme.primary // 替换为你实际的主题颜色
+                )
+            }
+        }
+    ) {
+        semesterCourses.forEachIndexed { index, semesterCourse ->
+            Tab(
+                selected = selectedIndex == index, // Tab 的选中状态仍用原始 index 判断
+                onClick = { onTabSelected(index) }, // 点击时调用回调
+                text = {
+                    Text(
+                        text = semesterCourse.term.value, // 获取学期名称
+                        fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
+                    )
+                },
+                selectedContentColor = MiuixTheme.colorScheme.primary, // 替换为你实际的主题颜色
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant // 替换为你实际的主题颜色
+            )
+        }
+    }
+}
 
 @Composable
 fun ElectiveCourseItem(course: ElectiveCourseInfo, modifier: Modifier = Modifier) {
@@ -279,4 +306,57 @@ fun DetailText(text: String) {
         style = MiuixTheme.textStyles.body2,
         color = MiuixTheme.colorScheme.onSecondaryVariant
     )
+}
+@Composable
+fun ErrorView(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth() // 填充宽度
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "加载错误",
+            style = MiuixTheme.textStyles.title1, // 替换为你的样式
+            color = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = message,
+            textAlign = TextAlign.Center,
+            style = MiuixTheme.textStyles.paragraph, // 替换为你的样式
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("重试")
+        }
+    }
+}
+
+/**
+ * 可组合项：显示无数据状态
+ */
+@Composable
+fun NoDataView(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            style = MiuixTheme.textStyles.body2, // 替换为你的样式
+            color = MiuixTheme.colorScheme.onSecondaryVariant // 替换为你的颜色
+        )
+    }
 }

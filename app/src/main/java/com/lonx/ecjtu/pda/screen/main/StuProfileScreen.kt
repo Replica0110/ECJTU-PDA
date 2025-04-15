@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,12 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.service.StuProfileService
+import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuProfileViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -45,18 +42,18 @@ fun StuProfileScreen(
     topLevelNavController : NavHostController,
     padding: PaddingValues,
 //    scrollBehavior: UpdatableScrollBehavior,
-    stuProfileViewModel: StuProfileViewModel = koinViewModel()
+    viewModel: StuProfileViewModel = koinViewModel()
 ) {
-    val uiState by stuProfileViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
-        if (uiState.profileData == null && !uiState.isLoading && uiState.error == null) {
-            stuProfileViewModel.loadProfile()
+        if (uiState is UiState.Empty && uiState !is UiState.Loading) {
+            viewModel.load()
         }
     }
-    LaunchedEffect(uiState.isLoading, pullToRefreshState.isRefreshing) {
-        if (!uiState.isLoading && pullToRefreshState.isRefreshing) {
+    LaunchedEffect(uiState, pullToRefreshState.isRefreshing) {
+        if (uiState !is UiState.Loading && pullToRefreshState.isRefreshing) {
             pullToRefreshState.completeRefreshing(
                 block = {  }
             )
@@ -64,10 +61,6 @@ fun StuProfileScreen(
         }
     }
 
-//    val nestedScrollConnection = rememberAppBarNestedScrollConnection(
-//        scrollBehavior = scrollBehavior,
-//        pullToRefreshState = pullToRefreshState
-//    )
 
     PullToRefresh(
         modifier = Modifier
@@ -81,7 +74,7 @@ fun StuProfileScreen(
             "刷新结束"
         ),
         onRefresh = {
-            stuProfileViewModel.loadProfile()
+            viewModel.load()
         }
     ) {
         LazyColumn(
@@ -91,8 +84,8 @@ fun StuProfileScreen(
 
         ) {
 
-            when {
-                uiState.isLoading -> {
+            when (val state = uiState) {
+                is UiState.Loading -> {
                     item {
                         Box(
                             modifier = Modifier
@@ -115,39 +108,39 @@ fun StuProfileScreen(
                     }
                 }
 
-                uiState.error != null -> {
+                is UiState.Error -> {
+                    val message = (uiState as UiState.Error).message
                     item {
                         Column(
                             modifier = Modifier
-                                .fillParentMaxWidth()
-                                .padding(vertical = 32.dp, horizontal = 16.dp),
+                                .fillMaxSize()
+                                .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = "错误",
-                                tint = MiuixTheme.colorScheme.primary, // Use theme color
-                                modifier = Modifier.size(40.dp)
+                            Text(
+                                text = "错误",
+                                style = MiuixTheme.textStyles.paragraph,
+                                color = MiuixTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = message,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.error
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = uiState.error!!,
-                                color = MiuixTheme.colorScheme.primary,
-                                style = MiuixTheme.textStyles.main,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(24.dp).width(60.dp))
-                            Button(onClick = { stuProfileViewModel.retryLoadProfile() }) {
+                            Button(onClick = { viewModel.retry() }) {
                                 Text("重试")
                             }
                         }
                     }
                 }
 
-                uiState.profileData != null -> {
+                is UiState.Success -> {
+                    val data = (uiState as UiState.Success).data
                     item{
-                        StuProfileCard(uiState.profileData!!)
+                        StuProfileCard(data)
 
 
                     }
