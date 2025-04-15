@@ -1,6 +1,5 @@
 package com.lonx.ecjtu.pda.data
 
-import android.util.Log
 import com.lonx.ecjtu.pda.state.UiState
 import timber.log.Timber
 

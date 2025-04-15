@@ -4,6 +4,11 @@ import android.os.Parcelable
 import com.lonx.ecjtu.pda.base.BaseService
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.TermInfo
+import com.lonx.ecjtu.pda.data.getOrNull
+import com.lonx.ecjtu.pda.data.map
+import com.lonx.ecjtu.pda.data.mapCatching
+import com.lonx.ecjtu.pda.data.onError
+import com.lonx.ecjtu.pda.data.onSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -51,56 +56,36 @@ class StuElectiveService(
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
     suspend fun getElectiveCourses(): ServiceResult<StudentElectiveCourses> = withContext(Dispatchers.IO) {
-        try {
-            val initialHtmlResult = service.getElectiveCourseHtml(term = null)
-            val initialHtml: String
+        return@withContext try {
+            service.getElectiveCourseHtml(term = null)
+                .onError { msg, e -> Timber.e(e, "获取初始选课页失败: $msg") }
+                .map { Jsoup.parse(it) }
 
-            when (initialHtmlResult) {
-                is ServiceResult.Success -> initialHtml = initialHtmlResult.data
-                is ServiceResult.Error -> return@withContext initialHtmlResult
-            }
-
-            val initialDocument = Jsoup.parse(initialHtml)
-
-            val semesters = parseSemesters(initialDocument)
-            if (semesters.isEmpty()) {
-                return@withContext ServiceResult.Success(StudentElectiveCourses(emptyList()))
-
-            }
-
-
-            val deferredSemesterCourses = semesters.map { semester ->
-                async {
-                    try {
-                        when (val semesterHtmlResult = service.getElectiveCourseHtml(term = semester.value)) {
-                            is ServiceResult.Success -> {
-                                val semesterDocument = Jsoup.parse(semesterHtmlResult.data)
-                                val courses = parseCoursesForTerm(semesterDocument, semester.value)
-                                SemesterCourses(semester, courses)
-                            }
-                            is ServiceResult.Error -> {
-                                Timber.e("Failed to fetch courses for semester ${semester.value}: ${semesterHtmlResult.exception}")
-                                null
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Timber.e("Error processing semester ${semester.value}: ${e.message}")
-                        null
+                .mapCatching { parseSemesters(it) }
+                .mapCatching { semesters ->
+                    if (semesters.isEmpty()) {
+                        return@withContext ServiceResult.Success(StudentElectiveCourses(emptyList()))
                     }
+                    val deferredSemesterCourses = semesters.map { semester ->
+                        async {
+                            service.getElectiveCourseHtml(term = semester.value)
+                                .onError { msg, e ->
+                                    Timber.e(e, "获取学期 ${semester.value} 的选课数据失败: $msg")
+                                }
+                                .map { Jsoup.parse(it) }
+                                .mapCatching { parseCoursesForTerm(it, semester.value) }
+                                .getOrNull()
+                                ?.let { SemesterCourses(semester, it) }
+                        }
+                    }
+
+                    val semesterCourses = deferredSemesterCourses.awaitAll().filterNotNull()
+                    StudentElectiveCourses(semesterCourses)
                 }
-            }
-
-            val allSemesterCoursesResults = deferredSemesterCourses.awaitAll()
-
-            val successfulSemesterCourses = allSemesterCoursesResults.filterNotNull()
-
-            val studentElectiveCourses = StudentElectiveCourses(successfulSemesterCourses)
-            ServiceResult.Success(studentElectiveCourses)
-
         } catch (e: IOException) {
-            ServiceResult.Error("Failed to get elective courses: ${e.message}", e)
+            ServiceResult.Error("网络错误: ${e.message}", e)
         } catch (e: Exception) {
-            ServiceResult.Error("An unexpected error occurred: ${e.message}", e)
+            ServiceResult.Error("未知错误: ${e.message}", e)
         }
     }
 

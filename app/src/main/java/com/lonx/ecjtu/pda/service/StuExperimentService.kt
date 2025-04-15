@@ -3,11 +3,18 @@ package com.lonx.ecjtu.pda.service
 import android.os.Parcelable
 import com.lonx.ecjtu.pda.base.BaseService
 import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.utils.PreferencesManager
+import com.lonx.ecjtu.pda.data.getOrNull
+import com.lonx.ecjtu.pda.data.map
+import com.lonx.ecjtu.pda.data.mapCatching
+import com.lonx.ecjtu.pda.data.onError
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import timber.log.Timber
 import java.io.IOException
 
 @Parcelize
@@ -36,44 +43,22 @@ class StuExperimentService(
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
     suspend fun getExperiments(): ServiceResult<List<ExperimentData>> = withContext(Dispatchers.IO) {
         try {
-            // Step 1: 获取默认学期（无 term 参数）
-            val initialResult = service.getExperimentHtml()
-            if (initialResult !is ServiceResult.Success) {
-                return@withContext ServiceResult.Error("获取默认实验页面失败")
-            }
+            val experimentDataList = mutableListOf<ExperimentData>()
 
-            val initialDoc = Jsoup.parse(initialResult.data)
+            val initialDocResult = service.getExperimentsHtml()
+                .onError { msg, e -> Timber.e(e, "获取默认实验页面失败: $msg") }
+                .map { Jsoup.parse(it) }
 
-            // 提取默认选中的学期
+            val initialDoc = initialDocResult.getOrNull() ?: return@withContext ServiceResult.Error("获取默认实验页面失败")
+
+            // 提取默认学期
             val defaultOption = initialDoc.selectFirst("select#term > option[selected]")
             val defaultTerm = defaultOption?.attr("value") ?: ""
             val defaultTermName = defaultOption?.text() ?: ""
 
-            // 解析默认学期的实验数据
-            val defaultRows = initialDoc.select("table.table_border tr").drop(1)
-            val isDefaultNoData = defaultRows.any { it.text().contains("对不起!") }
+            val defaultExperiments = parseExperimentRows(initialDoc)
 
-            val defaultExperiments = if (isDefaultNoData) {
-                emptyList()
-            } else {
-                defaultRows.mapNotNull { row ->
-                    val cells = row.select("td")
-                    if (cells.size < 9) return@mapNotNull null
-
-                    ExperimentInfo(
-                        courseName = cells[1].text(),
-                        courseType = cells[2].text(),
-                        experimentName = cells[3].text(),
-                        experimentType = cells[4].text(),
-                        batch = cells[5].text(),
-                        time = cells[6].text(),
-                        location = cells[7].text(),
-                        teacher = cells[8].text()
-                    )
-                }
-            }
-
-            val experimentDataList = mutableListOf(
+            experimentDataList.add(
                 ExperimentData(
                     term = defaultTerm,
                     termName = defaultTermName,
@@ -81,56 +66,58 @@ class StuExperimentService(
                 )
             )
 
-            // Step 2: 获取其余所有学期选项（跳过默认学期）
-            val termOptions = initialDoc.select("select#term > option")
-            val otherTerms = termOptions.toList()
+            // 解析其余学期
+            val otherTerms = initialDoc.select("select#term > option")
+                .toList()
                 .filter { it.attr("value") != defaultTerm }
 
-            for (option in otherTerms) {
-                val termValue = option.attr("value")
-                val termName = option.text()
+            val deferredTerms = otherTerms.map { option ->
+                async {
+                    val termValue = option.attr("value")
+                    val termName = option.text()
 
-                val termResult = service.getExperimentHtml(term = termValue)
-                if (termResult !is ServiceResult.Success) continue
-
-                val termDoc = Jsoup.parse(termResult.data)
-                val rows = termDoc.select("table.table_border tr").drop(1)
-
-                val isNoData = rows.any { it.text().contains("对不起!没有当前学期的实验数据") }
-                val experiments = if (isNoData) {
-                    emptyList()
-                } else {
-                    rows.mapNotNull { row ->
-                        val cells = row.select("td")
-                        if (cells.size < 9) return@mapNotNull null
-
-                        ExperimentInfo(
-                            courseName = cells[1].text(),
-                            courseType = cells[2].text(),
-                            experimentName = cells[3].text(),
-                            experimentType = cells[4].text(),
-                            batch = cells[5].text(),
-                            time = cells[6].text(),
-                            location = cells[7].text(),
-                            teacher = cells[8].text()
-                        )
-                    }
+                    service.getExperimentsHtml(term = termValue)
+                        .map { Jsoup.parse(it) }
+                        .mapCatching { doc ->
+                            ExperimentData(
+                                term = termValue,
+                                termName = termName,
+                                experiments = parseExperimentRows(doc)
+                            )
+                        }
+                        .getOrNull()
                 }
-
-                experimentDataList.add(
-                    ExperimentData(
-                        term = termValue,
-                        termName = termName,
-                        experiments = experiments
-                    )
-                )
             }
+
+            val additionalData = deferredTerms.awaitAll().filterNotNull()
+            experimentDataList.addAll(additionalData)
 
             ServiceResult.Success(experimentDataList)
         } catch (e: Exception) {
             ServiceResult.Error("解析实验数据失败", e)
         }
     }
+    private fun parseExperimentRows(doc: Document): List<ExperimentInfo> {
+        val rows = doc.select("table.table_border tr").drop(1)
+        if (rows.any { it.text().contains("对不起") }) return emptyList()
+
+        return rows.mapNotNull { row ->
+            val cells = row.select("td")
+            if (cells.size < 9) return@mapNotNull null
+
+            ExperimentInfo(
+                courseName = cells[1].text(),
+                courseType = cells[2].text(),
+                experimentName = cells[3].text(),
+                experimentType = cells[4].text(),
+                batch = cells[5].text(),
+                time = cells[6].text(),
+                location = cells[7].text(),
+                teacher = cells[8].text()
+            )
+        }
+    }
+
 
 
 }

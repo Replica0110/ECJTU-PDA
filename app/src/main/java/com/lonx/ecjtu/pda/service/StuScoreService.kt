@@ -6,6 +6,8 @@ import com.lonx.ecjtu.pda.data.RequirementCredits
 import com.lonx.ecjtu.pda.data.ScoreSummary
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.StudentScoresData
+import com.lonx.ecjtu.pda.data.getOrNull
+import com.lonx.ecjtu.pda.data.onError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -21,46 +23,46 @@ class StuScoreService(
 
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
-    suspend fun getStudentScores(): ServiceResult<StudentScoresData> = withContext(
-        Dispatchers.IO) {
+    suspend fun getStudentScores(): ServiceResult<StudentScoresData> = withContext(Dispatchers.IO) {
         Timber.d("StuScoreService: 开始获取并解析成绩数据...")
 
-        when (val htmlResult = service.getStudentScoresHtml()) {
-            is ServiceResult.Success -> {
-                val htmlBody = htmlResult.data
-                if (htmlBody.isBlank()) {
-                    Timber.e("StuScoreService: 获取成绩 HTML 成功，但内容为空。")
-                    return@withContext ServiceResult.Error("成绩页面内容为空")
-                }
+        val htmlBody = service.getStudentScoresHtml()
+            .onError { msg, _ -> Timber.e("StuScoreService: 获取成绩 HTML 失败: $msg") }
+            .getOrNull() ?: return@withContext ServiceResult.Error("获取成绩页面失败")
 
-                try {
-                    Timber.d("StuScoreService: HTML 获取成功，开始解析成绩数据...")
-                    val document = Jsoup.parse(htmlBody)
+        if (htmlBody.isBlank()) {
+            Timber.e("StuScoreService: HTML 内容为空")
+            return@withContext ServiceResult.Error("成绩页面内容为空")
+        }
 
-                    val summary = parseScoreSummaryTable(document)
+        return@withContext try {
+            Timber.d("StuScoreService: HTML 获取成功，开始解析成绩数据...")
+            val document = Jsoup.parse(htmlBody)
 
-                    val detailedScores = parseDetailedScores(document)
+            val summary = parseScoreSummaryTable(document)
+            val detailedScores = parseDetailedScores(document)
 
-                    val scoreData = StudentScoresData(summary, detailedScores)
-                    Timber.i("StuScoreService: 成绩数据解析成功。摘要类别数: ${summary.javaClass.declaredFields.count { it.type == RequirementCredits::class.java || it.name.startsWith("gpa") || it.name.startsWith("academicWarning") }}, 详细成绩条目数: ${detailedScores.size}")
-                    return@withContext ServiceResult.Success(scoreData)
+            val scoreData = StudentScoresData(summary, detailedScores)
 
-                } catch (e: ParseException) {
-                    Timber.e(e, "StuScoreService: 解析成绩 HTML 时出错: ${e.message}")
-                    Timber.v("StuScoreService: 解析失败的 HTML (前 1000 字符):\n${htmlBody.take(1000)}")
-                    return@withContext ServiceResult.Error("解析成绩数据失败: ${e.message}", e)
-                } catch (e: Exception) {
-                    Timber.e(e, "StuScoreService: 解析成绩数据时发生意外错误")
-                    Timber.v("StuScoreService: 解析失败的 HTML (前 1000 字符):\n${htmlBody.take(1000)}")
-                    return@withContext ServiceResult.Error("解析成绩数据时发生未知错误: ${e.message}", e)
-                }
-            }
-            is ServiceResult.Error -> {
-                Timber.e("StuScoreService: 获取成绩 HTML 失败: ${htmlResult.message}")
-                return@withContext ServiceResult.Error("获取成绩页面失败: ${htmlResult.message}")
-            }
+            Timber.i(
+                "StuScoreService: 成绩数据解析成功。" +
+                        "摘要字段数: ${summary.javaClass.declaredFields.count { it.type == RequirementCredits::class.java || it.name.startsWith("gpa") || it.name.startsWith("academicWarning") }}，" +
+                        "详细成绩条目数: ${detailedScores.size}"
+            )
+
+            ServiceResult.Success(scoreData)
+
+        } catch (e: ParseException) {
+            Timber.e(e, "StuScoreService: 解析成绩数据失败: ${e.message}")
+            Timber.v("HTML 内容片段:\n${htmlBody.take(1000)}")
+            ServiceResult.Error("解析成绩数据失败: ${e.message}", e)
+        } catch (e: Exception) {
+            Timber.e(e, "StuScoreService: 解析成绩数据时发生未知错误")
+            Timber.v("HTML 内容片段:\n${htmlBody.take(1000)}")
+            ServiceResult.Error("解析成绩数据时发生未知错误: ${e.message}", e)
         }
     }
+
 
 
     /**

@@ -3,6 +3,8 @@ package com.lonx.ecjtu.pda.service
 import com.google.gson.annotations.SerializedName
 import com.lonx.ecjtu.pda.base.BaseService
 import com.lonx.ecjtu.pda.data.ServiceResult
+import com.lonx.ecjtu.pda.data.getOrNull
+import com.lonx.ecjtu.pda.data.onError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -56,42 +58,38 @@ class StuSecondCreditService(
     private val yearPattern: Pattern = Pattern.compile("(\\d{4})\\s+学年学分记录")
 
     suspend fun getSecondCredit(): ServiceResult<SecondCreditData> = withContext(Dispatchers.IO) {
-        Timber.d("开始获取并解析素质拓展学分数据...")
+        Timber.d("StuSecondCreditService: 开始获取并解析素质拓展学分数据...")
 
-        when (val htmlResult = service.getSecondCreditHtml()) {
-            is ServiceResult.Success -> {
-                val htmlBody = htmlResult.data
-                if (htmlBody.isBlank()) {
-                    Timber.e(" 获取素质拓展 HTML 成功，但内容为空。")
-                    return@withContext ServiceResult.Error("素质拓展学分页面内容为空")
-                }
+        val htmlBody = service.getSecondCreditHtml()
+            .onError { msg, _ -> Timber.e("StuSecondCreditService: 获取 HTML 失败: $msg") }
+            .getOrNull() ?: return@withContext ServiceResult.Error("获取素质拓展学分页面失败")
 
-                try {
-                    Timber.d("HTML 获取成功，开始解析...")
-                    val document = Jsoup.parse(htmlBody)
-                    val dataContainer = document.selectFirst("div#data-center")
-                        ?: throw ParseException("无法找到主数据容器 (div#data-center)")
+        if (htmlBody.isBlank()) {
+            Timber.e("StuSecondCreditService: HTML 内容为空")
+            return@withContext ServiceResult.Error("素质拓展学分页面内容为空")
+        }
 
-                    val parsedData = parseTables(dataContainer)
-                    Timber.i("素质拓展学分数据解析成功。总类别数: ${parsedData.totalCreditsByCategory.size}, 学年记录数: ${parsedData.yearlyCredits.size}")
-                    return@withContext ServiceResult.Success(parsedData)
+        return@withContext try {
+            Timber.d("StuSecondCreditService: HTML 获取成功，开始解析...")
+            val document = Jsoup.parse(htmlBody)
+            val dataContainer = document.selectFirst("div#data-center")
+                ?: throw ParseException("无法找到主数据容器 (div#data-center)")
 
-                } catch (e: ParseException) {
-                    Timber.e(e, "解析素质拓展 HTML 时出错: ${e.message}")
-                    Timber.v("解析失败的 HTML (前 1000 字符):\n${htmlBody.take(1000)}")
-                    return@withContext ServiceResult.Error("解析素质拓展学分数据失败: ${e.message}", e)
-                } catch (e: Exception) {
-                    Timber.e(e, "解析素质拓展数据时发生意外错误")
-                    Timber.v("解析失败的 HTML (前 1000 字符):\n${htmlBody.take(1000)}")
-                    return@withContext ServiceResult.Error("解析素质拓展学分数据时发生未知错误: ${e.message}", e)
-                }
-            }
-            is ServiceResult.Error -> {
-                Timber.e("获取素质拓展 HTML 失败: ${htmlResult.message}")
-                return@withContext ServiceResult.Error("获取素质拓展学分页面失败: ${htmlResult.message}")
-            }
+            val parsedData = parseTables(dataContainer)
+            Timber.i("StuSecondCreditService: 数据解析成功。总类别数: ${parsedData.totalCreditsByCategory.size}，学年记录数: ${parsedData.yearlyCredits.size}")
+            ServiceResult.Success(parsedData)
+
+        } catch (e: ParseException) {
+            Timber.e(e, "StuSecondCreditService: 解析失败: ${e.message}")
+            Timber.v("失败 HTML 片段:\n${htmlBody.take(1000)}")
+            ServiceResult.Error("解析素质拓展学分失败: ${e.message}", e)
+        } catch (e: Exception) {
+            Timber.e(e, "StuSecondCreditService: 发生未知错误")
+            Timber.v("失败 HTML 片段:\n${htmlBody.take(1000)}")
+            ServiceResult.Error("解析素质拓展学分时发生未知错误: ${e.message}", e)
         }
     }
+
 
 
 

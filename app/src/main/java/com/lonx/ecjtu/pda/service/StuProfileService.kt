@@ -2,6 +2,8 @@ package com.lonx.ecjtu.pda.service // Or your appropriate package
 
 import com.lonx.ecjtu.pda.base.BaseService
 import com.lonx.ecjtu.pda.data.ServiceResult
+import com.lonx.ecjtu.pda.data.getOrNull
+import com.lonx.ecjtu.pda.data.onError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.IOException
@@ -24,69 +26,56 @@ class StuProfileService(
     suspend fun getStudentProfile(): ServiceResult<Map<String, Map<String, String>>> = withContext(Dispatchers.IO) {
         Timber.d("StuInfoService: 开始获取并解析学生信息 (按类别)...")
 
-        when (val htmlResult = service.getStudentInfoHtml()) {
-            is ServiceResult.Success -> {
-                val htmlBody = htmlResult.data
-                if (htmlBody.isBlank()) {
-                    Timber.e("StuInfoService: 获取学生信息 HTML 成功，但内容为空。")
-                    return@withContext ServiceResult.Error("学生信息页面内容为空")
+        val htmlBody = service.getProfileHtml()
+            .onError { msg, _ -> Timber.e("StuInfoService: 获取学生信息 HTML 失败: $msg") }
+            .getOrNull() ?: return@withContext ServiceResult.Error("获取学生信息页面失败")
+
+        if (htmlBody.isBlank()) {
+            Timber.e("StuInfoService: HTML 内容为空")
+            return@withContext ServiceResult.Error("学生信息页面内容为空")
+        }
+
+        return@withContext try {
+            Timber.d("StuInfoService: HTML 获取成功，开始按类别解析学生信息...")
+
+            val document = Jsoup.parse(htmlBody)
+            val categorizedDataMap = mutableMapOf<String, Map<String, String>>()
+
+            // 基本信息
+            parseStuInfo(document, "div#basic table.table_border", "k", "v")
+                .takeIf { it.isNotEmpty() }
+                ?.also {
+                    categorizedDataMap[CATEGORY_BASIC_INFO] = it
+                    Timber.d("StuInfoService: 解析到 ${it.size} 条 '$CATEGORY_BASIC_INFO'。")
                 }
 
-                try {
-                    Timber.d("StuInfoService: HTML 获取成功，开始按类别解析学生信息...")
-                    val document = Jsoup.parse(htmlBody)
-                    val categorizedDataMap = mutableMapOf<String, Map<String, String>>()
-
-                    val basicInfoMap = parseStuInfo(
-                        document = document,
-                        tableSelector = "div#basic table.table_border",
-                        keyCssClass = "k",
-                        valueCssClass = "v"
-                    )
-                    if (basicInfoMap.isNotEmpty()) {
-                        categorizedDataMap[CATEGORY_BASIC_INFO] = basicInfoMap
-                        Timber.d("StuInfoService: 解析到 ${basicInfoMap.size} 条 '$CATEGORY_BASIC_INFO'。")
-                    } else {
-                        Timber.w("StuInfoService: 未能解析到 '$CATEGORY_BASIC_INFO'。")
-                    }
-
-                    val contactInfoMap = parseStuInfo(
-                        document = document,
-                        tableSelector = "table#view_basic",
-                        keyCssClass = "k_l",
-                        valueCssClass = "v_l"
-                    )
-                    if (contactInfoMap.isNotEmpty()) {
-                        categorizedDataMap[CATEGORY_CONTACT_INFO] = contactInfoMap
-                        Timber.d("StuInfoService: 解析到 ${contactInfoMap.size} 条 '$CATEGORY_CONTACT_INFO'。")
-                    } else {
-                        Timber.w("StuInfoService: 未能解析到 '$CATEGORY_CONTACT_INFO'。")
-                    }
-
-                    if (categorizedDataMap.isEmpty()) {
-                        Timber.w("StuInfoService: 未能从页面解析出任何分类的学生信息。")
-                    } else {
-                        Timber.i("StuInfoService: 学生信息按类别解析成功，找到 ${categorizedDataMap.size} 个类别。")
-                    }
-
-                    return@withContext ServiceResult.Success(categorizedDataMap)
-
-                } catch (e: ParseException) {
-                    Timber.e(e, "StuInfoService: 按类别解析学生信息 HTML 时出错: ${e.message}")
-                    Timber.v("StuInfoService: 解析失败的 HTML (前 1000 字符):\n${htmlBody.take(1000)}")
-                    return@withContext ServiceResult.Error("解析学生信息失败: ${e.message}", e)
-                } catch (e: Exception) {
-                    Timber.e(e, "StuInfoService: 按类别解析学生信息时发生意外错误")
-                    Timber.v("StuInfoService: 解析失败的 HTML (前 1000 字符):\n${htmlBody.take(1000)}")
-                    return@withContext ServiceResult.Error("解析学生信息时发生未知错误: ${e.message}", e)
+            // 联系信息
+            parseStuInfo(document, "table#view_basic", "k_l", "v_l")
+                .takeIf { it.isNotEmpty() }
+                ?.also {
+                    categorizedDataMap[CATEGORY_CONTACT_INFO] = it
+                    Timber.d("StuInfoService: 解析到 ${it.size} 条 '$CATEGORY_CONTACT_INFO'。")
                 }
+
+            if (categorizedDataMap.isEmpty()) {
+                Timber.w("StuInfoService: 页面未能解析出任何分类的学生信息。")
+            } else {
+                Timber.i("StuInfoService: 成功解析 ${categorizedDataMap.size} 个信息分类。")
             }
-            is ServiceResult.Error -> {
-                Timber.e("StuInfoService: 获取学生信息 HTML 失败: ${htmlResult.message}")
-                return@withContext ServiceResult.Error("获取学生信息页面失败: ${htmlResult.message}")
-            }
+
+            ServiceResult.Success(categorizedDataMap)
+
+        } catch (e: ParseException) {
+            Timber.e(e, "解析学生信息失败: ${e.message}")
+            Timber.v("HTML内容片段:\n${htmlBody.take(1000)}")
+            ServiceResult.Error("解析学生信息失败: ${e.message}", e)
+        } catch (e: Exception) {
+            Timber.e(e, "解析学生信息时发生未知错误")
+            Timber.v("HTML内容片段:\n${htmlBody.take(1000)}")
+            ServiceResult.Error("解析学生信息发生未知错误: ${e.message}", e)
         }
     }
+
 
     private fun parseStuInfo(
         document: Document,

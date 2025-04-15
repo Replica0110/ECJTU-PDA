@@ -773,17 +773,6 @@ class JwxtService(
     }
 
 
-    /** 用于更安全的 Gson JSON 解析的辅助扩展函数*/
-    private fun JsonObject.getStringOrNull(key: String): String? {
-        return try {
-            // 检查是否存在该键，且不为 JsonNull，然后获取其字符串值
-            this.get(key)?.takeIf { !it.isJsonNull }?.asString
-        } catch (e: Exception) { // 处理 ClassCastException, IllegalStateException 等
-            Timber.w("从 JsonObject 获取字符串 '$key' 失败: ${e.message}")
-            null // 出错或找不到则返回 null
-        }
-    }
-
     private suspend fun ensureLoggedInIfNeeded(attempt: Int): Boolean {
         if (!hasLogin(1) && attempt == 1) {
             Timber.d("用户未登录，尝试自动登录")
@@ -923,7 +912,7 @@ class JwxtService(
      * @param [attempt] 当前尝试次数 (用于内部重试逻辑).
      * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
      */
-    suspend fun getStudentInfoHtml(attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
+    suspend fun getProfileHtml(attempt: Int = 1): ServiceResult<String> = withContext(Dispatchers.IO) {
 
         val url = ApiConstants.GET_STU_INFO_URL.toHttpUrlOrNull()
             ?: return@withContext ServiceResult.Error("无效的学生信息URL配置: ${ApiConstants.GET_STU_INFO_URL}")
@@ -932,7 +921,7 @@ class JwxtService(
             attempt = attempt,
             url = url,
             referer = "$JWXT_ECJTU_DOMAIN/index.action",
-            retry = ::getStudentInfoHtml
+            retry = ::getProfileHtml
         )
     }
 
@@ -1025,7 +1014,7 @@ class JwxtService(
      * @param [attempt] 当前尝试次数 (用于内部重试逻辑).
      * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
      * */
-    suspend fun getExperimentHtml(attempt: Int = 1, term: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
+    suspend fun getExperimentsHtml(attempt: Int = 1, term: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
         val url = ApiConstants.GET_EXPERIMENT.toHttpUrlOrNull()
             ?: return@withContext ServiceResult.Error("无效的实验安排URL配置: ${ApiConstants.GET_EXPERIMENT}")
         return@withContext fetchHtml(
@@ -1033,7 +1022,7 @@ class JwxtService(
             url = url,
             params = if (term.isNullOrBlank()) null else mapOf("term" to term),
             referer = "$JWXT_ECJTU_DOMAIN/index.action",
-            retry = ::getExperimentHtml
+            retry = ::getExperimentsHtml
         )
     }
 }
