@@ -1,7 +1,7 @@
 package com.lonx.ecjtu.pda.service
 
 import com.lonx.ecjtu.pda.base.BaseService
-import com.lonx.ecjtu.pda.data.FullScheduleResult
+import com.lonx.ecjtu.pda.data.TermSchedules
 import com.lonx.ecjtu.pda.data.ServiceResult
 import com.lonx.ecjtu.pda.data.StuCourse
 import com.lonx.ecjtu.pda.data.TermInfo
@@ -26,10 +26,10 @@ class StuScheduleService(
      *         如果任何学期的获取或解析失败，它们将被跳过，但操作本身可能仍返回 Success (如果至少有一个成功)。
      *         如果初始获取学期列表失败，或所有学期都获取/解析失败，则返回 Error。
      */
-    suspend fun getAllSchedules(): ServiceResult<List<FullScheduleResult>> = withContext(Dispatchers.IO) {
-        val allSuccessfullyParsedSchedules = mutableListOf<FullScheduleResult>()
+    suspend fun getAllSchedules(): ServiceResult<List<TermSchedules>> = withContext(Dispatchers.IO) {
+        val allSuccessfullyParsedSchedules = mutableListOf<TermSchedules>()
         val failedTermDetails = mutableListOf<Pair<String, String>>()
-
+        Timber.e("Fetching all schedules...")
         try {
             val initialHtmlResult = service.getScheduleHtml(term = null)
             val initialDoc: Document
@@ -145,7 +145,7 @@ class StuScheduleService(
      * @throws ParseException if essential elements (term select, table) are missing or parsing fails.
      */
     @Throws(ParseException::class)
-    private fun parseScheduleFromDoc(doc: Document, expectedTermValue: String? = null): FullScheduleResult {
+    private fun parseScheduleFromDoc(doc: Document, expectedTermValue: String? = null): TermSchedules {
         // 1. Parse Term Info from the document
         val termSelect = doc.selectFirst("select#term")
             ?: throw ParseException("Could not find term select element in schedule document.")
@@ -285,7 +285,7 @@ class StuScheduleService(
                 } // end while loop for lines in cell
             } // end for loop days
         }
-        return FullScheduleResult(
+        return TermSchedules(
             termValue = actualTermValue,
             termName = actualTermName,
             courses = parsedCourses

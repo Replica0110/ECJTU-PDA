@@ -1,8 +1,8 @@
 package com.lonx.ecjtu.pda.screen.jwxt
 
-import androidx.compose.foundation.BorderStroke
+//import androidx.compose.material3.HorizontalDivider
+//import androidx.compose.material3.VerticalDivider
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-//import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -34,7 +33,6 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-//import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,41 +52,43 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.FullScheduleResult
 import com.lonx.ecjtu.pda.data.StuCourse
+import com.lonx.ecjtu.pda.data.TermSchedules
 import com.lonx.ecjtu.pda.data.WeekDay
+import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuScheduleViewModel
 import org.koin.androidx.compose.koinViewModel
-import timber.log.Timber
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import kotlin.math.absoluteValue
 
 @Composable
 fun StuSchedulesScreen(
     onBack: () -> Unit,
-    viewModel:StuScheduleViewModel = koinViewModel()
+    viewModel: StuScheduleViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        if (uiState.schedulesData == null && !uiState.isLoading){
-            viewModel.loadSchedules()
+        if (uiState is UiState.Empty && uiState !is UiState.Loading) {
+            viewModel.load()
         }
     }
-    LazyColumn(modifier = Modifier.fillMaxSize(),
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        when {
-            uiState.isLoading -> {
+        when (val state = uiState) {
+            is UiState.Loading -> {
                 item {
-                    Box(modifier = Modifier
-                        .fillParentMaxSize()
-                        .padding(horizontal = 16.dp),
+                    Box(
+                        modifier = Modifier
+                            .fillParentMaxSize()
+                            .padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
@@ -105,15 +105,14 @@ fun StuSchedulesScreen(
                 }
             }
 
-            uiState.schedulesData != null -> {
-                item{
-                    StuSchedulesContent(
-                        schedules = uiState.schedulesData!!
-                    )
+            is UiState.Success -> {
+                item {
+                    // 展示加载成功的数据
+                    StuSchedulesContent(schedules = state.data)
                 }
             }
 
-            uiState.error != null -> {
+            is UiState.Error -> {
                 item {
                     Column(
                         modifier = Modifier
@@ -129,68 +128,70 @@ fun StuSchedulesScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = uiState.error ?: "无法加载课表信息",
+                            text = state.message ?: "无法加载课表信息",
                             textAlign = TextAlign.Center,
                             style = MiuixTheme.textStyles.paragraph,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.retryLoadSchedules() }) {
+                        Button(onClick = { viewModel.retry() }) {
                             Text("重试")
                         }
                     }
                 }
             }
+            else -> {
+
+            }
         }
     }
 }
+
 @Composable
-fun StuSchedulesContent(schedules: List<FullScheduleResult>) {
+fun StuSchedulesContent(schedules: List<TermSchedules>) {
+    // 按学期对课表进行分组
     val grouped = schedules.groupBy { it.termValue }.toSortedMap(compareByDescending { it })
     val terms = grouped.keys.toList()
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
-
-        // 学期切换 Tab
+    // 学期切换 Tab
     ScrollableTabRow(
-            selectedTabIndex = selectedIndex,
-            edgePadding = 0.dp,
-            containerColor = MiuixTheme.colorScheme.surface,
-            contentColor = MiuixTheme.colorScheme.primary,
-            indicator = { tabPositions ->
-                if (selectedIndex < tabPositions.size) {
-                    SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                        height = 3.dp,
-                        color = MiuixTheme.colorScheme.primary
-                    )
-                }
+        selectedTabIndex = selectedIndex,
+        edgePadding = 0.dp,
+        containerColor = MiuixTheme.colorScheme.surface,
+        contentColor = MiuixTheme.colorScheme.primary,
+        indicator = { tabPositions ->
+            if (selectedIndex < tabPositions.size) {
+                SecondaryIndicator(
+                    Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
+                    height = 3.dp,
+                    color = MiuixTheme.colorScheme.primary
+                )
             }
-        ) {
-                terms.forEachIndexed { index, term ->
-                    Tab(
-                        selected = selectedIndex == index,
-                        onClick = { selectedIndex = index },
-                        text = {
-                            Text(
-                                text = term,
-                                fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
-                            )
-                        },
-                        selectedContentColor = MiuixTheme.colorScheme.primary,
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    ) {
+        terms.forEachIndexed { index, term ->
+            Tab(
+                selected = selectedIndex == index,
+                onClick = { selectedIndex = index },
+                text = {
+                    Text(
+                        text = term,
+                        fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
                     )
-
-                }
-
-
+                },
+                selectedContentColor = MiuixTheme.colorScheme.primary,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(8.dp))
 
+    // 根据所选学期过滤出对应的课表数据
     val schedulesInTerm = grouped[terms[selectedIndex]].orEmpty()
-    if ( schedulesInTerm.all { it.courses.isEmpty() }){
+    if (schedulesInTerm.all { it.courses.isEmpty() }) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -217,6 +218,7 @@ fun StuSchedulesContent(schedules: List<FullScheduleResult>) {
 }
 
 
+
 val timeSlots = listOf("1-2", "3-4", "5-6", "7-8", "9-10", "11-12")
 val weekDays = WeekDay.entries.toList()
 
@@ -224,7 +226,7 @@ const val MIN_CELL_HEIGHT = 80
 const val TIME_SLOT_WIDTH = 35
 
 @Composable
-fun ScheduleGrid(schedule: FullScheduleResult) {
+fun ScheduleGrid(schedule: TermSchedules) {
     val dayColumnWidth = 60.dp
     val coursesMap = rememberSaveable(schedule.courses) {
         schedule.courses.groupBy { Pair(it.day, it.timeSlot) }

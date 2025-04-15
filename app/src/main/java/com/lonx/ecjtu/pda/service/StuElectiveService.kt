@@ -32,7 +32,6 @@ data class ElectiveCourseInfo(
 ) : Parcelable
 
 
-// Groups courses by semester
 @Parcelize
 data class SemesterCourses(
     val term: TermInfo,
