@@ -1021,4 +1021,19 @@ class JwxtService(
             retry = ::getElectiveCourseHtml
         )
     }
+    /**获取各学期实验安排信息，返回包含学期信息和实验安排的原始 HTML 内容。
+     * @param [attempt] 当前尝试次数 (用于内部重试逻辑).
+     * @return [ServiceResult] 包含成功获取的 HTML 字符串或错误信息.
+     * */
+    suspend fun getExperimentHtml(attempt: Int = 1, term: String? = null): ServiceResult<String> = withContext(Dispatchers.IO) {
+        val url = ApiConstants.GET_EXPERIMENT.toHttpUrlOrNull()
+            ?: return@withContext ServiceResult.Error("无效的实验安排URL配置: ${ApiConstants.GET_EXPERIMENT}")
+        return@withContext fetchHtml(
+            attempt = attempt,
+            url = url,
+            params = if (term.isNullOrBlank()) null else mapOf("term" to term),
+            referer = "$JWXT_ECJTU_DOMAIN/index.action",
+            retry = ::getExperimentHtml
+        )
+    }
 }
