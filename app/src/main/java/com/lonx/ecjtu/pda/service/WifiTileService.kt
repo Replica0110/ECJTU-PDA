@@ -10,8 +10,8 @@ import androidx.core.app.NotificationCompat
 import com.lonx.ecjtu.pda.MainActivity
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.base.BaseService
-import com.lonx.ecjtu.pda.data.NetworkType
-import com.lonx.ecjtu.pda.utils.PreferencesManager
+import com.lonx.ecjtu.pda.common.NetworkType
+import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,7 +23,7 @@ class WifiTileService : TileService(),BaseService {
     private val service = WifiService()
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
-    private val prefs:PreferencesManager by inject<PreferencesManager>()
+    private val prefs: PreferencesManager by inject<PreferencesManager>()
     private companion object {
         const val CHANNEL_ID = "ecjtupad_channel"
         const val CHANNEL_NAME = "ECJTUPDAChannel"

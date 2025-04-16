@@ -12,16 +12,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.lonx.ecjtu.pda.data.TopLevelRoute
+import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
+import com.lonx.ecjtu.pda.navigation.TopLevelRoute
 import com.lonx.ecjtu.pda.screen.top.LoginScreen
 import com.lonx.ecjtu.pda.screen.top.MainScreen
 import com.lonx.ecjtu.pda.screen.top.SplashScreen
-import com.lonx.ecjtu.pda.utils.PreferencesManager
 import org.koin.android.ext.android.inject
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 class MainActivity : ComponentActivity() {
-    private val prefs:PreferencesManager by inject<PreferencesManager>()
+    private val prefs: PreferencesManager by inject<PreferencesManager>()
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

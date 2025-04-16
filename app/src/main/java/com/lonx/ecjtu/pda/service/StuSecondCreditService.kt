@@ -2,9 +2,9 @@ package com.lonx.ecjtu.pda.service
 
 import com.google.gson.annotations.SerializedName
 import com.lonx.ecjtu.pda.base.BaseService
-import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.getOrNull
-import com.lonx.ecjtu.pda.data.onError
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.getOrNull
+import com.lonx.ecjtu.pda.data.common.onError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup

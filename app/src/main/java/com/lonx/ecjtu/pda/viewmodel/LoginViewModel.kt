@@ -3,13 +3,11 @@ package com.lonx.ecjtu.pda.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
-import com.lonx.ecjtu.pda.base.BaseViewModel
-import com.lonx.ecjtu.pda.data.IspOption
-import com.lonx.ecjtu.pda.data.NavigationTarget
-import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.availableIsp
-import com.lonx.ecjtu.pda.service.JwxtService
-import com.lonx.ecjtu.pda.utils.PreferencesManager
+import com.lonx.ecjtu.pda.data.common.IspOption
+import com.lonx.ecjtu.pda.data.common.NavigationTarget
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.availableIsp
+import com.lonx.ecjtu.pda.domain.usecase.LoginManuallyUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,12 +26,11 @@ data class LoginUiState(
 ): BaseUiState
 
 class LoginViewModel(
-    override val service: JwxtService,
-    override val prefs: PreferencesManager
-) : ViewModel(), BaseViewModel {
+    private val loginManuallyUseCase: LoginManuallyUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
-    override val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     fun onStudentIdChange(id: String) { _uiState.update { it.copy(studentId = id) } }
     fun onPasswordChange(pass: String) { _uiState.update { it.copy(password = pass) } }
@@ -49,7 +46,7 @@ class LoginViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, navigationEvent = null) }
             try {
-                val result = service.loginManually(
+                val result = loginManuallyUseCase(
                     studentId = currentState.studentId.trim(),
                     studentPass = currentState.password,
                     ispOption = currentState.selectedIspId

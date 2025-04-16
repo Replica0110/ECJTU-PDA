@@ -1,22 +1,22 @@
 package com.lonx.ecjtu.pda.service
 
+import android.provider.Telephony.Carriers.PASSWORD
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.lonx.ecjtu.pda.base.BaseService
-import com.lonx.ecjtu.pda.data.ApiConstants
-import com.lonx.ecjtu.pda.data.ApiConstants.COOKIE_CASTGC
-import com.lonx.ecjtu.pda.data.ApiConstants.COOKIE_JSESSIONID
-import com.lonx.ecjtu.pda.data.ApiConstants.ECJTU_LOGIN_URL
-import com.lonx.ecjtu.pda.data.ApiConstants.GET_SCORE_URL
-import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_ECJTU_DOMAIN
-import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
-import com.lonx.ecjtu.pda.data.ApiConstants.JWXT_LOGIN_URL
-import com.lonx.ecjtu.pda.data.ApiConstants.PORTAL_ECJTU_DOMAIN
-import com.lonx.ecjtu.pda.data.PrefKeys.PASSWORD
-import com.lonx.ecjtu.pda.data.PrefKeys.STUDENT_ID
-import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.utils.PersistentCookieJar
-import com.lonx.ecjtu.pda.utils.PreferencesManager
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.local.cookies.PersistentCookieJar
+import com.lonx.ecjtu.pda.data.local.prefs.PrefKeys.STU_ID
+import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
+import com.lonx.ecjtu.pda.data.remote.ApiConstants
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.COOKIE_CASTGC
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.COOKIE_JSESSIONID
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.ECJTU_LOGIN_URL
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.GET_SCORE_URL
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.JWXT_ECJTU_DOMAIN
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.JWXT_LOGIN_PAGE_IDENTIFIER
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.JWXT_LOGIN_URL
+import com.lonx.ecjtu.pda.data.remote.ApiConstants.PORTAL_ECJTU_DOMAIN
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -139,8 +139,7 @@ class JwxtService(
             }
         }
 
-        // 6. 最终检查 (JWXT 会话 - JSESSIONID)
-        if (!hasLogin(1)) { // Type 1 for JSESSIONID
+        if (!hasLogin(1)) {
             Timber.w("CAS 登录序列完成，但 JWXT 会话 Cookie (JSESSIONID) 可能缺失。")
             return ServiceResult.Error("无法建立教务系统会话")
         }
@@ -155,7 +154,7 @@ class JwxtService(
      * @return [ServiceResult] 登录结果。
      */
     suspend fun login(forceRefresh: Boolean = false): ServiceResult<Unit> = withContext(Dispatchers.IO) {
-        val studentId = prefs.getString(STUDENT_ID, "")
+        val studentId = prefs.getString(STU_ID, "")
         val studentPassword = prefs.getString(PASSWORD, "")
         val sessionTimeOut = checkSession()
 
@@ -363,7 +362,6 @@ class JwxtService(
                 }
 
                 val responseBody = it.body?.string()?.trim()
-                // *** 注意：这里打印修改为了 Timber.d 或 Timber.i，因为原始文本不是错误 ***
                 Timber.i("修改密码响应原始文本: '$responseBody'")
 
                 if (responseBody.isNullOrBlank()) {

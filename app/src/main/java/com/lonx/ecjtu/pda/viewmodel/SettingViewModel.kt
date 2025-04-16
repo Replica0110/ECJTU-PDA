@@ -3,12 +3,15 @@ package com.lonx.ecjtu.pda.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
-import com.lonx.ecjtu.pda.base.BaseViewModel
-import com.lonx.ecjtu.pda.data.IspOption
-import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.availableIsp
-import com.lonx.ecjtu.pda.service.JwxtService
-import com.lonx.ecjtu.pda.utils.PreferencesManager
+import com.lonx.ecjtu.pda.data.common.IspOption
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.availableIsp
+import com.lonx.ecjtu.pda.domain.usecase.GetStuCredentialsUseCase
+import com.lonx.ecjtu.pda.domain.usecase.GetWeiXinIDUseCase
+import com.lonx.ecjtu.pda.domain.usecase.LogoutUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdatePasswordUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdateStuCredentialsUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdateWeiXinIDUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,12 +38,16 @@ data class SettingUiState(
 ): BaseUiState
 
 class SettingViewModel(
-    override val service: JwxtService, // 使用具体的 JwxtService 类型
-    override val prefs: PreferencesManager
-) : ViewModel(), BaseViewModel { // 确保实现了 BaseViewModel
+    private val updatePasswordUseCase: UpdatePasswordUseCase,
+    private val logoutUseCase: LogoutUseCase,
+    private val updateWeiXinIDUseCase: UpdateWeiXinIDUseCase,
+    private val getStuCredentialsUseCase: GetStuCredentialsUseCase,
+    private val getWeiXinIDUseCase: GetWeiXinIDUseCase,
+    private val updateStuCredentialsUseCase: UpdateStuCredentialsUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingUiState())
-    override val uiState: StateFlow<SettingUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<SettingUiState> = _uiState.asStateFlow()
 
     private val _uiEvent = MutableSharedFlow<SettingUiEvent>()
     val uiEvent = _uiEvent.asSharedFlow()
@@ -52,15 +59,15 @@ class SettingViewModel(
     private fun loadSettings() {
         viewModelScope.launch {
             _uiState.update { currentState ->
-                val credentials = prefs.getCredentials()
+                val credentials = getStuCredentialsUseCase()
                 val savedId = credentials.first
                 val savedPassword = credentials.second
                 val savedIspId = credentials.third
-                val savedWeiXinId = prefs.getWeiXinId() // 假设 prefs 有这个方法
+                val savedWeiXinId = getWeiXinIDUseCase()
                 val selectedIsp = availableIsp.find { it.id == savedIspId } ?: currentState.ispSelected
                 currentState.copy(
                     studentId = savedId,
-                    password = savedPassword, // 再次注意安全风险
+                    password = savedPassword,
                     ispSelected = selectedIsp,
                     weiXinId = savedWeiXinId
                 )
@@ -73,7 +80,7 @@ class SettingViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                prefs.saveCredentials(studentId, password, selectedIsp.id)
+                updateStuCredentialsUseCase(studentId, password, selectedIsp.id)
                 Timber.i("保存配置: ID=$studentId, Pass=***, ISP=${selectedIsp.name}")
 
                 _uiState.update {
@@ -84,7 +91,6 @@ class SettingViewModel(
                         isLoading = false
                     )
                 }
-                // 可以发一个成功提示
                 _uiEvent.emit(SettingUiEvent.ShowSnackbar("账号信息保存成功", true))
             } catch (e: Exception) {
                 Timber.e(e, "保存配置失败")
@@ -104,7 +110,7 @@ class SettingViewModel(
 
             try {
                 // 调用更新后的 service 方法
-                when (val result = service.updatePassword(oldPassword, newPassword)) {
+                when (val result = updatePasswordUseCase(oldPassword, newPassword)) {
                     is ServiceResult.Success -> {
                         Timber.i("密码更新成功 (Service层)")
                         feedbackMessage = "密码修改成功"
@@ -126,7 +132,7 @@ class SettingViewModel(
                 if (operationSuccessful) {
                     try {
                         val currentState = _uiState.value
-                        prefs.saveCredentials(currentState.studentId, newPassword, currentState.ispSelected.id)
+                        updateStuCredentialsUseCase(currentState.studentId, newPassword, currentState.ispSelected.id)
                         Timber.i("新密码已成功保存到本地")
 
                         _uiState.update { it.copy(password = newPassword, isLoading = false) }
@@ -149,7 +155,7 @@ class SettingViewModel(
     fun updateWeiXinId(weiXinId: String){
         viewModelScope.launch{
             try {
-                prefs.setWeiXinId(weiXinId)
+                updateWeiXinIDUseCase(weiXinId)
                 _uiState.update { it.copy(weiXinId = weiXinId) }
                 _uiEvent.emit(SettingUiEvent.ShowSnackbar("微信ID保存成功", true))
             } catch (e: Exception) {
@@ -163,7 +169,7 @@ class SettingViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                service.logout(clearStoredCredentials = true)
+                logoutUseCase(clearStoredCredentials = true)
                 _uiState.value = SettingUiState()
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {

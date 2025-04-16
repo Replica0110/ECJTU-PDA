@@ -20,8 +20,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.lonx.ecjtu.pda.data.JwxtRoute
-import com.lonx.ecjtu.pda.data.MainRoute
+import com.lonx.ecjtu.pda.navigation.JwxtRoute
+import com.lonx.ecjtu.pda.navigation.MainRoute
 import com.lonx.ecjtu.pda.screen.jwxt.JwxtContainerScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuElectiveScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSchedulesScreen

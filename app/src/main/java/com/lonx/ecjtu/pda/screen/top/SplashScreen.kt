@@ -16,8 +16,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.data.NavigationTarget
-import com.lonx.ecjtu.pda.data.TopLevelRoute
+import com.lonx.ecjtu.pda.data.common.NavigationTarget
+import com.lonx.ecjtu.pda.navigation.TopLevelRoute
 import com.lonx.ecjtu.pda.viewmodel.SplashViewModel
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator

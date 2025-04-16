@@ -2,11 +2,11 @@ package com.lonx.ecjtu.pda.service
 
 import android.os.Parcelable
 import com.lonx.ecjtu.pda.base.BaseService
-import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.getOrNull
-import com.lonx.ecjtu.pda.data.map
-import com.lonx.ecjtu.pda.data.mapCatching
-import com.lonx.ecjtu.pda.data.onError
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.getOrNull
+import com.lonx.ecjtu.pda.data.common.map
+import com.lonx.ecjtu.pda.data.common.mapCatching
+import com.lonx.ecjtu.pda.data.common.onError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

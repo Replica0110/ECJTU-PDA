@@ -3,11 +3,11 @@ package com.lonx.ecjtu.pda.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
-import com.lonx.ecjtu.pda.base.BaseViewModel
-import com.lonx.ecjtu.pda.data.NavigationTarget
-import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.service.JwxtService
-import com.lonx.ecjtu.pda.utils.PreferencesManager
+import com.lonx.ecjtu.pda.data.common.NavigationTarget
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
+import com.lonx.ecjtu.pda.domain.usecase.CheckSessionValidityUseCase
+import com.lonx.ecjtu.pda.domain.usecase.LoginUseCase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,17 +24,19 @@ data class SplashUiState(
 ): BaseUiState
 
 class SplashViewModel(
-    override val service: JwxtService,
-    override val prefs: PreferencesManager
-) : ViewModel(), BaseViewModel {
+    private val checkCredentialsExistUseCase: CheckCredentialsExistUseCase,
+    private val checkSessionValidityUseCase: CheckSessionValidityUseCase,
+    private val loginUseCase: LoginUseCase
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SplashUiState(isLoading = true, message = "正在加载..."))
-    override val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(SplashUiState())
+    val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
 
     private val minSplashTimeMillis = 1500L
+    private val logTag = "SplashVM"
 
     init {
-        Timber.tag("SplashVM").d("初始化 SplashViewModel")
+        Timber.tag(logTag).d("初始化 SplashViewModel")
         checkAuthStatus()
     }
 
@@ -42,44 +44,39 @@ class SplashViewModel(
         viewModelScope.launch {
             val startTime = System.currentTimeMillis()
             var finalNavigationTarget: NavigationTarget? = null
-            var finalMessage = ""
+            var finalMessage = "正在准备应用..."
             var shouldBeLoading = true
 
-            try {
-                _uiState.update { it.copy(isLoading = true, message = "正在准备应用...", navigationEvent = null) }
+            _uiState.update { it.copy(isLoading = true, message = finalMessage, navigationEvent = null) }
 
-                val hasCreds = prefs.hasCredentials()
+            try {
+                val hasCreds = checkCredentialsExistUseCase()
+                Timber.tag(logTag).d("本地凭据检查结果: $hasCreds")
 
                 if (!hasCreds) {
-                    Timber.tag("SplashVM").d("未找到本地凭据")
                     finalMessage = "请先登录"
                     finalNavigationTarget = NavigationTarget.LOGIN
                     shouldBeLoading = false
                 } else {
-                    Timber.tag("SplashVM").d("检查会话有效性...")
                     _uiState.update { it.copy(message = "正在验证登录...") }
+                    val isSessionValid = checkSessionValidityUseCase()
+                    Timber.tag(logTag).d("会话有效性检查结果: $isSessionValid")
 
-                    val isLoggedIn = service.checkSession()
-                    Timber.tag("SplashVM").d("会话有效性: $isLoggedIn")
-
-                    if (isLoggedIn) {
-                        Timber.tag("SplashVM").d("会话有效，准备进入主页")
+                    if (isSessionValid) {
                         finalMessage = "登录成功，正在进入..."
                         finalNavigationTarget = NavigationTarget.MAIN
                         shouldBeLoading = false
                     } else {
-                        Timber.tag("SplashVM").d("会话无效或过期，尝试自动登录...")
                         _uiState.update { it.copy(message = "正在尝试自动登录...") }
-
-                        when (val loginResult = service.login()) {
+                        when (val loginResult = loginUseCase()) {
                             is ServiceResult.Success -> {
-                                Timber.tag("SplashVM").d("自动登录成功")
+                                Timber.tag(logTag).d("自动登录成功")
                                 finalMessage = "自动登录成功，正在进入..."
                                 finalNavigationTarget = NavigationTarget.MAIN
                                 shouldBeLoading = false
                             }
                             is ServiceResult.Error -> {
-                                Timber.tag("SplashVM").d("自动登录失败: ${loginResult.message}")
+                                Timber.tag(logTag).w("自动登录失败: ${loginResult.message}")
                                 finalMessage = "自动登录失败，请重新登录"
                                 finalNavigationTarget = NavigationTarget.LOGIN
                                 shouldBeLoading = false
@@ -89,49 +86,44 @@ class SplashViewModel(
                 }
 
             } catch (e: CancellationException) {
-                Timber.tag("SplashVM").d("协程被取消")
+                Timber.tag(logTag).d("启动检查协程被取消")
                 throw e
             } catch (t: Throwable) {
-                Timber.tag("SplashVM").e(t, "启动检查时发生错误")
+                Timber.tag(logTag).e(t, "启动检查时发生意外错误")
                 finalMessage = "加载出错，请稍后重试"
                 finalNavigationTarget = NavigationTarget.LOGIN
                 shouldBeLoading = false
             } finally {
-                Timber.tag("SplashVM").d("检查流程结束. Final Message: '$finalMessage', Target: $finalNavigationTarget")
-                splashTime(startTime, minSplashTimeMillis)
+                Timber.tag(logTag).d("检查流程结束. Final Message: '$finalMessage', Target: $finalNavigationTarget")
 
-                if (finalNavigationTarget != null) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = shouldBeLoading,
-                            message = finalMessage,
-                            navigationEvent = finalNavigationTarget
-                        )
-                    }
-                    Timber.tag("SplashVM").d("Final state updated, navigation triggered.")
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            message = finalMessage
-                        )
-                    }
-                    Timber.tag("SplashVM").d("Final state updated, no navigation.")
+                splashTime(startTime, minSplashTimeMillis)
+                Timber.tag(logTag).d("最短启动时间已满足")
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = shouldBeLoading,
+                        message = finalMessage,
+                        navigationEvent = finalNavigationTarget
+                    )
                 }
+                Timber.tag(logTag).d("最终状态已更新 (Loading: $shouldBeLoading). Navigation Target: $finalNavigationTarget")
             }
         }
     }
 
-
+    /** Ensures the splash screen is shown for a minimum duration. */
     private suspend fun splashTime(startTime: Long, minDuration: Long) {
         val elapsedTime = System.currentTimeMillis() - startTime
         val remainingTime = minDuration - elapsedTime
         if (remainingTime > 0) {
+            Timber.tag(logTag).d("需要等待 ${remainingTime}ms 以满足最短启动时间")
             delay(remainingTime)
         }
     }
 
+    /** Call this from the UI after navigation has occurred. */
     fun onNavigationComplete() {
+        Timber.tag(logTag).d("导航事件处理完成，清除 navigationEvent")
         _uiState.update { it.copy(navigationEvent = null) }
     }
 }

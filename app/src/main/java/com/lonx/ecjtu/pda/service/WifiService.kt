@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.lonx.ecjtu.pda.base.BaseService
-import com.lonx.ecjtu.pda.data.NetworkType
+import com.lonx.ecjtu.pda.common.NetworkType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request

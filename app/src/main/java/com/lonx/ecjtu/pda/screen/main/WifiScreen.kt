@@ -45,8 +45,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.ui.ConfirmAlertDialog
-import com.lonx.ecjtu.pda.ui.InfoAlertDialog
+import com.lonx.ecjtu.pda.ui.dialog.ConfirmAlertDialog
+import com.lonx.ecjtu.pda.ui.dialog.InfoAlertDialog
 import com.lonx.ecjtu.pda.viewmodel.WifiUiEvent
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import org.koin.compose.viewmodel.koinViewModel

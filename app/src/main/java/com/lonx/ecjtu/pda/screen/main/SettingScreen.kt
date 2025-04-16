@@ -35,11 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.TopLevelRoute
+import com.lonx.ecjtu.pda.navigation.TopLevelRoute
 import com.lonx.ecjtu.pda.screen.AccountConfigDialog
 import com.lonx.ecjtu.pda.screen.ChangePasswordDialog
-import com.lonx.ecjtu.pda.ui.InfoAlertDialog
-import com.lonx.ecjtu.pda.ui.InputAlertDialog
+import com.lonx.ecjtu.pda.ui.dialog.InfoAlertDialog
+import com.lonx.ecjtu.pda.ui.dialog.InputAlertDialog
 import com.lonx.ecjtu.pda.viewmodel.SettingUiEvent
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
 import org.koin.androidx.compose.koinViewModel

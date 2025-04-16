@@ -11,10 +11,10 @@ import android.widget.RemoteViews
 import com.google.gson.Gson
 import com.lonx.ecjtu.pda.MainActivity
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.StuDayCourses
-import com.lonx.ecjtu.pda.data.ServiceResult
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.model.StuDayCourses
+import com.lonx.ecjtu.pda.domain.usecase.GetStuCourseUseCase
 import com.lonx.ecjtu.pda.service.CourseRemoteViewsService
-import com.lonx.ecjtu.pda.service.StuCourseService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,12 +30,12 @@ import java.util.Locale
 const val ACTION_MANUAL_REFRESH = "com.lonx.ecjtu.widget.MANUAL_REFRESH"
 
 class CourseWidgetProvider : AppWidgetProvider() {
-    private lateinit var service: StuCourseService
+    private lateinit var getStuCourseUseCase: GetStuCourseUseCase
     private var lastUpdateTime = 0L
     private fun resolveDependencies() {
-        if (!::service.isInitialized) {
+        if (!::getStuCourseUseCase.isInitialized) {
             try {
-                service = GlobalContext.get().get()
+                getStuCourseUseCase = GlobalContext.get().get()
             } catch (e: Exception) {
                 Timber.tag("WidgetDeps").e(e, "Failed to resolve JwxtService dependency")
             }
@@ -96,8 +96,8 @@ class CourseWidgetProvider : AppWidgetProvider() {
         val tomorrow = getFormatDate(true)
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val todayResult = service.getCourseSchedule(today)
-                val tomorrowResult = service.getCourseSchedule(tomorrow)
+                val todayResult = getStuCourseUseCase(today)
+                val tomorrowResult = getStuCourseUseCase(tomorrow)
 
                 // 提前声明两个变量，用于在主线程中更新 widget
                 var todayCourses = StuDayCourses("N/A", emptyList())

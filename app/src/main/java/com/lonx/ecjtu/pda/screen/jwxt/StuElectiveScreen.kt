@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -25,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,8 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lonx.ecjtu.pda.service.ElectiveCourseInfo
-import com.lonx.ecjtu.pda.service.SemesterCourses
+import com.lonx.ecjtu.pda.data.model.ElectiveCourseInfo
+import com.lonx.ecjtu.pda.data.model.SemesterCourses
 import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuElectiveViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -105,26 +107,25 @@ fun StuElectiveScreen(
             }
 
             is UiState.Error -> {
-                val message = (uiState as UiState.Error).message
                 item {
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = "加载错误",
-                            style = MiuixTheme.textStyles.title1,
-                            color = MaterialTheme.colorScheme.error
+                        Icon(
+                            imageVector = Icons.Sharp.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = message,
+                            text = state.message,
                             textAlign = TextAlign.Center,
-                            style = MiuixTheme.textStyles.paragraph,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.retry() }) {

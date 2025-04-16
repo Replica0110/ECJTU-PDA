@@ -12,12 +12,12 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.base.BaseViewModel
-import com.lonx.ecjtu.pda.data.LocationStatus
-import com.lonx.ecjtu.pda.data.WifiStatus
-import com.lonx.ecjtu.pda.network.WifiStatusMonitor
+import com.lonx.ecjtu.pda.common.monitor.LocationStatusMonitor
+import com.lonx.ecjtu.pda.common.monitor.WifiStatusMonitor
+import com.lonx.ecjtu.pda.data.common.LocationStatus
+import com.lonx.ecjtu.pda.data.common.WifiStatus
+import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import com.lonx.ecjtu.pda.service.WifiService
-import com.lonx.ecjtu.pda.utils.LocationStatusMonitor
-import com.lonx.ecjtu.pda.utils.PreferencesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

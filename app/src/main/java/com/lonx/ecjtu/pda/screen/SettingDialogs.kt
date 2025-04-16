@@ -25,10 +25,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.IspOption
-import com.lonx.ecjtu.pda.data.availableIsp
-import com.lonx.ecjtu.pda.ui.AlertDialogContainer
-import com.lonx.ecjtu.pda.ui.CustomDropdownMenu
+import com.lonx.ecjtu.pda.data.common.IspOption
+import com.lonx.ecjtu.pda.data.common.availableIsp
+import com.lonx.ecjtu.pda.ui.component.CustomDropdownMenu
+import com.lonx.ecjtu.pda.ui.dialog.AlertDialogContainer
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text

@@ -1,8 +1,8 @@
 package com.lonx.ecjtu.pda.network
 
+import com.lonx.ecjtu.pda.data.local.cookies.PersistentCookieJar
 import com.lonx.ecjtu.pda.network.SSLManager.getUnsafeSslSocketFactory
 import com.lonx.ecjtu.pda.network.SSLManager.getUnsafeTrustManager
-import com.lonx.ecjtu.pda.utils.PersistentCookieJar
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 

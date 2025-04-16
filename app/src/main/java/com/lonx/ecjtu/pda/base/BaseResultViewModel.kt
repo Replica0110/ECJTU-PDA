@@ -2,8 +2,8 @@ package com.lonx.ecjtu.pda.base
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.ecjtu.pda.data.ServiceResult
-import com.lonx.ecjtu.pda.data.toUiState
+import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.toUiState
 import com.lonx.ecjtu.pda.state.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

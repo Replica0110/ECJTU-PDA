@@ -2,14 +2,14 @@ package com.lonx.ecjtu.pda.service
 
 import android.content.Context
 import android.content.Intent
-import android.os.Bundle // Needed for putting extras neatly
+import android.os.Bundle
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.StuCourse
-import com.lonx.ecjtu.pda.data.StuDayCourses
+import com.lonx.ecjtu.pda.data.model.StuCourse
+import com.lonx.ecjtu.pda.data.model.StuDayCourses
 import timber.log.Timber
 
 const val EXTRA_COURSE_NAME = "com.lonx.ecjtu.pda.widget.EXTRA_COURSE_NAME"

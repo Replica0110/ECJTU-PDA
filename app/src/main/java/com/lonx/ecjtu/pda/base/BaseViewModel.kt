@@ -1,6 +1,6 @@
 package com.lonx.ecjtu.pda.base
 
-import com.lonx.ecjtu.pda.utils.PreferencesManager
+import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import kotlinx.coroutines.flow.StateFlow
 
 interface BaseUiState

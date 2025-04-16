@@ -10,7 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.Warning
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,20 +26,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.lonx.ecjtu.pda.service.StuProfileService
+import com.lonx.ecjtu.pda.common.ProfileType
+import com.lonx.ecjtu.pda.common.toName
 import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuProfileViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.IconDefaults
 import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
+import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StuProfileScreen(
     internalNavController: NavHostController,
@@ -109,7 +117,6 @@ fun StuProfileScreen(
                 }
 
                 is UiState.Error -> {
-                    val message = (uiState as UiState.Error).message
                     item {
                         Column(
                             modifier = Modifier
@@ -118,14 +125,15 @@ fun StuProfileScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(
-                                text = "错误",
-                                style = MiuixTheme.textStyles.paragraph,
-                                color = MiuixTheme.colorScheme.primary
+                            Icon(
+                                imageVector = Icons.Sharp.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = message,
+                                text = state.message,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -173,7 +181,7 @@ fun StuProfileScreen(
 }
 @Composable
 fun StuProfileCard(infoData: Map<String, Map<String, String>>) {
-    val categoryOrder = listOf(StuProfileService.CATEGORY_BASIC_INFO, StuProfileService.CATEGORY_CONTACT_INFO)
+    val categoryOrder = listOf(ProfileType.BASE.toName(),ProfileType.CONTACT.toName())
 
     if (infoData.values.all { it.isEmpty() }) {
         Text("未能加载学生信息", modifier = Modifier.padding(16.dp))

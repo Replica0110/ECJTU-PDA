@@ -40,9 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.NavigationTarget
-import com.lonx.ecjtu.pda.data.TopLevelRoute
-import com.lonx.ecjtu.pda.ui.CustomDropdownMenu
+import com.lonx.ecjtu.pda.data.common.NavigationTarget
+import com.lonx.ecjtu.pda.navigation.TopLevelRoute
+import com.lonx.ecjtu.pda.ui.component.CustomDropdownMenu
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
@@ -54,10 +54,10 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    loginViewModel: LoginViewModel = koinViewModel(),
+    viewModel: LoginViewModel = koinViewModel(),
     onLoginSuccess: () -> Unit
 ) {
-    val uiState by loginViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     var passwordVisible by remember { mutableStateOf(false) }
@@ -69,7 +69,7 @@ fun LoginScreen(
                 popUpTo(TopLevelRoute.Login.route) { inclusive = true }
                 launchSingleTop = true
             }
-            loginViewModel.onNavigationHandled()
+            viewModel.onNavigationHandled()
         }
     }
 
@@ -80,7 +80,7 @@ fun LoginScreen(
                 message = message,
                 duration = SnackbarDuration.Short
             )
-            loginViewModel.onErrorMessageShown()
+            viewModel.onErrorMessageShown()
         }
     }
 
@@ -100,7 +100,7 @@ fun LoginScreen(
 
             TextField(
                 value = uiState.studentId,
-                onValueChange = { loginViewModel.onStudentIdChange(it) },
+                onValueChange = { viewModel.onStudentIdChange(it) },
                 modifier = Modifier.fillMaxWidth(),
                 label = "学号",
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = "学号图标", modifier = Modifier.padding(horizontal = 4.dp)) },
@@ -118,7 +118,7 @@ fun LoginScreen(
 
             TextField(
                 value = uiState.password,
-                onValueChange = { loginViewModel.onPasswordChange(it) },
+                onValueChange = { viewModel.onPasswordChange(it) },
                 modifier = Modifier.fillMaxWidth(),
                 label = "密码",
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "密码图标", modifier = Modifier.padding(horizontal = 4.dp))},
@@ -156,7 +156,7 @@ fun LoginScreen(
                     leadingIcon = { Icon(Icons.Default.Call, contentDescription = "运营商图标", modifier = Modifier.padding(horizontal = 4.dp))},
                     selectedOption = selectedIspObject,
                     onOptionSelected = { selectedIsp ->
-                        loginViewModel.onIspSelected(selectedIsp.id)
+                        viewModel.onIspSelected(selectedIsp.id)
                         focusManager.moveFocus(FocusDirection.Down)
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -178,7 +178,7 @@ fun LoginScreen(
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    loginViewModel.attemptLogin()
+                    viewModel.attemptLogin()
                 },
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth()

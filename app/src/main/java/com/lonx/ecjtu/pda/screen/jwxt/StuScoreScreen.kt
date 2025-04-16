@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.sharp.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
@@ -38,10 +39,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lonx.ecjtu.pda.data.CourseScore
-import com.lonx.ecjtu.pda.data.RequirementCredits
-import com.lonx.ecjtu.pda.data.ScoreSummary
-import com.lonx.ecjtu.pda.data.StudentScoresData
+import com.lonx.ecjtu.pda.data.model.CourseScore
+import com.lonx.ecjtu.pda.data.model.RequirementCredits
+import com.lonx.ecjtu.pda.data.model.ScoreSummary
+import com.lonx.ecjtu.pda.data.model.StuAllScores
 import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -72,7 +73,7 @@ fun StuScoreScreen(
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        when (uiState) {
+        when (val state = uiState) {
             is UiState.Loading -> {
                 item {
                     Box(
@@ -96,7 +97,6 @@ fun StuScoreScreen(
             }
 
             is UiState.Error -> {
-                val message = (uiState as UiState.Error).message
                 item {
                     Column(
                         modifier = Modifier
@@ -105,14 +105,15 @@ fun StuScoreScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = "错误",
-                            style = MiuixTheme.textStyles.paragraph,
-                            color = MiuixTheme.colorScheme.primary
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Sharp.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = message,
+                            text = state.message,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -135,7 +136,7 @@ fun StuScoreScreen(
 }
 
 
-fun LazyListScope.scoreContent(data: StudentScoresData) {
+fun LazyListScope.scoreContent(data: StuAllScores) {
     val groupedScores = data.detailedScores
         .groupBy { it.term }
         .toSortedMap(compareByDescending { term -> term })

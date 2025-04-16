@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.Warning
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -125,17 +127,17 @@ fun StuSecondCreditScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = "加载错误",
-                            style = MiuixTheme.textStyles.title1,
-                            color = MaterialTheme.colorScheme.error
+                        Icon(
+                            imageVector = Icons.Sharp.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = state.message,
                             textAlign = TextAlign.Center,
-                            style = MiuixTheme.textStyles.paragraph,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.retry() }) {

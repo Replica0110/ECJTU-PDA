@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.sharp.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,9 +53,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.StuCourse
-import com.lonx.ecjtu.pda.data.TermSchedules
-import com.lonx.ecjtu.pda.data.WeekDay
+import com.lonx.ecjtu.pda.data.model.StuAllSchedules
+import com.lonx.ecjtu.pda.data.model.StuCourse
+import com.lonx.ecjtu.pda.data.model.TermSchedules
+import com.lonx.ecjtu.pda.data.model.WeekDay
 import com.lonx.ecjtu.pda.state.UiState
 import com.lonx.ecjtu.pda.viewmodel.StuScheduleViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -108,7 +110,7 @@ fun StuSchedulesScreen(
             is UiState.Success -> {
                 item {
                     // 展示加载成功的数据
-                    StuSchedulesContent(schedules = state.data)
+                    StuSchedulesContent(stuAllSchedules = state.data)
                 }
             }
 
@@ -121,17 +123,17 @@ fun StuSchedulesScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = "加载错误",
-                            style = MiuixTheme.textStyles.title1,
-                            color = MaterialTheme.colorScheme.error
+                        Icon(
+                            imageVector = Icons.Sharp.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = state.message,
                             textAlign = TextAlign.Center,
-                            style = MiuixTheme.textStyles.paragraph,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.retry() }) {
@@ -148,8 +150,9 @@ fun StuSchedulesScreen(
 }
 
 @Composable
-fun StuSchedulesContent(schedules: List<TermSchedules>) {
+fun StuSchedulesContent(stuAllSchedules: StuAllSchedules) {
     // 按学期对课表进行分组
+    val schedules = stuAllSchedules.allSchedules
     val grouped = schedules.groupBy { it.termValue }.toSortedMap(compareByDescending { it })
     val terms = grouped.keys.toList()
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -387,7 +390,7 @@ fun ScheduleGrid(schedule: TermSchedules) {
 
 
 @Composable
-fun CourseItem(course: StuCourse,color: Color, onClick: () -> Unit) {
+fun CourseItem(course: StuCourse, color: Color, onClick: () -> Unit) {
 
     Column(
         modifier = Modifier
