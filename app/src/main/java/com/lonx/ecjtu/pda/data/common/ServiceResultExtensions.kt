@@ -42,8 +42,8 @@ inline fun <T, R> ServiceResult<T>.mapCatching(transform: (T) -> R): ServiceResu
 
 fun <T> ServiceResult<T>.log(tag: String = "ServiceResult"): ServiceResult<T> {
     when (this) {
-        is ServiceResult.Success -> Timber.tag(tag).d("成功: $data")
-        is ServiceResult.Error -> Timber.tag(tag).e(exception, "失败: $message")
+        is ServiceResult.Success -> Timber.tag(tag).d("请求成功")
+        is ServiceResult.Error -> Timber.tag(tag).e(exception, "请求失败: $message")
     }
     return this
 }

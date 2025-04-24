@@ -1,11 +1,11 @@
 package com.lonx.ecjtu.pda.viewmodel
 
 import com.lonx.ecjtu.pda.base.BaseResultViewModel
-import com.lonx.ecjtu.pda.service.ExperimentData
-import com.lonx.ecjtu.pda.service.StuExperimentService
+import com.lonx.ecjtu.pda.data.model.StuAllExperiments
+import com.lonx.ecjtu.pda.domain.usecase.GetStuExperimentsUseCase
 
 class StuExperimentViewModel(
-    private val service: StuExperimentService
-): BaseResultViewModel<List<ExperimentData>>(
-    fetchData = { service.getExperiments() }
+    private val getStuExperimentsUseCase: GetStuExperimentsUseCase
+): BaseResultViewModel<StuAllExperiments>(
+    fetchData = { getStuExperimentsUseCase() }
 )

@@ -1,11 +1,11 @@
 package com.lonx.ecjtu.pda.viewmodel
 
 import com.lonx.ecjtu.pda.base.BaseResultViewModel
-import com.lonx.ecjtu.pda.service.SecondCreditData
-import com.lonx.ecjtu.pda.service.StuSecondCreditService
+import com.lonx.ecjtu.pda.data.model.StuSecondCredits
+import com.lonx.ecjtu.pda.domain.usecase.GetStuSecondCreditUseCase
 
 class StuSecondCreditViewModel(
-    private val service: StuSecondCreditService
-) :BaseResultViewModel<SecondCreditData>(
-    fetchData = { service.getSecondCredit() }
+    private val getStuSecondCreditUseCase: GetStuSecondCreditUseCase
+) :BaseResultViewModel<StuSecondCredits>(
+    fetchData = { getStuSecondCreditUseCase() }
 )

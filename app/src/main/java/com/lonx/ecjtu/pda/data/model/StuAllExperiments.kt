@@ -17,8 +17,13 @@ data class ExperimentInfo(
 
 
 @Parcelize
-data class ExperimentData(
+data class TermExperiments(
     val term: String,
     val termName: String,
     val experiments: List<ExperimentInfo>
+): Parcelable
+
+@Parcelize
+data class StuAllExperiments(
+    val experiments: List<TermExperiments>
 ): Parcelable

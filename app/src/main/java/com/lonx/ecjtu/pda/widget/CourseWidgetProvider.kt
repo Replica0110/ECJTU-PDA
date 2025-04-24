@@ -27,7 +27,7 @@ import java.util.Date
 import java.util.Locale
 
 
-const val ACTION_MANUAL_REFRESH = "com.lonx.ecjtu.widget.MANUAL_REFRESH"
+const val ACTION_MANUAL_REFRESH = "com.lonx.ecjtu.pda.widget.MANUAL_REFRESH"
 
 class CourseWidgetProvider : AppWidgetProvider() {
     private lateinit var getStuCourseUseCase: GetStuCourseUseCase

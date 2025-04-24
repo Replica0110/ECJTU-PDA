@@ -15,19 +15,23 @@ import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import com.lonx.ecjtu.pda.domain.repository.AuthRepository
 import com.lonx.ecjtu.pda.domain.repository.CourseRepository
 import com.lonx.ecjtu.pda.domain.repository.ElectiveRepository
+import com.lonx.ecjtu.pda.domain.repository.ExperimentRepository
 import com.lonx.ecjtu.pda.domain.repository.PreferencesRepository
 import com.lonx.ecjtu.pda.domain.repository.ProfileRepository
 import com.lonx.ecjtu.pda.domain.repository.SchedulesRepository
 import com.lonx.ecjtu.pda.domain.repository.ScoreRepository
+import com.lonx.ecjtu.pda.domain.repository.SecondCreditRepository
 import com.lonx.ecjtu.pda.domain.source.JwxtApiClient
 import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckSessionValidityUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCourseUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuElectiveUseCase
+import com.lonx.ecjtu.pda.domain.usecase.GetStuExperimentsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuProfileUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuSchedulesUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuScoreUseCase
+import com.lonx.ecjtu.pda.domain.usecase.GetStuSecondCreditUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetWeiXinIDUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LoginManuallyUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LoginUseCase
@@ -39,14 +43,13 @@ import com.lonx.ecjtu.pda.network.MyOkHttpClient
 import com.lonx.ecjtu.pda.repository.AuthRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtCourseRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtElectiveRepositoryImpl
+import com.lonx.ecjtu.pda.repository.JwxtExperimentRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtProfileRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtSchedulesRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtScoreRepositoryImpl
+import com.lonx.ecjtu.pda.repository.JwxtSecondCreditRepositoryImpl
 import com.lonx.ecjtu.pda.repository.PreferencesRepositoryImpl
 import com.lonx.ecjtu.pda.repository.source.JwxtApiClientImpl
-import com.lonx.ecjtu.pda.service.JwxtService
-import com.lonx.ecjtu.pda.service.StuExperimentService
-import com.lonx.ecjtu.pda.service.StuSecondCreditService
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
 import com.lonx.ecjtu.pda.viewmodel.SettingViewModel
@@ -93,13 +96,13 @@ val appModule = module {
         ).createClient()
     }
 
-    single<JwxtService> {
-        JwxtService(
-            prefs = get(),
-            cookieJar = get(),
-            client = get()
-        )
-    }
+//    single<JwxtService> {
+//        JwxtService(
+//            prefs = get(),
+//            cookieJar = get(),
+//            client = get()
+//        )
+//    }
 //    single<StuScoreService> {
 //        StuScoreService(
 //            service = get()
@@ -110,11 +113,11 @@ val appModule = module {
 //            service = get()
 //        )
 //    }
-    single<StuSecondCreditService> {
-        StuSecondCreditService(
-            service = get()
-        )
-    }
+//    single<StuSecondCreditService> {
+//        StuSecondCreditService(
+//            service = get()
+//        )
+//    }
 //    single<StuCourseService> {
 //        StuCourseService(
 //            service = get()
@@ -130,11 +133,11 @@ val appModule = module {
 //            service = get()
 //        )
 //    }
-    single<StuExperimentService> {
-        StuExperimentService(
-            service = get()
-        )
-    }
+//    single<StuExperimentService> {
+//        StuExperimentService(
+//            service = get()
+//        )
+//    }
     single<Gson> { Gson() }
 
     single<AuthRepository> { AuthRepositoryImpl(prefs = get(), cookieJar = get(), client = get(), gson = get()) }
@@ -145,6 +148,8 @@ val appModule = module {
     single<ElectiveRepository> { JwxtElectiveRepositoryImpl(apiClient = get(), authRepository = get()) }
     single<ScoreRepository> { JwxtScoreRepositoryImpl(apiClient = get(), authRepository = get()) }
     single<SchedulesRepository> { JwxtSchedulesRepositoryImpl(apiClient = get(), authRepository = get()) }
+    single<ExperimentRepository> { JwxtExperimentRepositoryImpl(apiClient = get(), authRepository = get()) }
+    single<SecondCreditRepository> { JwxtSecondCreditRepositoryImpl(apiClient = get(), authRepository = get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(prefs = get()) }
 
     single<LoginManuallyUseCase> { LoginManuallyUseCase(authRepository = get()) }
@@ -159,6 +164,8 @@ val appModule = module {
     single<GetStuCourseUseCase> { GetStuCourseUseCase(courseRepository = get()) }
     single<GetStuScoreUseCase> { GetStuScoreUseCase(scoreRepository = get()) }
     single<GetStuCredentialsUseCase> { GetStuCredentialsUseCase(preferencesRepository = get()) }
+    single<GetStuExperimentsUseCase> { GetStuExperimentsUseCase(experimentRepository = get()) }
+    single<GetStuSecondCreditUseCase> { GetStuSecondCreditUseCase(secondCreditRepository = get()) }
     single<GetStuSchedulesUseCase> { GetStuSchedulesUseCase(schedulesRepository = get()) }
     single<GetWeiXinIDUseCase> { GetWeiXinIDUseCase(preferencesRepository = get()) }
     single<UpdateStuCredentialsUseCase> { UpdateStuCredentialsUseCase(preferencesRepository = get()) }
@@ -190,10 +197,10 @@ val appModule = module {
         updateStuCredentialsUseCase = get()
     ) }
     viewModel { StuScoreViewModel(getStuScoreUseCase = get()) }
-    viewModel { StuSecondCreditViewModel(service = get()) }
+    viewModel { StuSecondCreditViewModel(getStuSecondCreditUseCase = get()) }
     viewModel { StuScheduleViewModel(
         getSchedulesUseCase = get()
     ) }
     viewModel { StuElectiveViewModel(getStuElectiveUseCase = get()) }
-    viewModel { StuExperimentViewModel(service = get()) }
+    viewModel { StuExperimentViewModel(getStuExperimentsUseCase = get()) }
 }
