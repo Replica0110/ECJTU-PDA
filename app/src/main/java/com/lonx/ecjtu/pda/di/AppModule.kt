@@ -44,7 +44,6 @@ import com.lonx.ecjtu.pda.domain.usecase.LogoutUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdatePasswordUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateWeiXinIDUseCase
-import com.lonx.ecjtu.pda.network.MyOkHttpClient
 import com.lonx.ecjtu.pda.network.OkHttpConfig
 import com.lonx.ecjtu.pda.network.PDAOkHttpClient
 import com.lonx.ecjtu.pda.repository.AuthRepositoryImpl
@@ -70,7 +69,6 @@ import com.lonx.ecjtu.pda.viewmodel.StuScoreViewModel
 import com.lonx.ecjtu.pda.viewmodel.StuSecondCreditViewModel
 import com.lonx.ecjtu.pda.viewmodel.WifiViewModel
 import okhttp3.CookieJar
-import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named

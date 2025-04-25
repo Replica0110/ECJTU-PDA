@@ -11,17 +11,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.base.BaseUiState
-import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.common.monitor.LocationStatusMonitor
 import com.lonx.ecjtu.pda.common.monitor.WifiStatusMonitor
 import com.lonx.ecjtu.pda.data.common.LocationStatus
 import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.WifiStatus
-import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import com.lonx.ecjtu.pda.domain.usecase.CampusNetLoginUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CampusNetLogoutUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
-import com.lonx.ecjtu.pda.service.WifiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

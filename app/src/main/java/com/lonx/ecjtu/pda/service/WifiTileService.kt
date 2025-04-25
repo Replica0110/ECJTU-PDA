@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.core.app.NotificationCompat
@@ -14,10 +13,12 @@ import com.lonx.ecjtu.pda.R
 import com.lonx.ecjtu.pda.base.BaseService
 import com.lonx.ecjtu.pda.common.NetworkType
 import com.lonx.ecjtu.pda.data.common.PDAResult
-import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
-import com.lonx.ecjtu.pda.data.model.CampusNetStatus
-import com.lonx.ecjtu.pda.data.model.CampusNetStatus.*
-import com.lonx.ecjtu.pda.domain.repository.WifiRepository
+import com.lonx.ecjtu.pda.data.model.CampusNetStatus.CONNECTION_ERROR
+import com.lonx.ecjtu.pda.data.model.CampusNetStatus.LOGGED_IN
+import com.lonx.ecjtu.pda.data.model.CampusNetStatus.NOT_CAMPUS_NET
+import com.lonx.ecjtu.pda.data.model.CampusNetStatus.NOT_LOGGED_IN
+import com.lonx.ecjtu.pda.data.model.CampusNetStatus.SOCKET_ERROR
+import com.lonx.ecjtu.pda.data.model.CampusNetStatus.UNKNOWN_ERROR
 import com.lonx.ecjtu.pda.domain.usecase.CampusNetLoginUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetCampusNetStatusUseCase
