@@ -1,7 +1,7 @@
 package com.lonx.ecjtu.pda.repository.source
 
 import com.google.gson.Gson
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import com.lonx.ecjtu.pda.data.remote.ApiConstants
 import com.lonx.ecjtu.pda.data.remote.ApiConstants.JWXT_ECJTU_DOMAIN
@@ -29,22 +29,22 @@ class JwxtApiClientImpl(
 
     private val maxRetries = 3
 
-    override suspend fun getStudentScoresHtml(): ServiceResult<String> = safeApiCall {
+    override suspend fun getStudentScoresHtml(): PDAResult<String> = safeApiCall {
         val url = ApiConstants.GET_SCORE_URL.toHttpUrlOrNull() ?: throw IOException("Invalid Score URL")
         fetchHtmlInternal(url = url, referer = "$JWXT_ECJTU_DOMAIN/") // Default referer
     }
 
-    override suspend fun getSecondCreditHtml(): ServiceResult<String> = safeApiCall {
+    override suspend fun getSecondCreditHtml(): PDAResult<String> = safeApiCall {
         val url = ApiConstants.GET_SECOND_CREDIT.toHttpUrlOrNull() ?: throw IOException("Invalid Second Credit URL")
         fetchHtmlInternal(url = url, referer = "$JWXT_ECJTU_DOMAIN/")
     }
 
-    override suspend fun getProfileHtml(): ServiceResult<String> = safeApiCall {
+    override suspend fun getProfileHtml(): PDAResult<String> = safeApiCall {
         val url = ApiConstants.GET_STU_INFO_URL.toHttpUrlOrNull() ?: throw IOException("Invalid Profile URL")
         fetchHtmlInternal(url = url, referer = "$JWXT_ECJTU_DOMAIN/index.action")
     }
 
-    override suspend fun getCourseScheduleHtml(dateQuery: String?): ServiceResult<String> = safeApiCall {
+    override suspend fun getCourseScheduleHtml(dateQuery: String?): PDAResult<String> = safeApiCall {
         // This one seemed to have a different structure, implement directly
         Timber.d("获取课程表 HTML，查询日期: ${dateQuery ?: "未指定"}")
         val weiXinId = prefs.getWeiXinId() // Assuming this helper exists in PrefsManager
@@ -85,7 +85,7 @@ class JwxtApiClientImpl(
     }
 
 
-    override suspend fun getScheduleHtml(term: String?): ServiceResult<String> = safeApiCall {
+    override suspend fun getScheduleHtml(term: String?): PDAResult<String> = safeApiCall {
         val url = ApiConstants.GET_SCHEDULE.toHttpUrlOrNull() ?: throw IOException("Invalid Schedule URL")
         fetchHtmlInternal(
             url = url,
@@ -94,7 +94,7 @@ class JwxtApiClientImpl(
         )
     }
 
-    override suspend fun getElectiveCourseHtml(term: String?): ServiceResult<String> = safeApiCall {
+    override suspend fun getElectiveCourseHtml(term: String?): PDAResult<String> = safeApiCall {
         val url = ApiConstants.GET_ELECTIVE_COURSE_URL.toHttpUrlOrNull() ?: throw IOException("Invalid Elective Course URL")
         fetchHtmlInternal(
             url = url,
@@ -103,7 +103,7 @@ class JwxtApiClientImpl(
         )
     }
 
-    override suspend fun getExperimentsHtml(term: String?): ServiceResult<String> = safeApiCall {
+    override suspend fun getExperimentsHtml(term: String?): PDAResult<String> = safeApiCall {
         val url = ApiConstants.GET_EXPERIMENT.toHttpUrlOrNull() ?: throw IOException("Invalid Experiment URL")
         fetchHtmlInternal(
             url = url,
@@ -112,7 +112,7 @@ class JwxtApiClientImpl(
         )
     }
 
-    override suspend fun getYktBalance(): ServiceResult<String> = safeApiCall {
+    override suspend fun getYktBalance(): PDAResult<String> = safeApiCall {
 
 
         makeDcpCallInternal(ApiConstants.METHOD_GET_YKT_NUM)
@@ -206,29 +206,29 @@ class JwxtApiClientImpl(
 
 
     /** Generic wrapper for API calls in this client, handling retries for network issues. */
-    private suspend fun <T> safeApiCall(apiCall: suspend () -> T): ServiceResult<T> = withContext(
+    private suspend fun <T> safeApiCall(apiCall: suspend () -> T): PDAResult<T> = withContext(
         Dispatchers.IO) {
         var currentRetries = 0
         while (currentRetries < maxRetries) {
             try {
                 val result = apiCall()
-                return@withContext ServiceResult.Success(result)
+                return@withContext PDAResult.Success(result)
             } catch (e: SessionExpiredException) {
                 Timber.w("API 调用失败：会话已过期 (${e.message})")
-                return@withContext ServiceResult.Error(e.message ?: "会话已过期", e)
+                return@withContext PDAResult.Error(e.message ?: "会话已过期", e)
             } catch (e: IOException) {
                 currentRetries++
                 Timber.w(e, "API 调用失败 (尝试 ${currentRetries}/${maxRetries}): ${e.message}")
                 if (currentRetries >= maxRetries) {
-                    return@withContext ServiceResult.Error(e.message ?: "网络请求失败", e)
+                    return@withContext PDAResult.Error(e.message ?: "网络请求失败", e)
                 }
                 delay(500L * currentRetries)
             } catch (e: Exception) {
                 Timber.e(e, "API 调用期间发生意外错误: ${e.message}")
-                return@withContext ServiceResult.Error("发生意外错误: ${e.message}", e)
+                return@withContext PDAResult.Error("发生意外错误: ${e.message}", e)
             }
         }
-        ServiceResult.Error("达到最大重试次数后请求失败")
+        PDAResult.Error("达到最大重试次数后请求失败")
     }
 
     /** Checks if the response indicates a redirect to a login page or contains login page content. */

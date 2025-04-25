@@ -1,6 +1,6 @@
 package com.lonx.ecjtu.pda.domain.repository
 
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 
 interface AuthRepository {
     /** Checks if the user currently has a valid session (e.g., necessary cookies). */
@@ -10,10 +10,10 @@ interface AuthRepository {
     suspend fun hasCasTicket(): Boolean // Replaces hasLogin(0)
 
     /** Attempts to log in using stored credentials. Handles session checks and redirects. */
-    suspend fun login(forceRefresh: Boolean = false): ServiceResult<Unit>
+    suspend fun login(forceRefresh: Boolean = false): PDAResult<Unit>
 
     /** Performs login with explicitly provided credentials and saves them on success. */
-    suspend fun loginManually(studentId: String, studentPass: String, ispOption: Int): ServiceResult<Unit>
+    suspend fun loginManually(studentId: String, studentPass: String, ispOption: Int): PDAResult<Unit>
 
     /** Logs the user out, clearing session and optionally stored credentials. */
     suspend fun logout(clearStoredCredentials: Boolean = true) // Make suspend if prefs clearing is async
@@ -22,7 +22,7 @@ interface AuthRepository {
     suspend fun checkSessionValidity(): Boolean // Replaces checkSession()
 
     /** Updates the user's password on the platform. */
-    suspend fun updatePassword(oldPassword: String, newPassword: String): ServiceResult<String>
+    suspend fun updatePassword(oldPassword: String, newPassword: String): PDAResult<String>
 
     // Optional: Expose login state reactively
     // fun isLoggedIn(): Flow<Boolean>

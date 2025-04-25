@@ -11,7 +11,7 @@ import android.widget.RemoteViews
 import com.google.gson.Gson
 import com.lonx.ecjtu.pda.MainActivity
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.model.StuDayCourses
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCourseUseCase
 import com.lonx.ecjtu.pda.service.CourseRemoteViewsService
@@ -104,8 +104,8 @@ class CourseWidgetProvider : AppWidgetProvider() {
                 var tomorrowCourses = StuDayCourses("N/A", emptyList())
 
                 when (todayResult) {
-                    is ServiceResult.Success -> todayCourses = todayResult.data
-                    is ServiceResult.Error -> {
+                    is PDAResult.Success -> todayCourses = todayResult.data
+                    is PDAResult.Error -> {
                         Timber.tag("CourseWidgetProvider")
                             .e("获取今天课程失败: ${todayResult.message}")
 
@@ -113,8 +113,8 @@ class CourseWidgetProvider : AppWidgetProvider() {
                 }
 
                 when (tomorrowResult) {
-                    is ServiceResult.Success -> tomorrowCourses = tomorrowResult.data
-                    is ServiceResult.Error -> {
+                    is PDAResult.Success -> tomorrowCourses = tomorrowResult.data
+                    is PDAResult.Error -> {
                         Timber.tag("CourseWidgetProvider")
                             .e("获取明天课程失败: ${tomorrowResult.message}")
                     }
@@ -128,8 +128,8 @@ class CourseWidgetProvider : AppWidgetProvider() {
                             appWidgetId,
                             todayCourses,
                             tomorrowCourses,
-                            todayResult is ServiceResult.Error,
-                            tomorrowResult is ServiceResult.Error)
+                            todayResult is PDAResult.Error,
+                            tomorrowResult is PDAResult.Error)
 
                     }
                 }

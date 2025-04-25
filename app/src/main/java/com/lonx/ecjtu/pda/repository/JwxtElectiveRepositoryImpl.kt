@@ -1,6 +1,6 @@
 package com.lonx.ecjtu.pda.repository
 
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.getOrNull
 import com.lonx.ecjtu.pda.data.common.map
 import com.lonx.ecjtu.pda.data.common.mapCatching
@@ -25,7 +25,7 @@ class JwxtElectiveRepositoryImpl(
     apiClient: JwxtApiClient,
     authRepository: AuthRepository
 ) : BaseJwxtRepository(apiClient, authRepository), ElectiveRepository{
-    override suspend fun getStudentElectiveCourse(): ServiceResult<StuAllElectiveCourses> = withContext(Dispatchers.IO) {
+    override suspend fun getStudentElectiveCourse(): PDAResult<StuAllElectiveCourses> = withContext(Dispatchers.IO) {
         return@withContext try {
             fetchHtmlWithRelogin { apiClient.getElectiveCourseHtml()}
                 .onError { msg, e -> Timber.e(e, "获取初始选课页失败: $msg") }
@@ -34,7 +34,7 @@ class JwxtElectiveRepositoryImpl(
                 .mapCatching { parseSemesters(it) }
                 .mapCatching { semesters ->
                     if (semesters.isEmpty()) {
-                        return@withContext ServiceResult.Success(StuAllElectiveCourses(emptyList()))
+                        return@withContext PDAResult.Success(StuAllElectiveCourses(emptyList()))
                     }
                     val deferredSemesterCourses = semesters.map { semester ->
                         async {
@@ -53,9 +53,9 @@ class JwxtElectiveRepositoryImpl(
                     StuAllElectiveCourses(semesterCourses)
                 }
         } catch (e: IOException) {
-            ServiceResult.Error("网络错误: ${e.message}", e)
+            PDAResult.Error("网络错误: ${e.message}", e)
         } catch (e: Exception) {
-            ServiceResult.Error("未知错误: ${e.message}", e)
+            PDAResult.Error("未知错误: ${e.message}", e)
         }
 
     }

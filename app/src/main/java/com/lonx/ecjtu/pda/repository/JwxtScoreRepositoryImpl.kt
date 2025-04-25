@@ -1,6 +1,6 @@
 package com.lonx.ecjtu.pda.repository
 
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.log
 import com.lonx.ecjtu.pda.data.common.mapCatching
 import com.lonx.ecjtu.pda.data.common.onError
@@ -25,7 +25,7 @@ class JwxtScoreRepositoryImpl(
     authRepository: AuthRepository
 ): BaseJwxtRepository(apiClient, authRepository), ScoreRepository
 {
-    override suspend fun getStudentScores(): ServiceResult<StuAllScores> = withContext(Dispatchers.IO) {
+    override suspend fun getStudentScores(): PDAResult<StuAllScores> = withContext(Dispatchers.IO) {
         Timber.d("JwxtScoreRepository: 开始获取并解析成绩数据...")
 
         fetchHtmlWithRelogin{

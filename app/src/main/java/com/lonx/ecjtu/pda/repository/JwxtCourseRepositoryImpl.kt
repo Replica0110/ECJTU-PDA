@@ -1,6 +1,6 @@
 package com.lonx.ecjtu.pda.repository
 
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.log
 import com.lonx.ecjtu.pda.data.common.mapCatching
 import com.lonx.ecjtu.pda.data.common.onError
@@ -25,7 +25,7 @@ class JwxtCourseRepositoryImpl(
 
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
-    override suspend fun getCoursesForDate(dateQuery: String?): ServiceResult<StuDayCourses> = withContext(
+    override suspend fun getCoursesForDate(dateQuery: String?): PDAResult<StuDayCourses> = withContext(
         Dispatchers.IO) {
         fetchHtmlWithRelogin {
             apiClient.getCourseScheduleHtml(dateQuery)

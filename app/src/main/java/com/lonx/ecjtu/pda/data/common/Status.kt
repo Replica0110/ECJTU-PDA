@@ -1,8 +1,5 @@
 package com.lonx.ecjtu.pda.data.common
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
-
 enum class NavigationTarget { LOGIN, MAIN }
 
 
@@ -19,17 +16,7 @@ enum class CardType {
 }
 
 
-val availableIsp = listOf(
-    IspOption(1, "中国移动"),
-    IspOption(2, "中国电信"),
-    IspOption(3, "中国联通")
-)
 
-@Parcelize
-data class IspOption(
-    val id: Int,
-    val name: String
-) : Parcelable
 
 
 sealed class LocationStatus {

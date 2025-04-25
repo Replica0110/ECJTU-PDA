@@ -21,9 +21,14 @@ import com.lonx.ecjtu.pda.domain.repository.ProfileRepository
 import com.lonx.ecjtu.pda.domain.repository.SchedulesRepository
 import com.lonx.ecjtu.pda.domain.repository.ScoreRepository
 import com.lonx.ecjtu.pda.domain.repository.SecondCreditRepository
+import com.lonx.ecjtu.pda.domain.repository.WifiRepository
 import com.lonx.ecjtu.pda.domain.source.JwxtApiClient
+import com.lonx.ecjtu.pda.domain.usecase.CampusNetLoginUseCase
+import com.lonx.ecjtu.pda.domain.usecase.CampusNetLogoutUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckSessionValidityUseCase
+import com.lonx.ecjtu.pda.domain.usecase.GetCampusNetStatusUseCase
+import com.lonx.ecjtu.pda.domain.usecase.GetNetworkTypeUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCourseUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuElectiveUseCase
@@ -40,6 +45,8 @@ import com.lonx.ecjtu.pda.domain.usecase.UpdatePasswordUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateWeiXinIDUseCase
 import com.lonx.ecjtu.pda.network.MyOkHttpClient
+import com.lonx.ecjtu.pda.network.OkHttpConfig
+import com.lonx.ecjtu.pda.network.PDAOkHttpClient
 import com.lonx.ecjtu.pda.repository.AuthRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtCourseRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtElectiveRepositoryImpl
@@ -49,6 +56,7 @@ import com.lonx.ecjtu.pda.repository.JwxtSchedulesRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtScoreRepositoryImpl
 import com.lonx.ecjtu.pda.repository.JwxtSecondCreditRepositoryImpl
 import com.lonx.ecjtu.pda.repository.PreferencesRepositoryImpl
+import com.lonx.ecjtu.pda.repository.WifiRepositoryImpl
 import com.lonx.ecjtu.pda.repository.source.JwxtApiClientImpl
 import com.lonx.ecjtu.pda.viewmodel.HomeViewModel
 import com.lonx.ecjtu.pda.viewmodel.LoginViewModel
@@ -87,63 +95,33 @@ val appModule = module {
 
 
     single(named("defaultTimeout")) { 30L }
-
+    single { PDAOkHttpClient() }
     // --- 网络请求客户端 ---
-    single<OkHttpClient> {
-        MyOkHttpClient(
-            cookieJar = get(),
-            timeout = get(named("defaultTimeout"))
-        ).createClient()
-    }
-
-//    single<JwxtService> {
-//        JwxtService(
-//            prefs = get(),
+//    single<OkHttpClient> {
+//        MyOkHttpClient(
 //            cookieJar = get(),
-//            client = get()
-//        )
+//            timeout = get(named("defaultTimeout"))
+//        ).createClient()
 //    }
-//    single<StuScoreService> {
-//        StuScoreService(
-//            service = get()
-//        )
-//    }
-//    single<StuProfileService> {
-//        StuProfileService(
-//            service = get()
-//        )
-//    }
-//    single<StuSecondCreditService> {
-//        StuSecondCreditService(
-//            service = get()
-//        )
-//    }
-//    single<StuCourseService> {
-//        StuCourseService(
-//            service = get()
-//        )
-//    }
-//    single<StuScheduleService> {
-//        StuScheduleService(
-//            service = get()
-//        )
-//    }
-//    single<StuElectiveService> {
-//        StuElectiveService(
-//            service = get()
-//        )
-//    }
-//    single<StuExperimentService> {
-//        StuExperimentService(
-//            service = get()
-//        )
-//    }
+    // 用于教务系统的客户端
+    single(named("jwxtClient")) {
+        get<PDAOkHttpClient>().createClient(
+            OkHttpConfig(timeoutSeconds = get(named("defaultTimeout")), cookieJar = get(), useUnsafeSSL = true)
+        )
+    }
+    // 用于校园网登录的客户端
+    single(named("campusNetClient")) {
+        get<PDAOkHttpClient>().createClient(
+            OkHttpConfig(timeoutSeconds = 2, followRedirects = false, useUnsafeSSL = true)
+        )
+    }
     single<Gson> { Gson() }
 
-    single<AuthRepository> { AuthRepositoryImpl(prefs = get(), cookieJar = get(), client = get(), gson = get()) }
-    single<JwxtApiClient> { JwxtApiClientImpl(client = get(), prefs = get(), gson = get()) }
-
+    single<AuthRepository> { AuthRepositoryImpl(prefs = get(), cookieJar = get(), client = get(named("jwxtClient")), gson = get()) }
+    single<JwxtApiClient> { JwxtApiClientImpl(client = get(named("jwxtClient")), prefs = get(), gson = get()) }
+    single<WifiRepository> { WifiRepositoryImpl(prefs = get(), client = get(named("campusNetClient"))) }
     single<ProfileRepository> { JwxtProfileRepositoryImpl(apiClient = get(), authRepository = get()) }
+
     single<CourseRepository> { JwxtCourseRepositoryImpl(apiClient = get(), authRepository = get()) }
     single<ElectiveRepository> { JwxtElectiveRepositoryImpl(apiClient = get(), authRepository = get()) }
     single<ScoreRepository> { JwxtScoreRepositoryImpl(apiClient = get(), authRepository = get()) }
@@ -168,6 +146,10 @@ val appModule = module {
     single<GetStuSecondCreditUseCase> { GetStuSecondCreditUseCase(secondCreditRepository = get()) }
     single<GetStuSchedulesUseCase> { GetStuSchedulesUseCase(schedulesRepository = get()) }
     single<GetWeiXinIDUseCase> { GetWeiXinIDUseCase(preferencesRepository = get()) }
+    single<GetCampusNetStatusUseCase> { GetCampusNetStatusUseCase(wifiRepository = get()) }
+    single<GetNetworkTypeUseCase> { GetNetworkTypeUseCase(wifiRepository = get()) }
+    single<CampusNetLoginUseCase> { CampusNetLoginUseCase(wifiRepository = get()) }
+    single<CampusNetLogoutUseCase> { CampusNetLogoutUseCase(wifiRepository = get()) }
     single<UpdateStuCredentialsUseCase> { UpdateStuCredentialsUseCase(preferencesRepository = get()) }
     single<UpdateWeiXinIDUseCase> { UpdateWeiXinIDUseCase(preferencesRepository = get()) }
     single<UpdatePasswordUseCase> { UpdatePasswordUseCase(authRepository = get()) }
@@ -181,8 +163,12 @@ val appModule = module {
 
     // ViewModels
     viewModel { WifiViewModel(
-        prefs = get(), wifiStatusMonitor = get(), locationStatusMonitor = get(),
-        applicationContext = androidContext()
+        wifiStatusMonitor = get(),
+        locationStatusMonitor = get(),
+        applicationContext = androidContext(),
+        campusNetLoginUseCase = get(),
+        campusNetLogoutUseCase = get(),
+        checkCredentialsExistUseCase = get()
     ) }
     viewModel { SplashViewModel(checkSessionValidityUseCase = get(), checkCredentialsExistUseCase = get(), loginUseCase = get()) }
     viewModel { LoginViewModel(loginManuallyUseCase = get()) }

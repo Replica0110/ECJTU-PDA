@@ -23,3 +23,24 @@ class MyOkHttpClient(
     }
 
 }
+
+class PDAOkHttpClient {
+    fun createClient(config: OkHttpConfig): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(config.timeoutSeconds, TimeUnit.SECONDS)
+            .readTimeout(config.timeoutSeconds, TimeUnit.SECONDS)
+            .writeTimeout(config.timeoutSeconds, TimeUnit.SECONDS)
+            .followRedirects(config.followRedirects)
+
+        config.cookieJar?.let {
+            builder.cookieJar(it)
+        }
+
+        if (config.useUnsafeSSL) {
+            builder.sslSocketFactory(getUnsafeSslSocketFactory(), getUnsafeTrustManager())
+            builder.hostnameVerifier { _, _ -> true }
+        }
+        return builder.build()
+    }
+
+}

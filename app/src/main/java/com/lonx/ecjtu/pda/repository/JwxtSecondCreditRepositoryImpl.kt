@@ -1,6 +1,6 @@
 package com.lonx.ecjtu.pda.repository
 
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.getOrNull
 import com.lonx.ecjtu.pda.data.common.onError
 import com.lonx.ecjtu.pda.data.model.StuSecondCredits
@@ -25,7 +25,7 @@ class JwxtSecondCreditRepositoryImpl(
 
     private val yearPattern: Pattern = Pattern.compile("(\\d{4})\\s+学年学分记录")
 
-    override suspend fun getSecondCredit(): ServiceResult<StuSecondCredits> = withContext(Dispatchers.IO) {
+    override suspend fun getSecondCredit(): PDAResult<StuSecondCredits> = withContext(Dispatchers.IO) {
         Timber.d("JwxtStuSecondCreditRepositoryImpl: 开始获取并解析素质拓展学分数据...")
 
         try {
@@ -33,10 +33,10 @@ class JwxtSecondCreditRepositoryImpl(
                 .onError { msg, e -> Timber.e(e, "获取素质拓展学分 HTML 失败: $msg") }
 
             val htmlBody = htmlBodyResult.getOrNull()
-                ?: return@withContext ServiceResult.Error("无法获取素质拓展学分页面")
+                ?: return@withContext PDAResult.Error("无法获取素质拓展学分页面")
 
             if (htmlBody.isBlank()) {
-                return@withContext ServiceResult.Error("素质拓展学分页面内容为空")
+                return@withContext PDAResult.Error("素质拓展学分页面内容为空")
             }
 
             val document = Jsoup.parse(htmlBody)
@@ -46,13 +46,13 @@ class JwxtSecondCreditRepositoryImpl(
             val parsedData = parseTables(container)
             Timber.i("JwxtStuSecondCreditRepositoryImpl: 解析成功，总类数: ${parsedData.totalCreditsByCategory.size}，学年数: ${parsedData.yearlyCredits.size}")
 
-            ServiceResult.Success(parsedData)
+            PDAResult.Success(parsedData)
         } catch (e: ParseException) {
             Timber.e(e, "解析失败: ${e.message}")
-            ServiceResult.Error("解析素质拓展学分失败", e)
+            PDAResult.Error("解析素质拓展学分失败", e)
         } catch (e: Exception) {
             Timber.e(e, "未知错误")
-            ServiceResult.Error("解析素质拓展学分时发生未知错误", e)
+            PDAResult.Error("解析素质拓展学分时发生未知错误", e)
         }
     }
 

@@ -3,9 +3,9 @@ package com.lonx.ecjtu.pda.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
-import com.lonx.ecjtu.pda.data.common.IspOption
-import com.lonx.ecjtu.pda.data.common.ServiceResult
-import com.lonx.ecjtu.pda.data.common.availableIsp
+import com.lonx.ecjtu.pda.data.common.PDAResult
+import com.lonx.ecjtu.pda.data.model.IspOption
+import com.lonx.ecjtu.pda.data.model.availableIsp
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetWeiXinIDUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LogoutUseCase
@@ -111,12 +111,12 @@ class SettingViewModel(
             try {
                 // 调用更新后的 service 方法
                 when (val result = updatePasswordUseCase(oldPassword, newPassword)) {
-                    is ServiceResult.Success -> {
+                    is PDAResult.Success -> {
                         Timber.i("密码更新成功 (Service层)")
                         feedbackMessage = "密码修改成功"
                         operationSuccessful = true
                     }
-                    is ServiceResult.Error -> {
+                    is PDAResult.Error -> {
                         Timber.w("密码更新失败: ${result.message}")
                         feedbackMessage = result.message
                     }

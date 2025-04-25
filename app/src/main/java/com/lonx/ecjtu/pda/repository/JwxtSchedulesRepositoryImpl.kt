@@ -1,8 +1,7 @@
 package com.lonx.ecjtu.pda.repository
 
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.log
-import com.lonx.ecjtu.pda.data.common.map
 import com.lonx.ecjtu.pda.data.common.mapCatching
 import com.lonx.ecjtu.pda.data.common.onError
 import com.lonx.ecjtu.pda.data.common.onSuccess
@@ -27,7 +26,7 @@ class JwxtSchedulesRepositoryImpl(
     authRepository: AuthRepository
 ) : BaseJwxtRepository(apiClient, authRepository), SchedulesRepository {
 
-    override suspend fun getAllSchedules(): ServiceResult<StuAllSchedules> = withContext(Dispatchers.IO) {
+    override suspend fun getAllSchedules(): PDAResult<StuAllSchedules> = withContext(Dispatchers.IO) {
         Timber.d("开始获取所有学期课表...")
 
         val allSchedules = mutableListOf<TermSchedules>()
@@ -52,8 +51,8 @@ class JwxtSchedulesRepositoryImpl(
             }
 
         val (termList, initialSchedule, _) = when (initialResult) {
-            is ServiceResult.Success -> initialResult.data
-            is ServiceResult.Error -> return@withContext ServiceResult.Error(
+            is PDAResult.Success -> initialResult.data
+            is PDAResult.Error -> return@withContext PDAResult.Error(
                 "课表加载失败: ${initialResult.message}", initialResult.exception
             )
         }
@@ -84,11 +83,11 @@ class JwxtSchedulesRepositoryImpl(
             if (failedTerms.isNotEmpty()) {
                 Timber.w("部分失败: $failedTerms")
             }
-            ServiceResult.Success(StuAllSchedules(allSchedules.distinctBy { it.termValue }))
+            PDAResult.Success(StuAllSchedules(allSchedules.distinctBy { it.termValue }))
         } else {
             val msg = "全部失败，错误信息: ${failedTerms.joinToString { "${it.first}: ${it.second}" }}"
             Timber.e(msg)
-            ServiceResult.Error(msg)
+            PDAResult.Error(msg)
         }
     }
 

@@ -1,8 +1,7 @@
 package com.lonx.ecjtu.pda.repository
 
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.getOrNull
-import com.lonx.ecjtu.pda.data.common.log
 import com.lonx.ecjtu.pda.data.common.map
 import com.lonx.ecjtu.pda.data.common.mapCatching
 import com.lonx.ecjtu.pda.data.common.onError
@@ -28,7 +27,7 @@ class JwxtExperimentRepositoryImpl(
 
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
-    override suspend fun getAllExperiments(): ServiceResult<StuAllExperiments> = withContext(Dispatchers.IO) {
+    override suspend fun getAllExperiments(): PDAResult<StuAllExperiments> = withContext(Dispatchers.IO) {
         Timber.d("开始获取所有实验信息")
 
         try {
@@ -39,7 +38,7 @@ class JwxtExperimentRepositoryImpl(
                 .onError { msg, e -> Timber.e(e, "获取默认实验页面失败: $msg") }
                 .map { Jsoup.parse(it) }
 
-            val initialDoc = initialDocResult.getOrNull() ?: return@withContext ServiceResult.Error("获取默认实验页面失败")
+            val initialDoc = initialDocResult.getOrNull() ?: return@withContext PDAResult.Error("获取默认实验页面失败")
 
             val defaultOption = initialDoc.selectFirst("select#term > option[selected]")
             val defaultTerm = defaultOption?.attr("value") ?: ""
@@ -80,10 +79,10 @@ class JwxtExperimentRepositoryImpl(
 
             termExperimentsList.addAll(deferredTerms.awaitAll().filterNotNull())
 
-            ServiceResult.Success(StuAllExperiments(termExperimentsList))
+            PDAResult.Success(StuAllExperiments(termExperimentsList))
         } catch (e: Exception) {
             Timber.e(e, "实验信息解析异常")
-            ServiceResult.Error("解析实验数据失败", e)
+            PDAResult.Error("解析实验数据失败", e)
         }
     }
 

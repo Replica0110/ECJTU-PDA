@@ -3,10 +3,10 @@ package com.lonx.ecjtu.pda.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
-import com.lonx.ecjtu.pda.data.common.IspOption
 import com.lonx.ecjtu.pda.data.common.NavigationTarget
-import com.lonx.ecjtu.pda.data.common.ServiceResult
-import com.lonx.ecjtu.pda.data.common.availableIsp
+import com.lonx.ecjtu.pda.data.common.PDAResult
+import com.lonx.ecjtu.pda.data.model.IspOption
+import com.lonx.ecjtu.pda.data.model.availableIsp
 import com.lonx.ecjtu.pda.domain.usecase.LoginManuallyUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,12 +53,12 @@ class LoginViewModel(
                 )
 
                 when (result) {
-                    is ServiceResult.Success -> {
+                    is PDAResult.Success -> {
                         Timber.i("登录成功，准备导航到主界面")
 
                         _uiState.update { it.copy(isLoading = false, navigationEvent = NavigationTarget.MAIN) }
                     }
-                    is ServiceResult.Error -> {
+                    is PDAResult.Error -> {
                         Timber.w("登录失败: ${result.message}")
                         _uiState.update { it.copy(isLoading = false, error = result.message) }
                     }

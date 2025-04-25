@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.data.common.NavigationTarget
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckSessionValidityUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LoginUseCase
@@ -69,13 +69,13 @@ class SplashViewModel(
                     } else {
                         _uiState.update { it.copy(message = "正在尝试自动登录...") }
                         when (val loginResult = loginUseCase()) {
-                            is ServiceResult.Success -> {
+                            is PDAResult.Success -> {
                                 Timber.tag(logTag).d("自动登录成功")
                                 finalMessage = "自动登录成功，正在进入..."
                                 finalNavigationTarget = NavigationTarget.MAIN
                                 shouldBeLoading = false
                             }
-                            is ServiceResult.Error -> {
+                            is PDAResult.Error -> {
                                 Timber.tag(logTag).w("自动登录失败: ${loginResult.message}")
                                 finalMessage = "自动登录失败，请重新登录"
                                 finalNavigationTarget = NavigationTarget.LOGIN

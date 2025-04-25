@@ -25,8 +25,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.common.IspOption
-import com.lonx.ecjtu.pda.data.common.availableIsp
+import com.lonx.ecjtu.pda.data.model.IspOption
+import com.lonx.ecjtu.pda.data.model.availableIsp
 import com.lonx.ecjtu.pda.ui.component.CustomDropdownMenu
 import com.lonx.ecjtu.pda.ui.dialog.AlertDialogContainer
 import top.yukonga.miuix.kmp.basic.Icon
@@ -61,10 +61,7 @@ fun AccountConfigDialog(
         confirmButtonText = "保存",
         onConfirm = {
             internalError = null
-            if (tempPassword.isBlank()) {
-                internalError = "新密码不能为空"
-                return@AlertDialogContainer
-            }
+
             onSave(tempStudentId, tempPassword, tempSelectedIsp)
             if (internalError == null) {
                 onDismissRequest()

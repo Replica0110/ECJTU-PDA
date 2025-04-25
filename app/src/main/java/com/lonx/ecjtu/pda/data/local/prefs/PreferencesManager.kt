@@ -42,7 +42,10 @@ class PreferencesManager private constructor(context: Context) {
         return preferences.getInt(key, defaultValue)
     }
     /** 检查是否已经保存学号和密码*/
-    fun hasCredentials(): Boolean {
+    fun hasCredentials(checkIsp: Boolean = false): Boolean {
+        if (checkIsp) {
+            return preferences.contains(STU_ID) && preferences.contains(STU_PASSWORD) && preferences.contains(ISP)
+        }
         return preferences.contains(STU_ID) && preferences.contains(STU_PASSWORD)
     }
 

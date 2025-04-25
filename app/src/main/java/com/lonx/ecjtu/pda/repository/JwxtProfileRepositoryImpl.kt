@@ -2,7 +2,7 @@ package com.lonx.ecjtu.pda.repository
 
 import com.lonx.ecjtu.pda.common.ProfileType
 import com.lonx.ecjtu.pda.common.toName
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.log
 import com.lonx.ecjtu.pda.data.common.mapCatching
 import com.lonx.ecjtu.pda.data.common.onError
@@ -23,7 +23,7 @@ class JwxtProfileRepositoryImpl(
 ) : BaseJwxtRepository(apiClient, authRepository), ProfileRepository
 {
     class ParseException(message: String, cause: Throwable? = null) : IOException(message, cause)
-    override suspend fun getStudentProfile(): ServiceResult<Map<String, Map<String, String>>> = withContext(Dispatchers.IO) {
+    override suspend fun getStudentProfile(): PDAResult<Map<String, Map<String, String>>> = withContext(Dispatchers.IO) {
         Timber.d("JwxtProfileRepository: 开始获取学生信息...")
 
         fetchHtmlWithRelogin {

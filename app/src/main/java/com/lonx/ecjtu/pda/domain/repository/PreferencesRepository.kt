@@ -6,7 +6,7 @@ interface PreferencesRepository {
 
     fun setWeiXinId(weixinid: String)
 
-    fun hasCredentials(): Boolean
+    fun hasCredentials(checkIsp: Boolean = false): Boolean
 
     fun getCredentials(): Triple<String, String, Int>
 

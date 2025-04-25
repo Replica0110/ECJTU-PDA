@@ -15,8 +15,12 @@ import com.lonx.ecjtu.pda.base.BaseViewModel
 import com.lonx.ecjtu.pda.common.monitor.LocationStatusMonitor
 import com.lonx.ecjtu.pda.common.monitor.WifiStatusMonitor
 import com.lonx.ecjtu.pda.data.common.LocationStatus
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.WifiStatus
 import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
+import com.lonx.ecjtu.pda.domain.usecase.CampusNetLoginUseCase
+import com.lonx.ecjtu.pda.domain.usecase.CampusNetLogoutUseCase
+import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
 import com.lonx.ecjtu.pda.service.WifiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -56,14 +60,15 @@ data class WifiUiState(
 class WifiViewModel(
     private val wifiStatusMonitor: WifiStatusMonitor,
     private val locationStatusMonitor: LocationStatusMonitor,
-    override val prefs: PreferencesManager,
+    private val campusNetLoginUseCase: CampusNetLoginUseCase,
+    private val campusNetLogoutUseCase: CampusNetLogoutUseCase,
+    private val checkCredentialsExistUseCase: CheckCredentialsExistUseCase,
     private val applicationContext: Context
-) : ViewModel(), BaseViewModel {
+) : ViewModel() {
 
-    override val service = WifiService()
 
     private val _uiState = MutableStateFlow(WifiUiState())
-    override val uiState: StateFlow<WifiUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<WifiUiState> = _uiState.asStateFlow()
 
     private val _uiEvent = MutableSharedFlow<WifiUiEvent>()
     val uiEvent = _uiEvent.asSharedFlow()
@@ -243,9 +248,8 @@ class WifiViewModel(
         }
 
         d { "校园网登录中" }
-        val credentials = prefs.getCredentials()
-        val (stuId, stuPwd, isp) = credentials
-        if (stuId.isEmpty() || stuPwd.isEmpty()) {
+
+        if (!checkCredentialsExistUseCase(checkIsp = true)) {
             viewModelScope.launch {
                 _uiEvent.emit(WifiUiEvent.ShowInfoDialog("登录信息", "请先设置学号和密码"))
             }
@@ -256,15 +260,21 @@ class WifiViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                var result = service.login(stuId, stuPwd, isp)
+                val result = campusNetLoginUseCase()
                 val title: String
-                if (result.startsWith("E")) {
-                    title = "登录失败"
-                    result = result.substring(2).trim()
-                } else {
-                    title = "登录成功"
+                val message: String
+                when (result) {
+                    is PDAResult.Success -> {
+                        title="登录成功"
+                        message = result.data
+
+                    }
+                    is PDAResult.Error -> {
+                       title= "登录失败"
+                        message = result.message
+                    }
                 }
-                _uiEvent.emit(WifiUiEvent.ShowInfoDialog(title, result))
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog(title, message))
             } catch (e: Exception) {
                 e.printStackTrace()
                 _uiEvent.emit(WifiUiEvent.ShowInfoDialog("登录失败", "发生错误: ${e.message}"))
@@ -292,15 +302,21 @@ class WifiViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                var result = service.loginOut()
-                var title = ""
-                if (result.startsWith("E")) {
-                    title = "注销失败"
-                    result = result.substring(2).trim()
-                } else {
-                    title = "注销成功"
+                val result = campusNetLogoutUseCase()
+                val title: String
+                val message: String
+                when (result) {
+                    is PDAResult.Success -> {
+                        title="注销成功"
+                        message = result.data
+                    }
+                    is PDAResult.Error -> {
+                        title="注销失败"
+                        message = result.message
+                    }
                 }
-                _uiEvent.emit(WifiUiEvent.ShowInfoDialog(title, result))
+
+                _uiEvent.emit(WifiUiEvent.ShowInfoDialog(title, message))
             } catch (e: Exception) {
                 e.printStackTrace()
                 _uiEvent.emit(WifiUiEvent.ShowInfoDialog("注销失败", "发生错误: ${e.message}"))
@@ -322,6 +338,4 @@ class WifiViewModel(
     private fun updateLocationPermissionState() {
         _uiState.update { it.copy(hasLocationPermission = hasLocationPermission()) }
     }
-
-
 }

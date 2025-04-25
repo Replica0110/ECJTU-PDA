@@ -13,8 +13,8 @@ class PreferencesRepositoryImpl(
         prefs.setWeiXinId(weixinid)
     }
 
-    override fun hasCredentials(): Boolean {
-        return prefs.hasCredentials()
+    override fun hasCredentials(checkIsp: Boolean): Boolean {
+        return prefs.hasCredentials(checkIsp)
     }
 
     override fun getCredentials(): Triple<String, String, Int> {

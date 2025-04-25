@@ -2,7 +2,7 @@ package com.lonx.ecjtu.pda.repository
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.local.cookies.PersistentCookieJar
 import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import com.lonx.ecjtu.pda.data.remote.ApiConstants
@@ -40,7 +40,7 @@ class AuthRepositoryImpl(
 
     override suspend fun hasCasTicket(): Boolean = hasLoginInternal(0)
 
-    override suspend fun login(forceRefresh: Boolean): ServiceResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun login(forceRefresh: Boolean): PDAResult<Unit> = withContext(Dispatchers.IO) {
         val (studentId, studentPassword, _)= prefs.getCredentials()
 
         val sessionTimeOut = checkSessionValidity()
@@ -48,27 +48,27 @@ class AuthRepositoryImpl(
         if (studentId.isBlank() || studentPassword.isBlank()) {
             Timber.e("登录失败：账号为${studentId}，密码为${studentPassword}。")
             Timber.e("登录失败：PreferencesManager 中缺少凭据。")
-            return@withContext ServiceResult.Error("请先设置学号和密码")
+            return@withContext PDAResult.Error("请先设置学号和密码")
         }
 
         Timber.d("尝试为用户 $studentId 登录。强制刷新：$forceRefresh")
 
         if (!forceRefresh && hasValidSession() && !sessionTimeOut) {
             Timber.d("用户已拥有 CAS 和 JWXT 会话 Cookie。跳过登录步骤。")
-            return@withContext ServiceResult.Success(Unit)
+            return@withContext PDAResult.Success(Unit)
         } else if (!forceRefresh && hasCasTicket()) {
             Timber.d("用户拥有 CAS Cookie (CASTGC)，但可能需要为 JWXT 进行重定向。")
             val redirectResult = handleRedirectionIfNeeded()
-            return@withContext if (redirectResult is ServiceResult.Success) {
+            return@withContext if (redirectResult is PDAResult.Success) {
                 if (hasValidSession()) {
                     Timber.d("重定向成功，JWXT 会话已建立")
-                    ServiceResult.Success(Unit)
+                    PDAResult.Success(Unit)
                 } else {
                     Timber.w("重定向尝试完成，但 JWXT 会话仍然缺失。")
-                    ServiceResult.Error("无法建立教务系统会话")
+                    PDAResult.Error("无法建立教务系统会话")
                 }
             } else {
-                ServiceResult.Error("登录重定向失败: ${(redirectResult as ServiceResult.Error).message}")
+                PDAResult.Error("登录重定向失败: ${(redirectResult as PDAResult.Error).message}")
             }
         } else {
             Timber.d("需要执行完整的登录操作 (刷新或未登录)。")
@@ -81,27 +81,27 @@ class AuthRepositoryImpl(
             val sequenceResult = performCasLoginSequence(studentId, studentPassword)
 
             // 根据序列结果返回
-            return@withContext if (sequenceResult is ServiceResult.Success) {
+            return@withContext if (sequenceResult is PDAResult.Success) {
                 Timber.i("用户 $studentId 的自动登录过程成功完成 (通过调用序列)")
-                ServiceResult.Success(Unit)
+                PDAResult.Success(Unit)
             } else {
-                Timber.e("用户 $studentId 的自动登录过程失败 (通过调用序列): ${(sequenceResult as ServiceResult.Error).message}")
+                Timber.e("用户 $studentId 的自动登录过程失败 (通过调用序列): ${(sequenceResult as PDAResult.Error).message}")
                 sequenceResult // 返回序列中的错误
             }
         }
     }
 
-    override suspend fun loginManually(studentId: String, studentPass: String, ispOption: Int): ServiceResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun loginManually(studentId: String, studentPass: String, ispOption: Int): PDAResult<Unit> = withContext(Dispatchers.IO) {
         if (studentId.isBlank() || studentPass.isBlank()) {
             Timber.w("尝试使用空白凭据进行手动登录!")
-            return@withContext ServiceResult.Error("账号或密码不能为空")
+            return@withContext PDAResult.Error("账号或密码不能为空")
         }
         Timber.e("尝试为用户 $studentId 手动登录")
         cookieJar.clear()
 
         val sequenceResult = performCasLoginSequence(studentId, studentPass)
 
-        if (sequenceResult is ServiceResult.Error) {
+        if (sequenceResult is PDAResult.Error) {
             Timber.e("用户 $studentId 手动登录失败: ${sequenceResult.message}")
             return@withContext sequenceResult
         }
@@ -111,9 +111,9 @@ class AuthRepositoryImpl(
             prefs.saveCredentials(studentId, studentPass, ispOption)
         } catch (e: Exception) {
             Timber.e(e, "保存凭据时发生错误")
-            return@withContext ServiceResult.Error("登录成功但无法保存凭据: ${e.message}")
+            return@withContext PDAResult.Error("登录成功但无法保存凭据: ${e.message}")
         }
-        return@withContext ServiceResult.Success(Unit)
+        return@withContext PDAResult.Success(Unit)
     }
 
     override suspend fun logout(clearStoredCredentials: Boolean) = withContext(Dispatchers.IO) {
@@ -190,16 +190,16 @@ class AuthRepositoryImpl(
         }
     }
 
-    override suspend fun updatePassword(oldPassword: String, newPassword: String): ServiceResult<String> = withContext(Dispatchers.IO) {
+    override suspend fun updatePassword(oldPassword: String, newPassword: String): PDAResult<String> = withContext(Dispatchers.IO) {
         Timber.e("开始修改密码...")
         if (newPassword.isBlank()) {
             Timber.w("修改密码失败：新密码不能为空。")
-            return@withContext ServiceResult.Error("新密码不能为空")
+            return@withContext PDAResult.Error("新密码不能为空")
         }
 
         if (!checkSessionValidity()) {
             Timber.w("修改密码失败：会话无效。")
-            return@withContext ServiceResult.Error("请先登录或刷新会话")
+            return@withContext PDAResult.Error("请先登录或刷新会话")
         }
 
         try {
@@ -231,24 +231,24 @@ class AuthRepositoryImpl(
                 if (!it.isSuccessful) {
                     val errorBody = it.body?.string()
                     Timber.e("修改密码请求失败: HTTP ${it.code}. Body: $errorBody")
-                    return@withContext ServiceResult.Error("修改密码请求失败: HTTP ${it.code}")
+                    return@withContext PDAResult.Error("修改密码请求失败: HTTP ${it.code}")
                 }
 
                 val responseBody = it.body?.string()?.trim()
                 Timber.i("修改密码响应: '$responseBody'")
 
                 when (responseBody) {
-                    "1" -> ServiceResult.Success("密码修改成功")
-                    "2" -> ServiceResult.Error("旧密码错误或新密码不符合要求")
-                    else -> ServiceResult.Error("修改密码失败：未知的响应 '$responseBody'")
+                    "1" -> PDAResult.Success("密码修改成功")
+                    "2" -> PDAResult.Error("旧密码错误或新密码不符合要求")
+                    else -> PDAResult.Error("修改密码失败：未知的响应 '$responseBody'")
                 }
             }
         } catch (e: IOException) {
             Timber.e(e, "修改密码时网络错误")
-            ServiceResult.Error("网络错误: ${e.message}")
+            PDAResult.Error("网络错误: ${e.message}")
         } catch (e: Exception) {
             Timber.e(e, "修改密码时未知错误")
-            ServiceResult.Error("发生未知错误: ${e.message}")
+            PDAResult.Error("发生未知错误: ${e.message}")
         }
     }
 
@@ -277,16 +277,16 @@ class AuthRepositoryImpl(
         }
     }
 
-    private suspend fun performCasLoginSequence(studentId: String, plainPassword: String): ServiceResult<Unit> {
+    private suspend fun performCasLoginSequence(studentId: String, plainPassword: String): PDAResult<Unit> {
         Timber.d("执行用户 $studentId 的 CAS 登录序列...")
 
         // 1. 加密密码
         val encPassword = when (val encPasswordResult = getEncryptedPassword(plainPassword)) {
-            is ServiceResult.Success -> encPasswordResult.data
-            is ServiceResult.Error -> {
+            is PDAResult.Success -> encPasswordResult.data
+            is PDAResult.Error -> {
                 Timber.e("CAS 登录序列在密码加密时失败: ${encPasswordResult.message}")
                 // 直接返回错误，不继续执行
-                return ServiceResult.Error("密码加密失败: ${encPasswordResult.message}")
+                return PDAResult.Error("密码加密失败: ${encPasswordResult.message}")
             }
         }
 
@@ -298,51 +298,51 @@ class AuthRepositoryImpl(
 
         // 3. 获取 LT 值
         val ltValue = when (val ltValueResult = getLoginLtValue(headers)) {
-            is ServiceResult.Success -> ltValueResult.data
-            is ServiceResult.Error -> {
+            is PDAResult.Success -> ltValueResult.data
+            is PDAResult.Error -> {
                 Timber.e("CAS 登录序列在获取 LT 值时失败: ${ltValueResult.message}")
-                return ServiceResult.Error("无法获取登录令牌: ${ltValueResult.message}")
+                return PDAResult.Error("无法获取登录令牌: ${ltValueResult.message}")
             }
         }
 
         // 4. 执行登录 POST 请求
         when (val loginResponseResult = loginWithCredentials(studentId, encPassword, ltValue, headers)) {
-            is ServiceResult.Success -> {
+            is PDAResult.Success -> {
                 if (!hasCasTicket()) {
                     Timber.e("CAS 登录序列失败：提交凭据后未找到 CASTGC Cookie。")
                     // 假设是凭据错误
-                    return ServiceResult.Error("账号或密码错误")
+                    return PDAResult.Error("账号或密码错误")
                 }
                 Timber.d("CAS 登录序列：初始登录 POST 成功 (找到 CASTGC)。")
             }
-            is ServiceResult.Error -> {
+            is PDAResult.Error -> {
                 Timber.e("CAS 登录序列在凭据提交时失败: ${loginResponseResult.message}")
                 // 传递来自 loginWithCredentials 的具体错误消息
-                return ServiceResult.Error(loginResponseResult.message)
+                return PDAResult.Error(loginResponseResult.message)
             }
         }
 
         // 5. 处理重定向
         when (val redirectResult = handleRedirection(headers)) {
-            is ServiceResult.Success -> {
+            is PDAResult.Success -> {
                 Timber.d("CAS 登录序列：重定向处理成功。")
             }
-            is ServiceResult.Error -> {
+            is PDAResult.Error -> {
                 Timber.e("CAS 登录序列在重定向时失败: ${redirectResult.message}")
-                return ServiceResult.Error("登录重定向失败: ${redirectResult.message}")
+                return PDAResult.Error("登录重定向失败: ${redirectResult.message}")
             }
         }
 
         if (!hasValidSession()) {
             Timber.w("CAS 登录序列完成，但 JWXT 会话 Cookie (JSESSIONID) 可能缺失。")
-            return ServiceResult.Error("无法建立教务系统会话")
+            return PDAResult.Error("无法建立教务系统会话")
         }
 
         Timber.i("用户 $studentId 的 CAS 登录序列成功完成。")
-        return ServiceResult.Success(Unit)
+        return PDAResult.Success(Unit)
     }
 
-    private suspend fun getEncryptedPassword(plainPassword: String): ServiceResult<String> = safeAuthCall {
+    private suspend fun getEncryptedPassword(plainPassword: String): PDAResult<String> = safeAuthCall {
         // 构建表单体，包含需要加密的密码
         val formBody = FormBody.Builder()
             .add("pwd", plainPassword)
@@ -376,7 +376,7 @@ class AuthRepositoryImpl(
         passwordEnc // 返回加密后的密码字符串
     }
 
-    private suspend fun getLoginLtValue(headers: Headers): ServiceResult<String> = safeAuthCall {
+    private suspend fun getLoginLtValue(headers: Headers): PDAResult<String> = safeAuthCall {
         Timber.d("正在从登录页面获取 LT 值: $ECJTU_LOGIN_URL")
         // 构建 GET 请求以获取登录页面 HTML
         val request = Request.Builder()
@@ -410,7 +410,7 @@ class AuthRepositoryImpl(
         encryptedPass: String,
         ltValue: String,
         headers: Headers
-    ): ServiceResult<Unit> = safeAuthCall {
+    ): PDAResult<Unit> = safeAuthCall {
         Timber.d("正在为 $username 提交登录凭据...")
         // 构建登录表单体
         val loginRequestBody = FormBody.Builder()
@@ -479,7 +479,7 @@ class AuthRepositoryImpl(
     }
 
 
-    private suspend fun handleRedirection(headers: Headers): ServiceResult<Unit> = safeAuthCall {
+    private suspend fun handleRedirection(headers: Headers): PDAResult<Unit> = safeAuthCall {
         Timber.e("正在处理登录后重定向...")
         val jwxtLoginUrlHttp = JWXT_LOGIN_URL.toHttpUrlOrNull() ?: throw IOException("Invalid JWXT Login URL")
         Timber.e("正在访问 JWXT 登录 URL: $jwxtLoginUrlHttp")
@@ -512,7 +512,7 @@ class AuthRepositoryImpl(
         Timber.e("重定向处理完成。")
     }
 
-    private suspend fun handleRedirectionIfNeeded(): ServiceResult<Unit> {
+    private suspend fun handleRedirectionIfNeeded(): PDAResult<Unit> {
         if (hasCasTicket() && !hasValidSession()) {
             Timber.e("找到 CASTGC，但缺少 JWXT 会话。正在执行重定向。")
             val headers = Headers.Builder()
@@ -520,29 +520,29 @@ class AuthRepositoryImpl(
                 .add("Host", ApiConstants.CAS_ECJTU_DOMAIN)
                 .build()
             val result = handleRedirection(headers)
-            return if (result is ServiceResult.Success && hasValidSession()) {
-                ServiceResult.Success(Unit)
+            return if (result is PDAResult.Success && hasValidSession()) {
+                PDAResult.Success(Unit)
             } else {
-                ServiceResult.Error("重定向失败或未建立完整会话")
+                PDAResult.Error("重定向失败或未建立完整会话")
             }
         } else {
             Timber.e("不需要重定向 (缺少 CASTGC 或已有 JWXT 会话)。")
-            return if (hasValidSession()) ServiceResult.Success(Unit) else ServiceResult.Error("无法执行重定向 (缺少 CAS 凭据)")
+            return if (hasValidSession()) PDAResult.Success(Unit) else PDAResult.Error("无法执行重定向 (缺少 CAS 凭据)")
         }
     }
 
-    private suspend fun <T> safeAuthCall(authCall: suspend () -> T): ServiceResult<T> = withContext(Dispatchers.IO) {
+    private suspend fun <T> safeAuthCall(authCall: suspend () -> T): PDAResult<T> = withContext(Dispatchers.IO) {
         try {
-            ServiceResult.Success(authCall())
+            PDAResult.Success(authCall())
         } catch (e: AuthException) {
             Timber.w("认证失败: ${e.message}")
-            ServiceResult.Error(e.message ?: "认证失败", e)
+            PDAResult.Error(e.message ?: "认证失败", e)
         } catch (e: IOException) {
             Timber.e(e, "认证过程中网络或IO错误")
-            ServiceResult.Error("网络错误: ${e.message}", e)
+            PDAResult.Error("网络错误: ${e.message}", e)
         } catch (e: Exception) {
             Timber.e(e, "认证过程中未知错误")
-            ServiceResult.Error("发生未知错误: ${e.message}", e)
+            PDAResult.Error("发生未知错误: ${e.message}", e)
         }
     }
 

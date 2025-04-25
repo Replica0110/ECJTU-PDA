@@ -2,7 +2,7 @@ package com.lonx.ecjtu.pda.base
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.ecjtu.pda.data.common.ServiceResult
+import com.lonx.ecjtu.pda.data.common.PDAResult
 import com.lonx.ecjtu.pda.data.common.toUiState
 import com.lonx.ecjtu.pda.state.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 abstract class BaseResultViewModel<T>(
-    private val fetchData: suspend () -> ServiceResult<T>
+    private val fetchData: suspend () -> PDAResult<T>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<T>>(UiState.Empty)
