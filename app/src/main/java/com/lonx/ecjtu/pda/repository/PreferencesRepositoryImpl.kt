@@ -6,6 +6,12 @@ import com.lonx.ecjtu.pda.domain.repository.PreferencesRepository
 class PreferencesRepositoryImpl(
     private val prefs: PreferencesManager
 ):PreferencesRepository {
+    override fun getBoolean(key: String, defaultValue: Boolean): Boolean {
+        return prefs.getBoolean(key, defaultValue)
+    }
+    override fun setBoolean(key: String, value: Boolean) {
+        prefs.setBoolean(key, value)
+    }
     override fun getWeiXinId(): String {
         return prefs.getWeiXinId()
     }
@@ -21,7 +27,7 @@ class PreferencesRepositoryImpl(
         return prefs.getCredentials()
     }
 
-    override fun saveCredentials(studentId: String, studentPass: String, ispOption: Int) {
+    override fun saveCredentials(studentId: String?, studentPass: String?, ispOption: Int?) {
         prefs.saveCredentials(studentId, studentPass, ispOption)
     }
 

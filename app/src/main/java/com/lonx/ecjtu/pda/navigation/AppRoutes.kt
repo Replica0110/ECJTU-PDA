@@ -81,12 +81,13 @@ sealed class JwxtRoute(
     data object Score : JwxtRoute("jwxt_score", "我的成绩")
     data object Schedules : JwxtRoute("jwxt_course", "我的课表")
     data object ExamInfo : JwxtRoute("jwxt_exam", "考试安排")
+    data object ExperimentInfo : JwxtRoute("jwxt_experiment", "实验安排")
     data object SecondCredit : JwxtRoute("jwxt_second_credit", "素拓学分")
     data object ElectiveCourse : JwxtRoute("jwxt_elective", "选课小班信息")
 
     companion object {
         fun find(route: String?): JwxtRoute? {
-            return listOf(Menu, Score, Schedules, ExamInfo, SecondCredit, ElectiveCourse)
+            return listOf(Menu, Score, Schedules, ExamInfo, ExperimentInfo, SecondCredit, ElectiveCourse)
                 .find { it.route == route }
         }
     }

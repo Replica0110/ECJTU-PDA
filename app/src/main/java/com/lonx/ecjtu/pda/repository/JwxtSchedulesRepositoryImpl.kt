@@ -33,7 +33,7 @@ class JwxtSchedulesRepositoryImpl(
         val failedTerms = mutableListOf<Pair<String, String>>()
 
         // 获取初始页面并解析
-        val initialResult = fetchHtmlWithRelogin { apiClient.getScheduleHtml() }
+        val initialResult = getHtml { apiClient.getScheduleHtml() }
             .log("Initial Fetch")
             .mapCatching { html ->
                 val doc = Jsoup.parse(html)
@@ -63,7 +63,7 @@ class JwxtSchedulesRepositoryImpl(
         for (term in termList) {
             if (term.value == initialTermValue) continue
 
-            fetchHtmlWithRelogin { apiClient.getScheduleHtml(term.value) }
+            getHtml { apiClient.getScheduleHtml(term.value) }
                 .log("Fetch ${term.value}")
                 .mapCatching { html ->
                     val doc = Jsoup.parse(html)

@@ -28,7 +28,7 @@ class JwxtScoreRepositoryImpl(
     override suspend fun getStudentScores(): PDAResult<StuAllScores> = withContext(Dispatchers.IO) {
         Timber.d("JwxtScoreRepository: 开始获取并解析成绩数据...")
 
-        fetchHtmlWithRelogin{
+        getHtml{
             apiClient.getStudentScoresHtml()
                 .onError { msg, _ -> Timber.e("JwxtScoreRepository: 获取成绩 HTML 失败: $msg") } }
             .mapCatching { htmlBody ->

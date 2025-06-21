@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -22,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -35,8 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.R
+import com.lonx.ecjtu.pda.data.model.availableIsp
 import com.lonx.ecjtu.pda.navigation.TopLevelRoute
-import com.lonx.ecjtu.pda.screen.AccountConfigDialog
+import com.lonx.ecjtu.pda.screen.IspConfigDialog
 import com.lonx.ecjtu.pda.screen.ChangePasswordDialog
 import com.lonx.ecjtu.pda.ui.dialog.InfoAlertDialog
 import com.lonx.ecjtu.pda.ui.dialog.InputAlertDialog
@@ -49,6 +48,8 @@ import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.extra.SuperDropdown
+import top.yukonga.miuix.kmp.extra.SuperSwitch
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.icons.useful.Delete
 import top.yukonga.miuix.kmp.icon.icons.useful.Personal
@@ -62,9 +63,10 @@ fun SettingScreen(
     settingViewModel: SettingViewModel = koinViewModel()
 ) {
     val uiState by settingViewModel.uiState.collectAsState()
-
+    //设置项
+    var autoLogin by remember { mutableStateOf(settingViewModel.uiState.value.autoLogin) }
     // 对话框
-    var showAccountDialog by rememberSaveable { mutableStateOf(false) }
+    var showIspDialog by rememberSaveable { mutableStateOf(false) }
     var showPasswordDialog by rememberSaveable  { mutableStateOf(false) }
     var showWeiXinIdDialog by rememberSaveable { mutableStateOf(false) }
     var showWeiXinIdTutorialDialog by rememberSaveable { mutableStateOf(false) }
@@ -73,26 +75,18 @@ fun SettingScreen(
 
     // snackBar通知
     val snackbarHostState = remember { SnackbarHostState() }
-    var snackbarContainerColor by remember { mutableStateOf(Color.Unspecified) }
-    var snackbarContentColor by remember { mutableStateOf(Color.Unspecified) }
-    // snackBar通知颜色
-    val successContainerColor = MiuixTheme.colorScheme.primaryContainer
-    val successContentColor = MiuixTheme.colorScheme.onPrimaryContainer
-    val errorContainerColor = MaterialTheme.colorScheme.errorContainer
-    val errorContentColor = MaterialTheme.colorScheme.onError
-    val defaultContainerColor = MiuixTheme.colorScheme.onSurfaceContainer
-    val defaultContentColor = MiuixTheme.colorScheme.onSurface
-    // 账号配置对话框
-    AccountConfigDialog(
-        currentStudentId = uiState.studentId,
-        currentPassword = uiState.password,
+
+    // 运营商配置对话框
+    IspConfigDialog(
+//        currentStudentId = uiState.studentId,
+//        currentPassword = uiState.password,
         currentIsp = uiState.ispSelected,
         isLoading = uiState.isLoading,
         error = uiState.error,
-        onDismissRequest = { showAccountDialog= false },
-        onSave = { studentId, password, selectedIsp ->
-            settingViewModel.updateConfig(studentId, password, selectedIsp) },
-        show = showAccountDialog
+        onDismissRequest = { showIspDialog= false },
+        onSave = { selectedIsp ->
+            settingViewModel.updateConfig(selectedIsp) },
+        show = showIspDialog
     )
     // 修改密码对话框
     ChangePasswordDialog(
@@ -103,7 +97,6 @@ fun SettingScreen(
                 old, new
             )
         },
-        initialOldPassword = uiState.password,
         confirmButtonText = "确认",
         dismissButtonText = "取消",
         isLoading = uiState.isLoading
@@ -139,7 +132,7 @@ fun SettingScreen(
         val tutorialUrl = "https://github.com/Replica0110/ECJTU-Calendar"
         pushLink(LinkAnnotation.Url(tutorialUrl))
         withStyle(style = SpanStyle(color = Color.DarkGray, textDecoration = TextDecoration.Underline)) {
-            append("https://github.com/Replica0110/ECJTU-Calendar")
+            append("GitHub链接")
         }
         pop()
         append("\n")
@@ -158,13 +151,6 @@ fun SettingScreen(
         settingViewModel.uiEvent.collect { event ->
             when (event) {
                 is SettingUiEvent.ShowSnackbar -> {
-                    if (event.success) {
-                        snackbarContainerColor = successContainerColor
-                        snackbarContentColor = successContentColor
-                    } else {
-                        snackbarContainerColor = errorContainerColor
-                        snackbarContentColor = errorContentColor
-                    }
                     snackbarHostState.showSnackbar(
                         message = event.message,
                         duration = SnackbarDuration.Short
@@ -180,12 +166,7 @@ fun SettingScreen(
         modifier = Modifier.background(MiuixTheme.colorScheme.background),
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { snackbarData ->
-                Snackbar(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    containerColor = snackbarContainerColor.takeOrElse { defaultContainerColor },
-                    contentColor = snackbarContentColor.takeOrElse { defaultContentColor },
-                    snackbarData = snackbarData
-                )
+                Snackbar(snackbarData = snackbarData)
             }
         },
     ) {
@@ -214,10 +195,10 @@ fun SettingScreen(
                                 )
                             }
                         },
-                        title = "账号设置",
-                        summary = "配置账号密码及运营商",
+                        title = "运营商设置",
+                        summary = "配置校园网运营商",
                         onClick = {
-                            showAccountDialog = true
+                            showIspDialog = true
                         },
                         holdDownState = false
                     )
@@ -263,6 +244,32 @@ fun SettingScreen(
                     )
                 }
 
+            }
+            item {
+                SmallTitle("应用设置")
+                Card(modifier = Modifier.padding(16.dp)) {
+                    SuperSwitch(
+                        leftAction = {
+                            Box(
+                                contentAlignment = Alignment.TopStart,
+                                modifier = Modifier.padding(end = 16.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_update),
+                                    contentDescription = "启动时刷新",
+                                    tint = MiuixTheme.colorScheme.onBackground
+                                )
+                            }
+                        },
+                        title = "自动登录",
+                        summary = "启动时检查登录状态",
+                        onClick = {
+                            autoLogin = !autoLogin
+                        },
+                        checked = autoLogin,
+                        onCheckedChange = {autoLogin = it},
+                    )
+                }
             }
             item {
                 SmallTitle("教程")

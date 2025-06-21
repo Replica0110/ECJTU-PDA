@@ -26,7 +26,7 @@ class JwxtProfileRepositoryImpl(
     override suspend fun getStudentProfile(): PDAResult<Map<String, Map<String, String>>> = withContext(Dispatchers.IO) {
         Timber.d("JwxtProfileRepository: 开始获取学生信息...")
 
-        fetchHtmlWithRelogin {
+        getHtml {
             apiClient.getProfileHtml()
                 .onError { msg, _ -> Timber.e("StuInfoService: 获取学生信息 HTML 失败: $msg") }
         }

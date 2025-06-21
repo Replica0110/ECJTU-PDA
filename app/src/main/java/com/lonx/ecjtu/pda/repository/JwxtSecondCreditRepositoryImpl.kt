@@ -29,7 +29,7 @@ class JwxtSecondCreditRepositoryImpl(
         Timber.d("JwxtStuSecondCreditRepositoryImpl: 开始获取并解析素质拓展学分数据...")
 
         try {
-            val htmlBodyResult = fetchHtmlWithRelogin { apiClient.getSecondCreditHtml() }
+            val htmlBodyResult = getHtml { apiClient.getSecondCreditHtml() }
                 .onError { msg, e -> Timber.e(e, "获取素质拓展学分 HTML 失败: $msg") }
 
             val htmlBody = htmlBodyResult.getOrNull()

@@ -26,7 +26,7 @@ abstract class BaseJwxtRepository(
      * @param fetchAction 使用[apiClient]执行实际API调用的挂起函数。
      * @return 从fetch操作返回的[PDAResult]，可能在成功重新登录和重试后返回。
      */
-    protected suspend fun fetchHtmlWithRelogin(
+    protected suspend fun getHtml(
         fetchAction: suspend () -> PDAResult<String>
     ): PDAResult<String> = withContext(Dispatchers.IO) {
         val initialResult = fetchAction()

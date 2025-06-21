@@ -27,7 +27,7 @@ class JwxtCourseRepositoryImpl(
 
     override suspend fun getCoursesForDate(dateQuery: String?): PDAResult<StuDayCourses> = withContext(
         Dispatchers.IO) {
-        fetchHtmlWithRelogin {
+        getHtml {
             apiClient.getCourseScheduleHtml(dateQuery)
         }
             .mapCatching { html ->

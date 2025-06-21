@@ -131,6 +131,7 @@ dependencies {
     implementation(libs.accompanist.systemuicontroller)
     implementation(libs.haze)
     implementation(libs.miuix)
+    implementation(libs.mmkv)
     implementation(libs.koin.androidx.compose)
     implementation(libs.gson)
     implementation(libs.jsoup)

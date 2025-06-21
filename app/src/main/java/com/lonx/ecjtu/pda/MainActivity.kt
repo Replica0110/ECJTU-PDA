@@ -12,11 +12,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.lonx.ecjtu.pda.data.local.prefs.PrefKeys
 import com.lonx.ecjtu.pda.data.local.prefs.PreferencesManager
 import com.lonx.ecjtu.pda.navigation.TopLevelRoute
 import com.lonx.ecjtu.pda.screen.top.LoginScreen
 import com.lonx.ecjtu.pda.screen.top.MainScreen
 import com.lonx.ecjtu.pda.screen.top.SplashScreen
+import com.tencent.mmkv.MMKV
 import org.koin.android.ext.android.inject
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -25,6 +27,7 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        MMKV.initialize(this)
         enableEdgeToEdge()
         parseIntent(intent)
         setContent {
@@ -43,7 +46,7 @@ class MainActivity : ComponentActivity() {
                 val topLevelNavController = rememberNavController()
                 NavHost(
                     navController = topLevelNavController,
-                    startDestination = TopLevelRoute.Splash.route
+                    startDestination = if (prefs.getBoolean(PrefKeys.AUTO_LOGIN, false)) TopLevelRoute.Main.route else TopLevelRoute.Splash.route
                 ) {
                     composable(TopLevelRoute.Splash.route) {
                         SplashScreen(navController = topLevelNavController)

@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.ecjtu.pda.base.BaseUiState
 import com.lonx.ecjtu.pda.data.common.PDAResult
+import com.lonx.ecjtu.pda.data.local.prefs.PrefKeys
 import com.lonx.ecjtu.pda.data.model.IspOption
 import com.lonx.ecjtu.pda.data.model.availableIsp
+import com.lonx.ecjtu.pda.domain.usecase.GetBooleanPrefsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetWeiXinIDUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LogoutUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdateBooleanPrefsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdatePasswordUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateWeiXinIDUseCase
@@ -29,10 +32,10 @@ sealed class SettingUiEvent {
 }
 
 data class SettingUiState(
-    val studentId: String = "",
     val password: String = "",
     val ispSelected: IspOption = IspOption(1, "中国移动"),
     val weiXinId:String = "",
+    val autoLogin: Boolean = true,
     val isLoading: Boolean = false,
     val error: String? = null
 ): BaseUiState
@@ -43,7 +46,9 @@ class SettingViewModel(
     private val updateWeiXinIDUseCase: UpdateWeiXinIDUseCase,
     private val getStuCredentialsUseCase: GetStuCredentialsUseCase,
     private val getWeiXinIDUseCase: GetWeiXinIDUseCase,
-    private val updateStuCredentialsUseCase: UpdateStuCredentialsUseCase
+    private val updateStuCredentialsUseCase: UpdateStuCredentialsUseCase,
+    private val getBooleanPrefsUseCase: GetBooleanPrefsUseCase,
+    private val updateBooleanPrefsUseCase: UpdateBooleanPrefsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingUiState())
@@ -59,34 +64,29 @@ class SettingViewModel(
     private fun loadSettings() {
         viewModelScope.launch {
             _uiState.update { currentState ->
-                val credentials = getStuCredentialsUseCase()
-                val savedId = credentials.first
-                val savedPassword = credentials.second
-                val savedIspId = credentials.third
+                val savedIspId = getStuCredentialsUseCase().third
                 val savedWeiXinId = getWeiXinIDUseCase()
+                val autoLogin = getBooleanPrefsUseCase(PrefKeys.AUTO_LOGIN)
                 val selectedIsp = availableIsp.find { it.id == savedIspId } ?: currentState.ispSelected
                 currentState.copy(
-                    studentId = savedId,
-                    password = savedPassword,
                     ispSelected = selectedIsp,
-                    weiXinId = savedWeiXinId
+                    weiXinId = savedWeiXinId,
+                    autoLogin = autoLogin
                 )
             }
         }
     }
 
-    /**账号密码及运营商配置*/
-    fun updateConfig(studentId: String, password: String, selectedIsp: IspOption) {
+    /**运营商配置*/
+    fun updateConfig(selectedIsp: IspOption) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                updateStuCredentialsUseCase(studentId, password, selectedIsp.id)
-                Timber.i("保存配置: ID=$studentId, Pass=***, ISP=${selectedIsp.name}")
+                updateStuCredentialsUseCase(ispOption = selectedIsp.id)
+                Timber.i("更新运营商: ${selectedIsp.name}")
 
                 _uiState.update {
                     it.copy(
-                        studentId = studentId,
-                        password = password, // 更新UI状态中的密码
                         ispSelected = selectedIsp,
                         isLoading = false
                     )
@@ -132,7 +132,7 @@ class SettingViewModel(
                 if (operationSuccessful) {
                     try {
                         val currentState = _uiState.value
-                        updateStuCredentialsUseCase(currentState.studentId, newPassword, currentState.ispSelected.id)
+                        updateStuCredentialsUseCase(ispOption = currentState.ispSelected.id)
                         Timber.i("新密码已成功保存到本地")
 
                         _uiState.update { it.copy(password = newPassword, isLoading = false) }
@@ -164,6 +164,7 @@ class SettingViewModel(
             }
         }
     }
+
     /**清空登录信息*/
     fun logout() {
         viewModelScope.launch {

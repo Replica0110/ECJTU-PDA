@@ -27,6 +27,7 @@ import com.lonx.ecjtu.pda.domain.usecase.CampusNetLoginUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CampusNetLogoutUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckCredentialsExistUseCase
 import com.lonx.ecjtu.pda.domain.usecase.CheckSessionValidityUseCase
+import com.lonx.ecjtu.pda.domain.usecase.GetBooleanPrefsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetCampusNetStatusUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetNetworkTypeUseCase
 import com.lonx.ecjtu.pda.domain.usecase.GetStuCourseUseCase
@@ -41,6 +42,7 @@ import com.lonx.ecjtu.pda.domain.usecase.GetWeiXinIDUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LoginManuallyUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LoginUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LogoutUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdateBooleanPrefsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdatePasswordUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateWeiXinIDUseCase
@@ -78,7 +80,7 @@ import org.koin.dsl.module
 val appModule = module {
 
     // --- 核心依赖 ---
-    single { PreferencesManager.getInstance(androidContext()) } // 可以省略显式类型
+    single { PreferencesManager.getInstance() } // 可以省略显式类型
 
     // --- CookieJar 定义 ---
     single<PersistentCookieJar> {
@@ -151,7 +153,8 @@ val appModule = module {
     single<UpdateStuCredentialsUseCase> { UpdateStuCredentialsUseCase(preferencesRepository = get()) }
     single<UpdateWeiXinIDUseCase> { UpdateWeiXinIDUseCase(preferencesRepository = get()) }
     single<UpdatePasswordUseCase> { UpdatePasswordUseCase(authRepository = get()) }
-
+    single<GetBooleanPrefsUseCase> { GetBooleanPrefsUseCase(preferencesRepository = get()) }
+    single<UpdateBooleanPrefsUseCase> {  UpdateBooleanPrefsUseCase(preferencesRepository = get()) }
 
     // --- 系统服务 ---
     single { androidContext().getSystemService(Context.WIFI_SERVICE) as WifiManager }
@@ -178,7 +181,9 @@ val appModule = module {
         updateWeiXinIDUseCase = get(),
         getStuCredentialsUseCase = get(),
         getWeiXinIDUseCase = get(),
-        updateStuCredentialsUseCase = get()
+        updateStuCredentialsUseCase = get(),
+        getBooleanPrefsUseCase = get(),
+        updateBooleanPrefsUseCase = get()
     ) }
     viewModel { StuScoreViewModel(getStuScoreUseCase = get()) }
     viewModel { StuSecondCreditViewModel(getStuSecondCreditUseCase = get()) }

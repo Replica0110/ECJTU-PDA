@@ -24,6 +24,7 @@ import com.lonx.ecjtu.pda.navigation.JwxtRoute
 import com.lonx.ecjtu.pda.navigation.MainRoute
 import com.lonx.ecjtu.pda.screen.jwxt.JwxtContainerScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuElectiveScreen
+import com.lonx.ecjtu.pda.screen.jwxt.StuExperimentScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSchedulesScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuScoreScreen
 import com.lonx.ecjtu.pda.screen.jwxt.StuSecondCreditScreen
@@ -91,8 +92,11 @@ fun JwxtScreen(
         composable(JwxtRoute.Schedules.route) {
             StuSchedulesScreen(onBack = { jwxtNavController.popBackStack() })
         }
-        (composable(JwxtRoute.ElectiveCourse.route) {
+        composable(JwxtRoute.ElectiveCourse.route) {
             StuElectiveScreen(onBack = { jwxtNavController.popBackStack() })
-        })
+        }
+        composable(JwxtRoute.ExperimentInfo.route) {
+            StuExperimentScreen(onBack = { jwxtNavController.popBackStack() })
+        }
     }
 }

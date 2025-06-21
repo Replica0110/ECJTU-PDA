@@ -34,7 +34,7 @@ class JwxtExperimentRepositoryImpl(
             val termExperimentsList = mutableListOf<TermExperiments>()
 
             // 获取默认页面 HTML 并解析
-            val initialDocResult = fetchHtmlWithRelogin { apiClient.getExperimentsHtml() }
+            val initialDocResult = getHtml { apiClient.getExperimentsHtml() }
                 .onError { msg, e -> Timber.e(e, "获取默认实验页面失败: $msg") }
                 .map { Jsoup.parse(it) }
 
@@ -64,7 +64,7 @@ class JwxtExperimentRepositoryImpl(
                     val termValue = option.attr("value")
                     val termName = option.text()
 
-                    fetchHtmlWithRelogin { apiClient.getExperimentsHtml(termValue) }
+                    getHtml { apiClient.getExperimentsHtml(termValue) }
                         .map { Jsoup.parse(it) }
                         .mapCatching { doc ->
                             TermExperiments(

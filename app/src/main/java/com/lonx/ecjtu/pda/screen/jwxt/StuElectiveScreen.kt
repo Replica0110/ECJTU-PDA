@@ -1,5 +1,6 @@
 package com.lonx.ecjtu.pda.screen.jwxt
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,11 +42,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.ecjtu.pda.data.model.ElectiveCourseInfo
 import com.lonx.ecjtu.pda.data.model.SemesterCourses
 import com.lonx.ecjtu.pda.state.UiState
+import com.lonx.ecjtu.pda.ui.component.GenericTabs
 import com.lonx.ecjtu.pda.viewmodel.StuElectiveViewModel
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.LazyColumn
+import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -143,11 +146,14 @@ fun StuElectiveScreen(
                     item { NoDataView(message = "暂无任何学期数据") }
                 } else {
                     item {
-                        SemesterTabs(
-                            semesterCourses = currentSemesterCourses,
-                            selectedIndex = selectedIndex,
-                            onTabSelected = { index -> selectedIndex = index }
-                        )
+                        top.yukonga.miuix.kmp.basic.Card {
+                            GenericTabs(
+                                items = semesterCourses,
+                                selectedIndex = selectedIndex,
+                                onTabSelected = { selectedIndex = it },
+                                getLabel = { it.term.value }
+                            )
+                        }
                     }
 
                     val safeSelectedIndex = selectedIndex.coerceIn(0, currentSemesterCourses.size - 1)
@@ -170,55 +176,6 @@ fun StuElectiveScreen(
             }
 
             else -> {}
-        }
-    }
-}
-
-/**
- * 负责显示学期切换 Tabs 的可组合项
- */
-@Composable
-fun SemesterTabs(
-    semesterCourses: List<SemesterCourses>,
-    selectedIndex: Int,
-    onTabSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // 确保 selectedIndex 在 ScrollableTabRow 的有效范围内
-    // 注意：ScrollableTabRow 的 selectedTabIndex 本身不做越界检查，但 indicator 需要
-    val safeTabIndex = selectedIndex.coerceIn(0, semesterCourses.size - 1)
-
-    ScrollableTabRow(
-        selectedTabIndex = safeTabIndex, // 使用安全索引
-        modifier = modifier,
-        edgePadding = 0.dp,
-        containerColor = MiuixTheme.colorScheme.surface, // 替换为你实际的主题颜色
-        contentColor = MiuixTheme.colorScheme.primary, // 替换为你实际的主题颜色
-        indicator = { tabPositions ->
-            // 再次检查，确保索引在 tabPositions 列表内，防止异步或边界情况导致崩溃
-            if (safeTabIndex >= 0 && safeTabIndex < tabPositions.size) {
-                SecondaryIndicator( // 假设这是你自定义的 Indicator
-                    Modifier.tabIndicatorOffset(tabPositions[safeTabIndex]),
-                    height = 3.dp,
-                    color = MiuixTheme.colorScheme.primary // 替换为你实际的主题颜色
-                )
-            }
-        }
-    ) {
-        semesterCourses.forEachIndexed { index, semesterCourse ->
-            Tab(
-                selected = selectedIndex == index, // Tab 的选中状态仍用原始 index 判断
-                onClick = { onTabSelected(index) }, // 点击时调用回调
-                text = {
-                    Text(
-                        text = semesterCourse.term.value, // 获取学期名称
-                        fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
-                    )
-                },
-                selectedContentColor = MiuixTheme.colorScheme.primary, // 替换为你实际的主题颜色
-                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant // 替换为你实际的主题颜色
-            )
         }
     }
 }

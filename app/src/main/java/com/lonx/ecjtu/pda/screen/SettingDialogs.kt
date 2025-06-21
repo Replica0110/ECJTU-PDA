@@ -35,20 +35,20 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 
 @Composable
-fun AccountConfigDialog(
+fun IspConfigDialog(
     show: Boolean,
-    currentStudentId: String,
-    currentPassword: String,
+//    currentStudentId: String,
+//    currentPassword: String,
     currentIsp: IspOption,
     isLoading: Boolean,
     error: String?,
     onDismissRequest: () -> Unit,
-    onSave: (String, String, IspOption) -> Unit,
+    onSave: (IspOption) -> Unit,
     modifier: Modifier = Modifier
 ) {
 
-    var tempStudentId by rememberSaveable { mutableStateOf(currentStudentId) }
-    var tempPassword by rememberSaveable { mutableStateOf(currentPassword) }
+//    var tempStudentId by rememberSaveable { mutableStateOf(currentStudentId) }
+//    var tempPassword by rememberSaveable { mutableStateOf(currentPassword) }
     var tempSelectedIsp by rememberSaveable { mutableStateOf(currentIsp) }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var internalError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -57,12 +57,12 @@ fun AccountConfigDialog(
         showDialog = show,
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        title = "账号配置",
+        title = "运营商设置",
         confirmButtonText = "保存",
         onConfirm = {
             internalError = null
 
-            onSave(tempStudentId, tempPassword, tempSelectedIsp)
+            onSave(tempSelectedIsp)
             if (internalError == null) {
                 onDismissRequest()
             }
@@ -72,36 +72,36 @@ fun AccountConfigDialog(
         isLoading = isLoading
     ) {
 
-        TextField(
-            label = "学号",
-            value = tempStudentId,
-            onValueChange = { tempStudentId = it },
-            singleLine = true,
-            leadingIcon = { Icon( Icons.Default.Person, contentDescription = "学号图标", modifier = Modifier.padding(horizontal = 4.dp)) },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        TextField(
-            label = "密码",
-            value = tempPassword,
-            onValueChange = { tempPassword = it; internalError = null },
-            singleLine = true,
-            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "密码图标", modifier = Modifier.padding(horizontal = 4.dp)) },
-            trailingIcon = {
-                val image = if (isPasswordVisible)
-                    painterResource(id = R.drawable.ic_visible)
-                else painterResource(id = R.drawable.ic_invisible)
-
-                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                    Icon(image, contentDescription = if (isPasswordVisible) "隐藏密码" else "显示密码")
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+//        TextField(
+//            label = "学号",
+//            value = tempStudentId,
+//            onValueChange = { tempStudentId = it },
+//            singleLine = true,
+//            leadingIcon = { Icon( Icons.Default.Person, contentDescription = "学号图标", modifier = Modifier.padding(horizontal = 4.dp)) },
+//            modifier = Modifier.fillMaxWidth(),
+//            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+//        )
+//        Spacer(modifier = Modifier.height(8.dp))
+//        TextField(
+//            label = "密码",
+//            value = tempPassword,
+//            onValueChange = { tempPassword = it; internalError = null },
+//            singleLine = true,
+//            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+//            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+//            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "密码图标", modifier = Modifier.padding(horizontal = 4.dp)) },
+//            trailingIcon = {
+//                val image = if (isPasswordVisible)
+//                    painterResource(id = R.drawable.ic_visible)
+//                else painterResource(id = R.drawable.ic_invisible)
+//
+//                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+//                    Icon(image, contentDescription = if (isPasswordVisible) "隐藏密码" else "显示密码")
+//                }
+//            },
+//            modifier = Modifier.fillMaxWidth()
+//        )
+//        Spacer(modifier = Modifier.height(8.dp))
         CustomDropdownMenu(
             label = "运营商",
             options = availableIsp,
@@ -128,12 +128,11 @@ fun ChangePasswordDialog(
     showDialog: Boolean,
     onDismissRequest: () -> Unit,
     onConfirm: (old: String, new: String) -> Unit,
-    initialOldPassword: String = "",
     confirmButtonText: String = "确认",
     dismissButtonText: String = "取消",
     isLoading: Boolean = false
 ) {
-    var oldPassword by rememberSaveable { mutableStateOf(initialOldPassword) }
+    var oldPassword by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var isOldPasswordVisible by rememberSaveable { mutableStateOf(false) }
@@ -173,7 +172,7 @@ fun ChangePasswordDialog(
         TextField(
             value = oldPassword,
             onValueChange = { oldPassword = it; internalError = null },
-            label = "当前密码",
+            label = "旧密码",
             singleLine = true,
             leadingIcon = {
                 androidx.compose.material3.Icon(

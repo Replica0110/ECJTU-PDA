@@ -31,7 +31,7 @@ fun JwxtContainerScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 SuperArrow(
-                    title = "选课小班序号",
+                    title = JwxtRoute.ElectiveCourse.title,
                     summary = "查询选课小班序号",
                     onClick = {
                         jwxtNavController.navigate(JwxtRoute.ElectiveCourse.route)
@@ -45,14 +45,14 @@ fun JwxtContainerScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 SuperArrow(
-                    title = "我的成绩",
+                    title = JwxtRoute.Score.title,
                     summary = "查询绩点及各科分数",
                     onClick = {
                         jwxtNavController.navigate(JwxtRoute.Score.route)
                     }
                 )
                 SuperArrow(
-                    title = "素质拓展学分",
+                    title = JwxtRoute.SecondCredit.title,
                     summary = "查询素质拓展学分",
                     onClick = {
                         jwxtNavController.navigate(JwxtRoute.SecondCredit.route)
@@ -64,7 +64,7 @@ fun JwxtContainerScreen(
             SmallTitle("课表/考试")
             Card(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 SuperArrow(
-                    title = "我的课表",
+                    title = JwxtRoute.Schedules.title,
                     summary = "查看学期课程安排",
                     onClick = { jwxtNavController.navigate(JwxtRoute.Schedules.route) }
                 )
@@ -122,10 +122,11 @@ fun JwxtContainerScreen(
             SmallTitle("实践教学")
             Card (modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)){
                 SuperArrow(
-                    title = "实验安排",
+                    title = JwxtRoute.ExperimentInfo.title,
                     summary = "查询各学期实验安排",
-                    onClick = { },
-                    enabled = false
+                    onClick = {
+                        jwxtNavController.navigate(JwxtRoute.ExperimentInfo.route)
+                    }
                 )
             }
         }

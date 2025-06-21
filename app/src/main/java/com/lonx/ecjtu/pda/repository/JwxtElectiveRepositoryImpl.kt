@@ -27,7 +27,7 @@ class JwxtElectiveRepositoryImpl(
 ) : BaseJwxtRepository(apiClient, authRepository), ElectiveRepository{
     override suspend fun getStudentElectiveCourse(): PDAResult<StuAllElectiveCourses> = withContext(Dispatchers.IO) {
         return@withContext try {
-            fetchHtmlWithRelogin { apiClient.getElectiveCourseHtml()}
+            getHtml { apiClient.getElectiveCourseHtml()}
                 .onError { msg, e -> Timber.e(e, "获取初始选课页失败: $msg") }
                 .map { Jsoup.parse(it) }
 
