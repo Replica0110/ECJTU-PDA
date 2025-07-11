@@ -33,9 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.lonx.ecjtu.pda.R
-import com.lonx.ecjtu.pda.data.model.availableIsp
 import com.lonx.ecjtu.pda.navigation.TopLevelRoute
-import com.lonx.ecjtu.pda.screen.IspConfigDialog
+import com.lonx.ecjtu.pda.screen.AccountConfigDialog
 import com.lonx.ecjtu.pda.screen.ChangePasswordDialog
 import com.lonx.ecjtu.pda.ui.dialog.InfoAlertDialog
 import com.lonx.ecjtu.pda.ui.dialog.InputAlertDialog
@@ -48,7 +47,6 @@ import top.yukonga.miuix.kmp.basic.LazyColumn
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.extra.SuperArrow
-import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.extra.SuperSwitch
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.icons.useful.Delete
@@ -66,7 +64,7 @@ fun SettingScreen(
     //设置项
     var autoLogin by remember { mutableStateOf(settingViewModel.uiState.value.autoLogin) }
     // 对话框
-    var showIspDialog by rememberSaveable { mutableStateOf(false) }
+    var showAccountDialog by rememberSaveable { mutableStateOf(false) }
     var showPasswordDialog by rememberSaveable  { mutableStateOf(false) }
     var showWeiXinIdDialog by rememberSaveable { mutableStateOf(false) }
     var showWeiXinIdTutorialDialog by rememberSaveable { mutableStateOf(false) }
@@ -77,16 +75,16 @@ fun SettingScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 运营商配置对话框
-    IspConfigDialog(
-//        currentStudentId = uiState.studentId,
-//        currentPassword = uiState.password,
+    AccountConfigDialog(
+        currentStudentId = uiState.studentId,
+        currentPassword = uiState.password,
         currentIsp = uiState.ispSelected,
         isLoading = uiState.isLoading,
         error = uiState.error,
-        onDismissRequest = { showIspDialog= false },
-        onSave = { selectedIsp ->
-            settingViewModel.updateConfig(selectedIsp) },
-        show = showIspDialog
+        onDismissRequest = { showAccountDialog= false },
+        onSave = { studentId, password, selectedIsp  ->
+            settingViewModel.updateConfig(studentId,password,selectedIsp) },
+        show = showAccountDialog
     )
     // 修改密码对话框
     ChangePasswordDialog(
@@ -195,10 +193,10 @@ fun SettingScreen(
                                 )
                             }
                         },
-                        title = "运营商设置",
-                        summary = "配置校园网运营商",
+                        title = "账号设置",
+                        summary = "配置账号密码及运营商",
                         onClick = {
-                            showIspDialog = true
+                            showAccountDialog = true
                         },
                         holdDownState = false
                     )

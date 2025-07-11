@@ -13,6 +13,9 @@ import com.lonx.ecjtu.pda.domain.usecase.GetWeiXinIDUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LogoutUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateBooleanPrefsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdatePasswordUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdatePrefsIspUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdatePrefsPasswordUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdatePrefsStuIdUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateWeiXinIDUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,6 +35,7 @@ sealed class SettingUiEvent {
 }
 
 data class SettingUiState(
+    val studentId: String = "",
     val password: String = "",
     val ispSelected: IspOption = IspOption(1, "中国移动"),
     val weiXinId:String = "",
@@ -47,6 +51,9 @@ class SettingViewModel(
     private val getStuCredentialsUseCase: GetStuCredentialsUseCase,
     private val getWeiXinIDUseCase: GetWeiXinIDUseCase,
     private val updateStuCredentialsUseCase: UpdateStuCredentialsUseCase,
+    private val updatePrefsStuIdUseCase: UpdatePrefsStuIdUseCase,
+    private val updatePrefsPasswordUseCase: UpdatePrefsPasswordUseCase,
+    private val updatePrefsIspUseCase: UpdatePrefsIspUseCase,
     private val getBooleanPrefsUseCase: GetBooleanPrefsUseCase,
     private val updateBooleanPrefsUseCase: UpdateBooleanPrefsUseCase
 ) : ViewModel() {
@@ -64,11 +71,13 @@ class SettingViewModel(
     private fun loadSettings() {
         viewModelScope.launch {
             _uiState.update { currentState ->
+                val studentId = getStuCredentialsUseCase().first?:""
                 val savedIspId = getStuCredentialsUseCase().third
                 val savedWeiXinId = getWeiXinIDUseCase()
                 val autoLogin = getBooleanPrefsUseCase(PrefKeys.AUTO_LOGIN)
                 val selectedIsp = availableIsp.find { it.id == savedIspId } ?: currentState.ispSelected
                 currentState.copy(
+                    studentId = studentId,
                     ispSelected = selectedIsp,
                     weiXinId = savedWeiXinId,
                     autoLogin = autoLogin
@@ -77,16 +86,23 @@ class SettingViewModel(
         }
     }
 
-    /**运营商配置*/
-    fun updateConfig(selectedIsp: IspOption) {
+    /**账号密码及运营商配置*/
+    fun updateConfig(studentId: String, password: String, selectedIsp: IspOption) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                updateStuCredentialsUseCase(ispOption = selectedIsp.id)
-                Timber.i("更新运营商: ${selectedIsp.name}")
+//                updateStuCredentialsUseCase(studentId, password, selectedIsp.id)
+                updatePrefsStuIdUseCase(studentId)
+                if (password.isNotEmpty()) {
+                    updatePrefsPasswordUseCase(password)
+                }
+                updatePrefsIspUseCase(selectedIsp.id)
+                Timber.i("保存配置: ID=$studentId, Pass=***, ISP=${selectedIsp.name}")
 
                 _uiState.update {
                     it.copy(
+                        studentId = studentId,
+//                        password = password,
                         ispSelected = selectedIsp,
                         isLoading = false
                     )
@@ -132,7 +148,7 @@ class SettingViewModel(
                 if (operationSuccessful) {
                     try {
                         val currentState = _uiState.value
-                        updateStuCredentialsUseCase(ispOption = currentState.ispSelected.id)
+                        updatePrefsPasswordUseCase(newPassword)
                         Timber.i("新密码已成功保存到本地")
 
                         _uiState.update { it.copy(password = newPassword, isLoading = false) }

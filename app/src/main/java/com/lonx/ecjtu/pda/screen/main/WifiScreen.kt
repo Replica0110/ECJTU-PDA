@@ -245,24 +245,27 @@ fun WifiScreen(
                             Timber.d("Login Button Clicked")
                             wifiViewModel.onLoginClicked()
                         },
+                        cornerRadius = 2.dp,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
                     ) {
                         if (uiState.isLoadingIn) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
+                                color = MiuixTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp
                             )
                         } else {
                             Text("登录")
                         }
                     }
-
+                    Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
                             Timber.d("Logout Button Clicked")
                             wifiViewModel.onLogoutClicked()
                         },
+                        cornerRadius = 2.dp,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !uiState.isLoadingIn && !uiState.isLoadingOut
                     ) {

@@ -44,6 +44,9 @@ import com.lonx.ecjtu.pda.domain.usecase.LoginUseCase
 import com.lonx.ecjtu.pda.domain.usecase.LogoutUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateBooleanPrefsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdatePasswordUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdatePrefsIspUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdatePrefsPasswordUseCase
+import com.lonx.ecjtu.pda.domain.usecase.UpdatePrefsStuIdUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateStuCredentialsUseCase
 import com.lonx.ecjtu.pda.domain.usecase.UpdateWeiXinIDUseCase
 import com.lonx.ecjtu.pda.network.OkHttpConfig
@@ -141,18 +144,23 @@ val appModule = module {
     single<GetStuElectiveUseCase> { GetStuElectiveUseCase(electiveRepository = get()) }
     single<GetStuCourseUseCase> { GetStuCourseUseCase(courseRepository = get()) }
     single<GetStuScoreUseCase> { GetStuScoreUseCase(scoreRepository = get()) }
-    single<GetStuCredentialsUseCase> { GetStuCredentialsUseCase(preferencesRepository = get()) }
     single<GetStuExperimentsUseCase> { GetStuExperimentsUseCase(experimentRepository = get()) }
     single<GetStuSecondCreditUseCase> { GetStuSecondCreditUseCase(secondCreditRepository = get()) }
     single<GetStuSchedulesUseCase> { GetStuSchedulesUseCase(schedulesRepository = get()) }
-    single<GetWeiXinIDUseCase> { GetWeiXinIDUseCase(preferencesRepository = get()) }
     single<GetCampusNetStatusUseCase> { GetCampusNetStatusUseCase(wifiRepository = get()) }
     single<GetNetworkTypeUseCase> { GetNetworkTypeUseCase(wifiRepository = get()) }
     single<CampusNetLoginUseCase> { CampusNetLoginUseCase(wifiRepository = get()) }
     single<CampusNetLogoutUseCase> { CampusNetLogoutUseCase(wifiRepository = get()) }
+
+    single<GetStuCredentialsUseCase> { GetStuCredentialsUseCase(preferencesRepository = get()) }
+    single<GetWeiXinIDUseCase> { GetWeiXinIDUseCase(preferencesRepository = get()) }
     single<UpdateStuCredentialsUseCase> { UpdateStuCredentialsUseCase(preferencesRepository = get()) }
     single<UpdateWeiXinIDUseCase> { UpdateWeiXinIDUseCase(preferencesRepository = get()) }
     single<UpdatePasswordUseCase> { UpdatePasswordUseCase(authRepository = get()) }
+    single<UpdatePrefsStuIdUseCase> { UpdatePrefsStuIdUseCase(preferencesRepository = get()) }
+    single<UpdatePrefsPasswordUseCase> { UpdatePrefsPasswordUseCase(preferencesRepository = get()) }
+    single<UpdatePrefsIspUseCase> { UpdatePrefsIspUseCase(preferencesRepository = get()) }
+
     single<GetBooleanPrefsUseCase> { GetBooleanPrefsUseCase(preferencesRepository = get()) }
     single<UpdateBooleanPrefsUseCase> {  UpdateBooleanPrefsUseCase(preferencesRepository = get()) }
 
@@ -183,7 +191,10 @@ val appModule = module {
         getWeiXinIDUseCase = get(),
         updateStuCredentialsUseCase = get(),
         getBooleanPrefsUseCase = get(),
-        updateBooleanPrefsUseCase = get()
+        updateBooleanPrefsUseCase = get(),
+        updatePrefsStuIdUseCase = get(),
+        updatePrefsPasswordUseCase = get(),
+        updatePrefsIspUseCase = get()
     ) }
     viewModel { StuScoreViewModel(getStuScoreUseCase = get()) }
     viewModel { StuSecondCreditViewModel(getStuSecondCreditUseCase = get()) }
